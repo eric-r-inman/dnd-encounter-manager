@@ -107,17 +107,20 @@ npm run preview
 ## 🏗️ Architecture
 
 ### Modular Design
-The application follows a modular architecture for maintainability:
+The application follows a modular architecture for maintainability. A comprehensive refactoring in 2024 successfully extracted a 6,873-line monolithic event handler into 7 focused modules, reducing complexity while maintaining full functionality:
 
 ```
 src/
 ├── main.js                 # Application entry point
 ├── scripts/
-│   ├── events/            # Event handling modules
+│   ├── events/            # Modular event handling system
 │   │   ├── index.js       # EventCoordinator (central dispatch)
-│   │   ├── tooltip-events.js    # Tooltip interactions
-│   │   ├── hp-events.js   # HP modification logic
-│   │   └── combatant-events.js  # Combatant management
+│   │   ├── tooltip-events.js    # D&D tooltips & batch hints
+│   │   ├── hp-events.js   # HP modification & health tracking
+│   │   ├── combatant-events.js  # Batch selection & status
+│   │   ├── modal-events.js      # Modal handling & forms
+│   │   ├── combat-events.js     # Turn progression & initiative
+│   │   └── keyboard-events.js   # Shortcuts & input utilities
 │   ├── app-core.js        # Core application logic
 │   ├── state-manager.js   # Reactive state management
 │   └── data-services.js   # Data layer and persistence
@@ -134,6 +137,10 @@ src/
 - **CombatantCard**: Individual combatant rendering and logic
 - **HPEvents**: Health point calculations and modifications
 - **TooltipEvents**: D&D 5e rule tooltips and batch operation hints
+- **ModalEvents**: Modal handling and form submission processing
+- **CombatEvents**: Turn progression, initiative, and combat control
+- **CombatantEvents**: Batch operations and combatant status management
+- **KeyboardEvents**: Global shortcuts and input validation utilities
 
 ## 🛠️ Development
 
