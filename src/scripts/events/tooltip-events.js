@@ -331,9 +331,8 @@ export class TooltipEvents {
         const tooltip = document.getElementById('batch-tooltip');
         if (!tooltip) return;
 
-        // Get selected combatants (requires access to main EventHandlers)
-        // This will need to be updated when we create the coordinator
-        const selectedCombatants = window.EventHandlers?.getSelectedCombatants() || [];
+        // Get selected combatants from the EventCoordinator
+        const selectedCombatants = window.EventCoordinator?.getSelectedCombatants() || [];
         if (selectedCombatants.length === 0) return;
 
         // Build the list HTML

@@ -22,7 +22,7 @@ import './components/toast/toast.css';
 import { AppCore } from './scripts/app-core.js';
 import { StateManager } from './scripts/state-manager.js';
 import { DataServices } from './scripts/data-services.js';
-import { EventHandlers } from './scripts/event-handlers.js';
+import { EventCoordinator } from './scripts/events/index.js';
 
 // Import UI components
 import { ToastSystem } from './components/toast/ToastSystem.js';
@@ -133,7 +133,10 @@ class DnDEncounterManager {
         console.log('🔗 Binding event handlers...');
         
         // Initialize global event handling system
-        EventHandlers.init();
+        EventCoordinator.init();
+
+        // Make EventCoordinator globally available for tooltip events
+        window.EventCoordinator = EventCoordinator;
         
         // Bind keyboard shortcuts
         this.bindKeyboardShortcuts();
@@ -207,7 +210,8 @@ class DnDEncounterManager {
                         return;
                     }
                     e.preventDefault();
-                    EventHandlers.handleClearEncounter();
+                    // TODO: Implement clear encounter in EventCoordinator
+                    console.log('Clear encounter - TODO');
                     break;
                             }
                         });
