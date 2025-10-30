@@ -9,6 +9,7 @@
  */
 
 import { TooltipEvents } from './tooltip-events.js';
+import { HPEvents } from './hp-events.js';
 import { StateManager } from '../state-manager.js';
 import { ToastSystem } from '../../components/toast/ToastSystem.js';
 import { ModalSystem } from '../../components/modals/ModalSystem.js';
@@ -222,11 +223,11 @@ export class EventCoordinator {
     }
 
     static handleHPModification(target, actionType) {
-        ToastSystem.show(`${actionType} functionality - TODO`, 'info');
+        HPEvents.handleHPModification(target, actionType);
     }
 
     static handleBatchHPModification(target) {
-        ToastSystem.show('Batch HP modification functionality - TODO', 'info');
+        HPEvents.handleBatchHPModification(target);
     }
 
     static handleClearNote(target) {
@@ -258,7 +259,7 @@ export class EventCoordinator {
     }
 
     static handleHPModificationForm(form) {
-        ToastSystem.show('HP modification form functionality - TODO', 'info');
+        HPEvents.handleHPModificationForm(form);
     }
 
     static handleConditionForm(form) {
@@ -290,23 +291,6 @@ export class EventCoordinator {
      * @returns {Array} Array of selected combatant objects
      */
     static getSelectedCombatants() {
-        const selectedIds = [];
-
-        // Find all checked checkboxes
-        const checkboxes = document.querySelectorAll('input[name="batch-select"]:checked');
-        checkboxes.forEach(checkbox => {
-            selectedIds.push(checkbox.value);
-        });
-
-        // Get the actual combatant objects
-        const selectedCombatants = [];
-        selectedIds.forEach(id => {
-            const combatant = DataServices.combatantManager.getCombatant(id);
-            if (combatant) {
-                selectedCombatants.push(combatant);
-            }
-        });
-
-        return selectedCombatants;
+        return HPEvents.getSelectedCombatants();
     }
 }
