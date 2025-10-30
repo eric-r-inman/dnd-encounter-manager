@@ -10,6 +10,7 @@
 
 import { TooltipEvents } from './tooltip-events.js';
 import { HPEvents } from './hp-events.js';
+import { CombatantEvents } from './combatant-events.js';
 import { StateManager } from '../state-manager.js';
 import { ToastSystem } from '../../components/toast/ToastSystem.js';
 import { ModalSystem } from '../../components/modals/ModalSystem.js';
@@ -235,27 +236,27 @@ export class EventCoordinator {
     }
 
     static handleToggleConcentration(target) {
-        ToastSystem.show('Toggle concentration functionality - TODO', 'info');
+        CombatantEvents.handleToggleConcentration(target);
     }
 
     static handleToggleStealth(target) {
-        ToastSystem.show('Toggle stealth functionality - TODO', 'info');
+        CombatantEvents.handleToggleStealth(target);
     }
 
     static handleToggleSurprise(target) {
-        ToastSystem.show('Toggle surprise functionality - TODO', 'info');
+        CombatantEvents.handleToggleSurprise(target);
     }
 
     static handleToggleBatchSelect(target) {
-        ToastSystem.show('Toggle batch select functionality - TODO', 'info');
+        CombatantEvents.handleToggleBatchSelect(target);
     }
 
     static handleClearCondition(target) {
-        ToastSystem.show('Clear condition functionality - TODO', 'info');
+        CombatantEvents.handleClearCondition(target);
     }
 
     static handleClearEffect(target) {
-        ToastSystem.show('Clear effect functionality - TODO', 'info');
+        CombatantEvents.handleClearEffect(target);
     }
 
     static handleHPModificationForm(form) {
@@ -291,6 +292,6 @@ export class EventCoordinator {
      * @returns {Array} Array of selected combatant objects
      */
     static getSelectedCombatants() {
-        return HPEvents.getSelectedCombatants();
+        return CombatantEvents.getSelectedCombatants();
     }
 }
