@@ -1,0 +1,185 @@
+/* Utility classes for quick styling */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    border-radius: var(--border-radius);
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.btn-primary {
+    background-color: var(--color-primary);
+    color: var(--color-bg-primary);
+}
+
+.btn-success {
+    background-color: var(--color-success);
+    color: var(--color-bg-primary);
+}
+
+.btn-danger {
+    background-color: var(--color-danger);
+    color: var(--color-text-primary);
+}
+
+.btn-secondary {
+    background-color: var(--color-bg-tertiary);
+    color: var(--color-text-secondary);
+}
+
+.compendium-section .combat-controls {
+    margin-bottom: var(--spacing-lg);
+}
+
+.compendium-section .combat-controls-row {
+    grid-template-columns: 1fr 1fr 1fr; /* Ensure 3 equal columns */
+}
+
+.combat-controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.combat-controls-row {
+    display: grid;
+    gap: var(--spacing-sm);
+    width: 100%;
+}
+
+/* First row: 3 equal buttons (Add, Save, Load) */
+.combat-controls-row:first-child {
+    grid-template-columns: 1fr 1fr 1fr;
+}
+
+/* Second row: 2 equal buttons (Next Turn, Reset) */
+.combat-controls-row:nth-child(2) {
+    grid-template-columns: 1fr 1fr 1fr;
+}
+
+/* Ensure all combat control buttons are same height and styling */
+.combat-controls .btn {
+    width: 100%;
+    justify-content: center;
+    white-space: nowrap;
+    padding: var(--spacing-sm) var(--spacing-xs);
+    font-size: var(--font-size-sm);
+    text-align: center;
+}
+
+.empty-state {
+    text-align: center;
+    padding: var(--spacing-2xl);
+    color: var(--color-text-muted);
+}
+
+.keyboard-shortcuts-hint {
+    position: fixed;
+    bottom: var(--spacing-lg);
+    left: var(--spacing-lg);
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    display: flex;
+    gap: var(--spacing-md);
+}
+
+.keyboard-shortcuts-hint kbd {
+    background-color: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-family: var(--font-family-mono);
+}
+
+/* Combat header display */
+#initiative-header-display {
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+}
+
+.current-turn-name {
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-npc);
+}
+
+.health-status {
+    color: var(--color-success);
+    font-weight: var(--font-weight-medium);
+}
+
+.cover-status {
+    font-weight: var(--font-weight-semibold);
+}
+
+.status-condition {
+    color: var(--color-purple);
+    font-weight: var(--font-weight-medium);
+    margin-left: var(--spacing-xs);
+}
+
+.conditions-list {
+    display: inline;
+    color: var(--color-purple);
+}
+
+.effects-list {
+    display: inline;
+    color: var(--color-purple);
+}
+
+.status-separator {
+    margin: 0 var(--spacing-xs);
+    color: var(--color-text-muted);
+}
+
+/* Enhanced keyboard shortcuts hint */
+.keyboard-shortcuts-hint {
+    position: fixed;
+    bottom: var(--spacing-lg);
+    left: var(--spacing-lg);
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    display: flex;
+    gap: var(--spacing-md);
+    z-index: var(--z-index-dropdown);
+    background-color: var(--color-bg-secondary);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius);
+    border: var(--border-width) solid var(--color-border-muted);
+    box-shadow: var(--box-shadow-sm);
+}
+
+.keyboard-shortcuts-hint kbd {
+    background-color: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-family: var(--font-family-mono);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs);
+    box-shadow: 0 1px 0 var(--color-border-primary);
+}
+
+/* Clickable creature name in combat header */
+.current-turn-name.clickable-name {
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 3px;
+    text-decoration-color: transparent;
+}
+
+.current-turn-name.clickable-name:hover {
+    text-decoration-color: currentColor;
+    text-shadow: 0 0 10px rgba(255, 235, 59, 0.3);
+}

@@ -1,0 +1,342 @@
+{
+  "creatures": [
+    
+    
+    {
+      "id": "ancient-red-dragon",
+      "name": "Ancient Red Dragon",
+      "type": "enemy",
+      "ac": 22,
+      "maxHP": 507,
+      "cr": "24",
+      "size": "Gargantuan",
+      "race": "Dragon",
+      "subrace": "Chromatic",
+      "alignment": "Chaotic Evil",
+      "description": "The most powerful and feared of all chromatic dragons",
+      "source": "Monster Manual",
+      "hasFullStatBlock": true,
+      "statBlock": {
+        "fullType": "Gargantuan Dragon (Chromatic), Chaotic Evil",
+        "armorClass": {
+          "value": 22,
+          "type": "Natural Armor"
+        },
+        "hitPoints": {
+          "average": 507,
+          "formula": "26d20 + 234"
+        },
+        "initiative": {
+          "modifier": 14,
+          "total": 24
+        },
+        "speed": {
+          "walk": 40,
+          "burrow": null,
+          "climb": 40,
+          "fly": 80,
+          "swim": null
+        },
+        "abilities": {
+          "str": { "score": 30, "modifier": 10 },
+          "dex": { "score": 10, "modifier": 0 },
+          "con": { "score": 29, "modifier": 9 },
+          "int": { "score": 18, "modifier": 4 },
+          "wis": { "score": 15, "modifier": 2 },
+          "cha": { "score": 27, "modifier": 8 }
+        },
+        "savingThrows": {
+          "str": 10,
+          "dex": 7,
+          "con": 9,
+          "int": 4,
+          "wis": 9,
+          "cha": 8
+        },
+        "skills": {
+          "perception": 16,
+          "stealth": 7
+        },
+        "damageResistances": [],
+        "damageImmunities": ["Fire"],
+        "damageVulnerabilities": [],
+        "conditionImmunities": [],
+        "senses": {
+          "blindsight": 60,
+          "darkvision": 120,
+          "tremorsense": null,
+          "truesight": null,
+          "passivePerception": 26
+        },
+        "languages": ["Common", "Draconic"],
+        "challengeRating": {
+          "cr": "24",
+          "xp": 62000,
+          "xpInLair": 75000,
+          "proficiencyBonus": 7
+        },
+        "traits": [
+          {
+            "name": "Legendary Resistance",
+            "description": "(4/Day, or 5/Day in Lair). If the dragon fails a saving throw, it can choose to succeed instead.",
+            "usage": {
+              "type": "perDay",
+              "amount": 4,
+              "amountInLair": 5
+            }
+          }
+        ],
+        "actions": [
+          {
+            "name": "Multiattack",
+            "type": "multiattack",
+            "description": "The dragon makes three Rend attacks. It can replace one attack with a use of Spellcasting to cast Scorching Ray (level 3 version)."
+          },
+          {
+            "name": "Rend",
+            "type": "melee",
+            "description": "Melee Attack Roll: +17, reach 15 ft. Hit: 19 (2d8 + 10) Slashing damage plus 10 (3d6) Fire damage.",
+            "attackBonus": 17,
+            "reach": "15 ft.",
+            "damage": "19 (2d8 + 10)",
+            "damageType": "slashing",
+            "additionalDamage": "10 (3d6)",
+            "additionalDamageType": "fire"
+          },
+          {
+            "name": "Fire Breath",
+            "type": "special",
+            "description": "(Recharge 5–6). Dexterity Saving Throw: DC 24, each creature in a 90-foot Cone. Failure: 91 (26d6) Fire damage. Success: Half damage.",
+            "saveDC": 24,
+            "saveType": "Dexterity",
+            "area": "90-foot cone",
+            "damage": "91 (26d6)",
+            "damageType": "fire",
+            "recharge": "5-6"
+          }
+        ],
+        "reactions": [],
+        "legendaryActions": {
+          "description": "Legendary Action Uses: 3 (4 in Lair). Immediately after another creature's turn, the dragon can expend a use to take one of the following actions. The dragon regains all expended uses at the start of each of its turns.",
+          "uses": 3,
+          "usesInLair": 4,
+          "options": [
+            {
+              "name": "Commanding Presence",
+              "description": "The dragon uses Spellcasting to cast Command (level 2 version). The dragon can't take this action again until the start of its next turn.",
+              "cost": 1
+            },
+            {
+              "name": "Fiery Rays",
+              "description": "The dragon uses Spellcasting to cast Scorching Ray (level 3 version). The dragon can't take this action again until the start of its next turn.",
+              "cost": 1
+            },
+            {
+              "name": "Pounce",
+              "description": "The dragon moves up to half its Speed, and it makes one Rend attack.",
+              "cost": 1
+            }
+          ]
+        },
+        "lairActions": null,
+        "regionalEffects": null,
+        "spellcasting": {
+          "description": "The dragon casts one of the following spells, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 23, +15 to hit with spell attacks):",
+          "ability": "Charisma",
+          "saveDC": 23,
+          "attackBonus": 15,
+          "spells": {
+            "atWill": [
+              { "name": "Command", "level": 2 },
+              { "name": "Detect Magic", "level": null },
+              { "name": "Scorching Ray", "level": 3 }
+            ],
+            "perDay": {
+              "1": [
+                { "name": "Fireball", "level": 6 },
+                { "name": "Scrying", "level": null }
+              ]
+            }
+          }
+        }
+      }
+    },
+
+    {
+    "id": "aboleth",
+    "name": "Aboleth",
+    "type": "enemy",
+    "ac": 17,
+    "maxHP": 150,
+    "cr": "10",
+    "size": "Large",
+    "race": "Aberration",
+    "subrace": null,
+    "alignment": "Lawful Evil",
+    "description": "Ancient aquatic aberrations with powerful psychic abilities",
+    "source": "Monster Manual",
+    "hasFullStatBlock": true,
+    "statBlock": {
+      "fullType": "Large Aberration, Lawful Evil",
+      "armorClass": {
+        "value": 17,
+        "type": null
+      },
+      "hitPoints": {
+        "average": 150,
+        "formula": "20d10 + 40"
+      },
+      "initiative": {
+        "modifier": 7,
+        "total": 17
+      },
+      "speed": {
+        "walk": 10,
+        "burrow": null,
+        "climb": null,
+        "fly": null,
+        "swim": 40
+      },
+      "abilities": {
+        "str": { "score": 21, "modifier": 5 },
+        "dex": { "score": 9, "modifier": -1 },
+        "con": { "score": 15, "modifier": 2 },
+        "int": { "score": 18, "modifier": 4 },
+        "wis": { "score": 15, "modifier": 2 },
+        "cha": { "score": 18, "modifier": 4 }
+      },
+      "savingThrows": {
+        "str": 5,
+        "dex": 3,
+        "con": 6,
+        "int": 8,
+        "wis": 6,
+        "cha": 4
+      },
+      "skills": {
+        "history": 12,
+        "perception": 10
+      },
+      "damageResistances": [],
+      "damageImmunities": [],
+      "damageVulnerabilities": [],
+      "conditionImmunities": [],
+      "senses": {
+        "blindsight": null,
+        "darkvision": 120,
+        "tremorsense": null,
+        "truesight": null,
+        "passivePerception": 20
+      },
+      "languages": ["Deep Speech", "Telepathy 120 ft."],
+      "challengeRating": {
+        "cr": "10",
+        "xp": 5900,
+        "xpInLair": 7200,
+        "proficiencyBonus": 4
+      },
+      "traits": [
+        {
+          "name": "Amphibious",
+          "description": "The aboleth can breathe air and water.",
+          "usage": null
+        },
+        {
+          "name": "Eldritch Restoration",
+          "description": "If destroyed, the aboleth gains a new body in 5d10 days, reviving with all its Hit Points in the Far Realm or another location chosen by the DM.",
+          "usage": null
+        },
+        {
+          "name": "Legendary Resistance",
+          "description": "(3/Day, or 4/Day in Lair). If the aboleth fails a saving throw, it can choose to succeed instead.",
+          "usage": {
+            "type": "perDay",
+            "amount": 3,
+            "amountInLair": 4
+          }
+        },
+        {
+          "name": "Mucus Cloud",
+          "description": "While underwater, the aboleth is surrounded by mucus. Constitution Saving Throw: DC 14, each creature in a 5-foot Emanation originating from the aboleth at the end of the aboleth's turn. Failure: The target is cursed. Until the curse ends, the target's skin becomes slimy, the target can breathe air and water, and it can't regain Hit Points unless it is underwater. While the cursed creature is outside a body of water, the creature takes 6 (1d12) Acid damage at the end of every 10 minutes unless moisture is applied to its skin before those minutes have passed.",
+          "usage": null
+        },
+        {
+          "name": "Probing Telepathy",
+          "description": "If a creature the aboleth can see communicates telepathically with the aboleth, the aboleth learns the creature's greatest desires.",
+          "usage": null
+        }
+      ],
+      "actions": [
+        {
+          "name": "Multiattack",
+          "type": "multiattack",
+          "description": "The aboleth makes two Tentacle attacks and uses either Consume Memories or Dominate Mind if available."
+        },
+        {
+          "name": "Tentacle",
+          "type": "melee",
+          "description": "Melee Attack Roll: +9, reach 15 ft. Hit: 12 (2d6 + 5) Bludgeoning damage. If the target is a Large or smaller creature, it has the Grappled condition (escape DC 14) from one of four tentacles.",
+          "attackBonus": 9,
+          "reach": "15 ft.",
+          "damage": "12 (2d6 + 5)",
+          "damageType": "bludgeoning"
+        },
+        {
+          "name": "Consume Memories",
+          "type": "special",
+          "description": "Intelligence Saving Throw: DC 16, one creature within 30 feet that is Charmed or Grappled by the aboleth. Failure: 10 (3d6) Psychic damage. Success: Half damage. Failure or Success: The aboleth gains the target's memories if the target is a Humanoid and is reduced to 0 Hit Points by this action.",
+          "saveDC": 16,
+          "saveType": "Intelligence",
+          "range": "30 ft.",
+          "damage": "10 (3d6)",
+          "damageType": "psychic"
+        },
+        {
+          "name": "Dominate Mind",
+          "type": "special",
+          "description": "(2/Day). Wisdom Saving Throw: DC 16, one creature the aboleth can see within 30 feet. Failure: The target has the Charmed condition until the aboleth dies or is on a different plane of existence from the target. While Charmed, the target acts as an ally to the aboleth and is under its control while within 60 feet of it. In addition, the aboleth and the target can communicate telepathically with each other over any distance. The target repeats the save whenever it takes damage as well as after every 24 hours it spends at least 1 mile away from the aboleth, ending the effect on itself on a success.",
+          "saveDC": 16,
+          "saveType": "Wisdom",
+          "range": "30 ft.",
+          "usage": {
+            "type": "perDay",
+            "amount": 2
+          }
+        }
+      ],
+      "reactions": [],
+      "legendaryActions": {
+        "description": "Legendary Action Uses: 3 (4 in Lair). Immediately after another creature's turn, the aboleth can expend a use to take one of the following actions. The aboleth regains all expended uses at the start of each of its turns.",
+        "uses": 3,
+        "usesInLair": 4,
+        "options": [
+          {
+            "name": "Lash",
+            "description": "The aboleth makes one Tentacle attack.",
+            "cost": 1
+          },
+          {
+            "name": "Psychic Drain",
+            "description": "If the aboleth has at least one creature Charmed or Grappled, it uses Consume Memories and regains 5 (1d10) Hit Points.",
+            "cost": 1
+          }
+        ]
+      },
+      "lairActions": null,
+      "regionalEffects": null,
+      "spellcasting": null
+    }
+  }
+
+    
+  ],
+  "metadata": {
+    "version": "2.0.0",
+    "lastUpdated": "2024-05-27",
+    "totalCreatures": 6,
+    "schema": {
+      "version": "2.0",
+      "description": "D&D 5e creature database with lazy-loadable stat blocks"
+    }
+  }
+}

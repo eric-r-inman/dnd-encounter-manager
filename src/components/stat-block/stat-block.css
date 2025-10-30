@@ -1,0 +1,358 @@
+/**
+ * =============================================================================
+ * STAT BLOCK COMPONENT STYLES
+ * =============================================================================
+ * 
+ * Complete D&D creature stat block display formatting
+ * Matches traditional D&D 5e stat block layout and styling
+ * Used in compendium section for creature reference
+ * 
+ * @component StatBlock
+ * @version 1.0.0
+ */
+
+.stat-block {
+    background-color: var(--color-bg-card);
+    border: var(--border-width) solid var(--color-border-primary);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md);
+    margin-top: var(--spacing-md);
+    font-size: var(--font-size-sm);
+    line-height: var(--line-height-normal);
+}
+
+.stat-block-header {
+    text-align: center;
+    border-bottom: 2px solid var(--color-border-primary);
+    padding-bottom: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.stat-block-creature-name {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-warning);
+    margin: 0;
+}
+
+/* Add styling for the window button */
+.stat-block-window-btn {
+    background: none;
+    border: none;
+    padding: 4px;
+    font-size: var(--font-size-lg);
+    cursor: pointer;
+    color: var(--color-warning);
+    transition: all var(--transition-fast);
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stat-block-window-btn:hover {
+    transform: scale(1.2);
+    text-shadow: 0 0 8px rgba(240, 136, 62, 0.5);
+}
+
+.stat-block-window-btn:active {
+    transform: scale(1.1);
+}
+
+.stat-block-window-btn:focus {
+    outline: none;
+    outline-offset: 2px;
+    border-radius: var(--border-radius);
+}
+
+.stat-block-window-btn:focus-visible {
+    text-shadow: 0 0 12px rgba(240, 136, 62, 0.8);
+}
+
+.creature-type {
+    font-style: italic;
+    color: var(--color-text-secondary);
+    margin: 0;
+    font-size: var(--font-size-xs);
+}
+
+.stat-block-section {
+    border-bottom: 1px solid var(--color-border-muted);
+    padding: var(--spacing-sm) 0;
+    margin-bottom: var(--spacing-sm);
+}
+
+.stat-block-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.stat-block-row {
+    display: flex;
+    margin-bottom: var(--spacing-xs);
+    align-items: baseline;
+}
+
+.stat-block-row:last-child {
+    margin-bottom: 0;
+}
+
+.stat-label {
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    min-width: 80px;
+    flex-shrink: 0;
+    margin-right: var(--spacing-sm);
+}
+
+.stat-value {
+    color: var(--color-text-secondary);
+    flex: 1;
+    padding-left: var(--spacing-xs);
+}
+
+/* Ability Scores Grid */
+.ability-scores {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: var(--spacing-xs);
+    padding: var(--spacing-sm) 0;
+    border-bottom: 1px solid var(--color-border-muted);
+    margin-bottom: var(--spacing-sm);
+}
+
+.ability {
+    text-align: center;
+    background-color: var(--color-bg-hover);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-xs);
+}
+
+.ability-name {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    margin-bottom: 2px;
+}
+
+.ability-score {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-secondary);
+}
+
+/* Section Titles */
+.stat-block-section-title {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-primary);
+    margin: 0 0 var(--spacing-xs) 0;
+    border-bottom: 1px solid var(--color-border-primary);
+    padding-bottom: 2px;
+}
+
+/* Traits and Actions */
+.trait,
+.action {
+    margin-bottom: var(--spacing-sm);
+    line-height: var(--line-height-relaxed);
+}
+
+.trait:last-child,
+.action:last-child {
+    margin-bottom: 0;
+}
+
+.trait-name,
+.action-name {
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+}
+
+.trait-desc,
+.action-desc {
+    color: var(--color-text-secondary);
+}
+
+.action-desc em {
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
+/* Empty state for when no creature is selected */
+.empty-state {
+    text-align: center;
+    padding: var(--spacing-2xl);
+    color: var(--color-text-muted);
+}
+
+.empty-state h3 {
+    color: var(--color-text-secondary);
+    margin-bottom: var(--spacing-md);
+    font-size: var(--font-size-lg);
+}
+
+.empty-state p {
+    margin: var(--spacing-sm) 0;
+    line-height: var(--line-height-relaxed);
+    font-size: var(--font-size-sm);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .ability-scores {
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--spacing-sm);
+    }
+    
+    .ability {
+        padding: var(--spacing-sm);
+    }
+    
+    .stat-label {
+        min-width: 60px;
+        font-size: var(--font-size-xs);
+    }
+    
+    .stat-block {
+        padding: var(--spacing-sm);
+        font-size: var(--font-size-xs);
+    }
+    
+    .stat-block-creature-name {
+        font-size: var(--font-size-base);
+    }
+}
+
+/* Print-friendly styles */
+@media print {
+    .stat-block {
+        background-color: white !important;
+        border: 1px solid black !important;
+        color: black !important;
+        box-shadow: none !important;
+    }
+    
+    .stat-block-creature-name,
+    .stat-label,
+    .trait-name,
+    .action-name {
+        color: black !important;
+    }
+    
+    .ability {
+        background-color: #f5f5f5 !important;
+        border: 1px solid #ccc !important;
+    }
+}
+
+/* Clickable creature name feedback */
+.stat-block-creature-name {
+    transition: color var(--transition-fast);
+}
+
+/* Smooth scroll indicator */
+.compendium-section {
+    scroll-behavior: smooth;
+}
+
+/* Highlight effect when stat block updates */
+@keyframes statBlockUpdate {
+    0% {
+        background-color: var(--color-bg-card);
+    }
+    50% {
+        background-color: var(--color-bg-hover);
+        border-color: var(--color-primary);
+    }
+    100% {
+        background-color: var(--color-bg-card);
+    }
+}
+
+.stat-block-updating {
+    animation: statBlockUpdate 0.6s ease-in-out;
+}
+
+/* Loading state for stat blocks */
+.stat-block-loading {
+    text-align: center;
+    padding: var(--spacing-2xl);
+    color: var(--color-text-muted);
+}
+
+.stat-block-loading::before {
+    content: "🔄 ";
+    font-size: var(--font-size-xl);
+    display: block;
+    margin-bottom: var(--spacing-sm);
+    animation: spin 1s linear infinite;
+}
+
+/* Stat block title row with add button */
+.stat-block-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+}
+
+/* Stat block add button - same styling as quick view */
+.stat-block-add-btn {
+    background: none;
+    border: none;
+    padding: 4px 6px;
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    border-radius: var(--border-radius);
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    position: relative;
+}
+
+/* Default state - subtle */
+.stat-block-add-btn::before {
+    content: "➕";
+    transition: all var(--transition-fast);
+    font-size: 14px;
+}
+
+/* Hover state - prominent with background and color change */
+.stat-block-add-btn:hover {
+    background-color: var(--color-success);
+    color: var(--color-bg-primary);
+    box-shadow: 0 0 0 2px rgba(63, 185, 80, 0.2);
+}
+
+/* Change symbol on hover for extra clarity */
+.stat-block-add-btn:hover::before {
+    content: "⊕";
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.stat-block-add-btn:active {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 2px rgba(63, 185, 80, 0.4);
+}
+
+/* Focus state for accessibility */
+.stat-block-add-btn:focus {
+    outline: 2px solid var(--color-success);
+    outline-offset: 2px;
+}
+
+/* Adjust creature name to work with flexbox */
+.stat-block-creature-name {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-warning);
+    margin: 0;
+}

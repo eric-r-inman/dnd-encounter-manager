@@ -1,0 +1,1557 @@
+/**
+ * =============================================================================
+ * MODAL SYSTEM COMPONENT STYLES
+ * =============================================================================
+ * 
+ * Complete modal system including overlays, forms, and all modal types:
+ * - Add Combatant Modal
+ * - Condition Selection Modal  
+ * - Effect Application Modal
+ * - Form controls and validation
+ * 
+ * @component ModalSystem
+ * @version 1.0.0
+ */
+
+/* Modal overlay backdrop */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: var(--z-index-modal-backdrop);
+    animation: fadeIn var(--animation-duration-medium);
+    padding: var(--spacing-lg);
+}
+
+/* Modal container */
+.modal {
+    background-color: var(--color-bg-secondary);
+    border: var(--border-width) solid var(--color-border-primary);
+    border-radius: var(--border-radius-xl);
+    max-width: 500px;
+    width: 100%;
+    max-height: 90vh;
+    overflow: hidden;
+    box-shadow: var(--box-shadow-lg);
+    animation: slideIn var(--animation-duration-medium);
+}
+
+/* Modal header */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-lg);
+    background-color: var(--color-bg-tertiary);
+    border-bottom: var(--border-width) solid var(--color-border-primary);
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+}
+
+/* Modal close button */
+.modal-close {
+    width: var(--action-toggle-size);
+    height: var(--action-toggle-size);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-xl);
+    color: var(--color-text-secondary);
+    border-radius: var(--border-radius);
+    transition: all var(--transition-fast);
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+}
+
+.modal-close:hover {
+    background-color: var(--color-bg-hover);
+    color: var(--color-text-primary);
+}
+
+.modal-close:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+/* Modal body */
+.modal-body {
+    padding: var(--spacing-lg);
+    overflow-y: auto;
+    max-height: calc(80vh - 100px);
+}
+
+/* Modal actions (footer) */
+.modal-footer-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    justify-content: flex-end;
+    margin-top: var(--spacing-xl);
+    padding-top: var(--spacing-lg);
+    border-top: var(--border-width) solid var(--color-border-muted);
+}
+
+/* Form group container */
+.form-group {
+    margin-bottom: var(--spacing-lg);
+}
+
+/* Form labels */
+.form-group label {
+    display: block;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    margin-bottom: var(--spacing-xs);
+    color: var(--color-text-primary);
+}
+
+/* Enhanced form inputs */
+.form-group input,
+.form-group select,
+.form-group textarea {
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    border: var(--border-width) solid var(--color-border-primary);
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-sm);
+    transition: all var(--transition-fast);
+    padding: var(--spacing-sm) var(--spacing-md);
+    width: 100%;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 var(--focus-ring-size) var(--focus-ring-color);
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+    color: var(--color-text-muted);
+    opacity: 1;
+}
+
+/* Select specific styles */
+.form-group select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right var(--spacing-sm) center;
+    background-size: 16px;
+    padding-right: calc(var(--spacing-md) + 20px);
+}
+
+/* Condition selection grid */
+.condition-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+    overflow: visible;
+}
+
+/* Condition option buttons */
+.condition-option {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-sm);
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border-muted);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    user-select: none;
+}
+
+.condition-option:hover {
+    background-color: var(--color-bg-hover);
+    border-color: var(--color-border-primary);
+}
+
+.condition-option:has(input:checked) {
+    background-color: var(--color-bg-tertiary);
+    border-color: var(--color-primary);
+}
+
+.condition-option input[type="radio"] {
+    margin: 0;
+    width: auto;
+    accent-color: var(--color-primary);
+}
+
+.condition-option input[type="radio"]:checked + span {
+    color: var(--color-primary);
+    font-weight: var(--font-weight-semibold);
+}
+
+/* Custom effect input field */
+.custom-effect-input {
+    margin-bottom: var(--spacing-md);
+    width: 100%;
+}
+
+.custom-effect-field {
+    width: 100%;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    border: var(--border-width) solid var(--color-border-primary);
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-sm);
+    transition: all var(--transition-fast);
+}
+
+.custom-effect-field::placeholder {
+    color: var(--color-text-muted);
+    opacity: 0.7;
+}
+
+.custom-effect-field:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 var(--focus-ring-size) var(--focus-ring-color);
+}
+
+/* Effect dropdown container */
+.effect-dropdown-container {
+    margin-bottom: var(--spacing-md);
+    width: 100%;
+}
+
+/* Enhanced effect dropdown */
+.effect-dropdown {
+    width: 100%;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    border: var(--border-width) solid var(--color-border-primary);
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right var(--spacing-sm) center;
+    background-size: 16px;
+    padding-right: calc(var(--spacing-md) + 20px);
+    transition: all var(--transition-fast);
+}
+
+.effect-dropdown:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 var(--focus-ring-size) var(--focus-ring-color);
+}
+
+.effect-dropdown option {
+    background-color: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    padding: var(--spacing-sm);
+}
+
+/* Duration input group */
+.duration-input-group {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+/* Infinity toggle button */
+.infinity-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background-color: white;
+    color: black;
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    padding: 0;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.infinity-btn:hover {
+    background-color: #f0f0f0;
+    transform: scale(1.05);
+}
+
+.infinity-btn:active {
+    transform: scale(0.95);
+}
+
+.infinity-btn:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+/* Infinity active state */
+.duration-set-permanent {
+    background-color: var(--color-success) !important;
+    color: white !important;
+    border-color: var(--color-success) !important;
+}
+
+/* Forever text display */
+.forever-text {
+    padding: 6px var(--spacing-sm);
+    background-color: rgba(255, 235, 59, 0.2);
+    color: var(--color-npc);
+    border-radius: var(--border-radius);
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--font-size-sm);
+    flex-grow: 1;
+    text-align: center;
+    border: 1px solid rgba(255, 235, 59, 0.3);
+}
+
+/* Hidden by default */
+.modal-overlay {
+    display: none;
+}
+
+.modal-overlay.show {
+    display: flex;
+}
+
+/* Modal closing animation */
+.modal-closing {
+    animation: fadeOut var(--animation-duration-short);
+}
+
+.modal-closing .modal {
+    animation: slideOut var(--animation-duration-short);
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    .modal-overlay {
+        padding: var(--spacing-md);
+    }
+    
+    .modal {
+        max-width: 100%;
+        border-radius: var(--border-radius-lg);
+    }
+    
+    .modal-header,
+    .modal-body {
+        padding: var(--spacing-md);
+    }
+    
+    .condition-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .modal-footer-actions {
+        flex-direction: column;
+    }
+    
+    .modal-footer-actions .btn {
+        width: 100%;
+    }
+}
+
+/* Print styles - hide modals */
+@media print {
+    .modal-overlay {
+        display: none !important;
+    }
+}
+
+/* Add these styles to modal-system.css */
+
+/* Creature selection dropdown styling */
+#creature-select {
+    width: 100%;
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--font-size-sm);
+}
+
+/* Condition quick select checkboxes */
+.condition-quick-select {
+    display: flex;
+    gap: var(--spacing-lg);
+    margin-top: var(--spacing-sm);
+}
+
+.condition-checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    cursor: pointer;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius);
+    transition: background-color var(--transition-fast);
+}
+
+.condition-checkbox:hover {
+    background-color: var(--color-bg-hover);
+}
+
+.condition-checkbox input[type="checkbox"] {
+    margin: 0;
+    cursor: pointer;
+}
+
+.condition-checkbox span {
+    user-select: none;
+    font-size: var(--font-size-sm);
+}
+
+/* Form helper text */
+.form-group small {
+    display: block;
+    margin-top: var(--spacing-xs);
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-normal);
+}
+
+/* HP History Styles */
+.hp-history-section {
+    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid var(--color-border-muted);
+}
+
+.hp-history-title {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    margin-bottom: var(--spacing-sm);
+}
+
+.hp-history-list {
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.hp-history-entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background-color: var(--color-bg-tertiary);
+    border-radius: var(--border-radius);
+    margin-bottom: var(--spacing-xs);
+    font-size: var(--font-size-sm);
+}
+
+.hp-history-entry:last-child {
+    margin-bottom: 0;
+}
+
+.hp-history-amount {
+    font-weight: var(--font-weight-semibold);
+}
+
+.hp-history-amount.damage {
+    color: var(--color-danger);
+}
+
+.hp-history-amount.heal {
+    color: var(--color-success);
+}
+
+.hp-history-amount.temp-hp {
+    color: var(--color-info);
+}
+
+.hp-history-round {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-xs);
+}
+
+.hp-history-empty {
+    text-align: center;
+    color: var(--color-text-muted);
+    font-style: italic;
+    padding: var(--spacing-md);
+}
+
+/* Batch selection tooltip */
+.batch-tooltip {
+    position: fixed;
+    background-color: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-sm);
+    box-shadow: var(--box-shadow);
+    z-index: calc(var(--z-index-modal) + 10);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+    max-width: 250px;
+    font-size: var(--font-size-sm);
+}
+
+.batch-tooltip.show {
+    opacity: 1;
+}
+
+.batch-tooltip-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.batch-tooltip-item {
+    padding: 2px 0;
+    color: var(--color-text-primary);
+}
+
+.batch-tooltip-item.player {
+    color: var(--color-player);
+}
+
+.batch-tooltip-item.enemy {
+    color: var(--color-warning);
+}
+
+.batch-tooltip-item.npc {
+    color: var(--color-npc);
+}
+
+/* Condition tooltip styles */
+.condition-tooltip {
+    position: fixed;
+    background-color: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md);
+    box-shadow: var(--box-shadow-lg);
+    z-index: calc(var(--z-index-modal) + 20);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+    max-width: 350px;
+    font-size: var(--font-size-sm);
+}
+
+.condition-tooltip.show {
+    opacity: 1;
+}
+
+.condition-tooltip-header {
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-purple);
+    margin-bottom: var(--spacing-sm);
+    padding-bottom: var(--spacing-xs);
+    border-bottom: 1px solid var(--color-border-muted);
+}
+
+.condition-tooltip-effects {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.condition-effect-item {
+    display: block;
+}
+
+.condition-effect-title {
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    margin-bottom: 2px;
+}
+
+.condition-effect-desc {
+    color: var(--color-text-secondary);
+    line-height: var(--line-height-relaxed);
+    display: block;
+}
+
+/* =============================================================================
+   CREATURE DATABASE MODAL STYLES
+   ============================================================================= */
+
+/* Large modal variant for database */
+.modal-large {
+    max-width: 900px;
+    width: 90%;
+    max-height: 85vh;
+}
+
+/* Database modal body adjustments */
+.modal-database-body {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    height: calc(85vh - 80px); /* Account for header */
+}
+
+/* Database controls bar */
+.database-controls {
+    padding: var(--spacing-lg);
+    background-color: var(--color-bg-tertiary);
+    border-bottom: var(--border-width) solid var(--color-border-primary);
+}
+
+.database-search-bar {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
+}
+
+.database-search-input {
+    flex: 1;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    border: var(--border-width) solid var(--color-border-primary);
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-sm);
+}
+
+.database-filter-select {
+    width: 150px;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    border: var(--border-width) solid var(--color-border-primary);
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-sm);
+}
+
+/* Two-column layout */
+.database-content {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Creature list column */
+.creature-list-column {
+    background-color: var(--color-bg-tertiary);
+    border-right: var(--border-width) solid var(--color-border-primary);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.creature-list-header {
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--color-bg-secondary);
+    border-bottom: var(--border-width) solid var(--color-border-muted);
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+}
+
+/* Virtual scrolling container */
+.creature-list-container {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.creature-list-viewport {
+    padding: var(--spacing-xs);
+}
+
+/* Creature list items */
+.creature-list-item {
+    background-color: var(--color-bg-secondary);
+    border: var(--border-width) solid var(--color-border-muted);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-sm);
+    margin-bottom: var(--spacing-xs);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.creature-list-item:hover {
+    background-color: var(--color-bg-hover);
+    border-color: var(--color-border-primary);
+}
+
+.creature-list-item.selected {
+    background-color: var(--color-bg-hover);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+.creature-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-xs);
+}
+
+.creature-name {
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--font-size-sm);
+}
+
+/* Type badges */
+.creature-type-badge {
+    font-size: var(--font-size-xs);
+    padding: 2px 6px;
+    border-radius: var(--border-radius);
+    font-weight: var(--font-weight-medium);
+}
+
+.badge-player {
+    background-color: var(--color-player-bg);
+    color: var(--color-player);
+    border: 1px solid var(--color-player);
+}
+
+.badge-enemy {
+    background-color: var(--color-enemy-bg);
+    color: var(--color-enemy);
+    border: 1px solid var(--color-enemy);
+}
+
+.badge-npc {
+    background-color: var(--color-npc-bg);
+    color: var(--color-npc);
+    border: 1px solid var(--color-npc);
+}
+
+.creature-item-stats {
+    display: flex;
+    gap: var(--spacing-md);
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+}
+
+.creature-stat {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+/* Creature details column */
+.creature-details-column {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.creature-details-header {
+    padding: var(--spacing-md) var(--spacing-lg);
+    background-color: var(--color-bg-tertiary);
+    border-bottom: var(--border-width) solid var(--color-border-primary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.creature-details-header h3 {
+    margin: 0;
+    color: var(--color-text-primary);
+}
+
+.creature-actions {
+    display: flex;
+    gap: var(--spacing-xs);
+}
+
+.creature-details-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--spacing-lg);
+}
+
+/* Form section styling */
+.form-section-title {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-primary);
+    margin: var(--spacing-lg) 0 var(--spacing-md) 0;
+    padding-bottom: var(--spacing-xs);
+    border-bottom: 1px solid var(--color-border-muted);
+}
+
+.form-section-title:first-child {
+    margin-top: 0;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--spacing-md);
+}
+
+/* Responsive adjustments for creature database modal */
+@media (max-width: 768px) {
+    .modal-large {
+        max-width: 100%;
+        width: 100%;
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+    
+    .modal-database-body {
+        height: calc(100vh - 60px);
+    }
+    
+    .database-content {
+        grid-template-columns: 1fr;
+    }
+    
+    .creature-list-column {
+        display: none;
+    }
+    
+    /* Show list column when details are hidden on mobile */
+    .database-content.show-list .creature-list-column {
+        display: flex;
+    }
+    
+    .database-content.show-list .creature-details-column {
+        display: none;
+    }
+    
+    .creature-details-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    
+    /* Add back button on mobile */
+    .creature-details-header::before {
+        content: "← ";
+        color: var(--color-primary);
+        cursor: pointer;
+    }
+}
+
+/* Loading and empty states */
+.creature-list-loading,
+.creature-list-empty {
+    text-align: center;
+    padding: var(--spacing-2xl);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+}
+
+/* Scrollbar styling for creature list */
+.creature-list-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.creature-list-container::-webkit-scrollbar-track {
+    background: var(--color-bg-secondary);
+}
+
+.creature-list-container::-webkit-scrollbar-thumb {
+    background: var(--color-border-primary);
+    border-radius: 3px;
+}
+
+/* Virtual scrolling performance optimization */
+.creature-list-viewport {
+    will-change: transform;
+    transform: translateZ(0);
+}
+
+/* =============================================================================
+   QUICK VIEW CHECKBOX STYLES
+   ============================================================================= */
+
+/* Creature item controls container */
+.creature-item-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+/* Quick View checkbox container */
+.quick-view-checkbox {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    position: relative;
+    padding: 4px;
+    user-select: none;
+}
+
+/* Hide default checkbox */
+.quick-view-check {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+/* Custom checkbox */
+.quick-view-checkmark {
+    height: 18px;
+    width: 18px;
+    background-color: var(--color-bg-primary);
+    border: 2px solid var(--color-border-primary);
+    border-radius: var(--border-radius);
+    display: inline-block;
+    position: relative;
+    transition: all var(--transition-fast);
+}
+
+/* Hover state */
+.quick-view-checkbox:hover .quick-view-checkmark {
+    background-color: var(--color-bg-hover);
+    border-color: var(--color-primary);
+}
+
+/* Checked state */
+.quick-view-check:checked ~ .quick-view-checkmark {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+/* Checkmark icon */
+.quick-view-checkmark::after {
+    content: "";
+    position: absolute;
+    display: none;
+    left: 5px;
+    top: 2px;
+    width: 4px;
+    height: 8px;
+    border: solid var(--color-bg-primary);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+/* Show checkmark when checked */
+.quick-view-check:checked ~ .quick-view-checkmark::after {
+    display: block;
+}
+
+/* Focus state for accessibility */
+.quick-view-check:focus ~ .quick-view-checkmark {
+    box-shadow: 0 0 0 var(--focus-ring-size) var(--focus-ring-color);
+}
+
+/* =============================================================================
+   QUICK VIEW DROPDOWN STYLES
+   ============================================================================= */
+
+/* Quick View dropdown container */
+.quick-view-dropdown {
+    position: absolute;
+    background-color: var(--color-bg-secondary);
+    border: var(--border-width) solid var(--color-border-primary);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow-lg);
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: var(--z-index-dropdown);
+    min-width: 200px;
+    animation: slideIn var(--animation-duration-short);
+}
+
+/* Empty state */
+.quick-view-empty {
+    padding: var(--spacing-lg) var(--spacing-md);
+    text-align: center;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+    font-style: italic;
+}
+
+/* Quick View item */
+.quick-view-item {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-bottom: var(--border-width) solid var(--color-border-muted);
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.quick-view-item:last-child {
+    border-bottom: none;
+}
+
+.quick-view-item:hover {
+    background-color: var(--color-bg-hover);
+}
+
+/* Quick View item name */
+.quick-view-item-name {
+    font-weight: var(--font-weight-medium);
+    font-size: var(--font-size-sm);
+    flex: 1;
+}
+
+/* Quick View item stats */
+.quick-view-item-stats {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    white-space: nowrap;
+}
+
+/* Dropdown animation */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Scrollbar styling for dropdown */
+.quick-view-dropdown::-webkit-scrollbar {
+    width: 6px;
+}
+
+.quick-view-dropdown::-webkit-scrollbar-track {
+    background: var(--color-bg-secondary);
+}
+
+.quick-view-dropdown::-webkit-scrollbar-thumb {
+    background: var(--color-border-primary);
+    border-radius: 3px;
+}
+
+.quick-view-dropdown::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-disabled);
+}
+
+/* Quick View add button */
+.quick-view-add-btn {
+    background: none;
+    border: none;
+    padding: 4px 6px;
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    border-radius: var(--border-radius);
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    position: relative;
+}
+
+/* Default state - subtle */
+.quick-view-add-btn::before {
+    content: "➕";
+    transition: all var(--transition-fast);
+    font-size: 14px;
+}
+
+/* Hover state - prominent with background and color change */
+.quick-view-add-btn:hover {
+    background-color: var(--color-success);
+    color: var(--color-bg-primary);
+    box-shadow: 0 0 0 2px rgba(63, 185, 80, 0.2);
+}
+
+/* Change symbol on hover for extra clarity */
+.quick-view-add-btn:hover::before {
+    content: "⊕";  /* Alternative: circled plus for emphasis */
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.quick-view-add-btn:active {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 2px rgba(63, 185, 80, 0.4);
+}
+
+/* Focus state for accessibility */
+.quick-view-add-btn:focus {
+    outline: 2px solid var(--color-success);
+    outline-offset: 2px;
+}
+
+/* Prevent the item hover effect from affecting the button */
+.quick-view-item:hover .quick-view-add-btn:not(:hover) {
+    background-color: transparent;
+    color: var(--color-text-secondary);
+}
+
+/* =============================================================================
+   EXPANDED CREATURE FORM STYLES
+   ============================================================================= */
+
+/* Scrollable form body for creature form */
+.modal-large .modal-body {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-primary) var(--color-bg-secondary);
+}
+
+/* Form section titles in creature form */
+.form-section-title {
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-primary);
+    margin: var(--spacing-xl) 0 var(--spacing-md) 0;
+    padding-bottom: var(--spacing-xs);
+    border-bottom: 2px solid var(--color-border-primary);
+}
+
+.form-section-title:first-child {
+    margin-top: 0;
+}
+
+/* Form row grid layout */
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+/* Ability score special layout */
+.form-row .form-group:has(input[name*="Score"]),
+.form-row .form-group:has(input[name*="Modifier"]) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.form-row .form-group:has(input[name*="Score"]) input,
+.form-row .form-group:has(input[name*="Modifier"]) input {
+    width: 100%;
+}
+
+/* Speed inputs row */
+.form-row:has(input[name*="speed"]) {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+/* Dynamic row containers */
+.skill-row,
+.trait-row,
+.action-row,
+.legendary-action-row,
+.spell-row {
+    background-color: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-muted);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    position: relative;
+    animation: slideIn var(--animation-duration-short);
+}
+
+/* Skill row specific layout */
+.skill-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr auto;
+    gap: var(--spacing-sm);
+    align-items: center;
+}
+
+.skill-row .form-group {
+    margin-bottom: 0;
+}
+
+/* Trait row layout */
+.trait-row .form-group {
+    margin-bottom: var(--spacing-sm);
+}
+
+.trait-row .form-group:last-child {
+    margin-bottom: 0;
+}
+
+/* Action row layout */
+.action-row .form-group {
+    margin-bottom: var(--spacing-sm);
+}
+
+.action-row .form-row {
+    margin-bottom: var(--spacing-sm);
+}
+
+.action-row .form-row:last-child {
+    margin-bottom: 0;
+}
+
+/* Legendary action row layout */
+.legendary-action-row {
+    display: grid;
+    gap: var(--spacing-sm);
+}
+
+.legendary-action-row .form-group {
+    margin-bottom: 0;
+}
+
+/* Spell row layout */
+.spell-row .form-row {
+    margin-bottom: 0;
+}
+
+/* Remove button styling */
+.skill-row .btn-danger,
+.trait-row .btn-danger,
+.action-row .btn-danger,
+.legendary-action-row .btn-danger,
+.spell-row .btn-danger {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: var(--font-size-xs);
+    min-width: auto;
+}
+
+/* Add button styling */
+#skills-container > button,
+#traits-container > button,
+#actions-container > button,
+#legendary-actions-container > button,
+#spells-container > button {
+    margin-top: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+/* Textarea in dynamic rows */
+.trait-row textarea,
+.action-row textarea,
+.legendary-action-row textarea {
+    min-height: 60px;
+    resize: vertical;
+}
+
+/* Select elements in dynamic rows */
+.action-row select,
+.spell-row select {
+    width: 100%;
+}
+
+/* Nested inputs for ability scores */
+.form-group input[name*="Score"] {
+    margin-bottom: var(--spacing-xs);
+}
+
+/* Placeholder text styling */
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+    color: var(--color-text-muted);
+    opacity: 0.7;
+    font-size: var(--font-size-xs);
+}
+
+/* Required field indicator */
+.form-group label:has(+ input[required])::after,
+.form-group label:has(+ select[required])::after {
+    content: " *";
+    color: var(--color-danger);
+}
+
+/* Damage type inputs (comma-separated lists) */
+input[name*="Vulnerabilities"],
+input[name*="Resistances"],
+input[name*="Immunities"],
+input[name="languages"] {
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-sm);
+}
+
+/* Challenge rating details section */
+.form-row:has(input[name="xp"]) {
+    grid-template-columns: 1fr 1fr;
+}
+
+/* Legendary actions section */
+.form-row:has(input[name="legendaryUses"]) {
+    grid-template-columns: 1fr 1fr;
+    margin-bottom: var(--spacing-sm);
+}
+
+/* Spellcasting section */
+.form-row:has(select[name="spellcastingAbility"]) {
+    margin-top: var(--spacing-sm);
+}
+
+/* Legendary action and spellcasting header sections */
+.legendary-header-section,
+.spellcasting-header-section {
+    background-color: rgba(88, 166, 255, 0.05);
+    padding: var(--spacing-md);
+    margin: calc(-1 * var(--spacing-md));
+    margin-bottom: var(--spacing-md);
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+}
+
+/* Section divider */
+.section-divider {
+    border: none;
+    border-top: 1px solid var(--color-border-muted);
+    margin: var(--spacing-lg) 0 var(--spacing-md) 0;
+}
+
+/* First row styling */
+.legendary-action-row:first-of-type,
+.spell-row:first-of-type {
+    background-color: var(--color-bg-secondary);
+    border-color: var(--color-border-primary);
+}
+
+/* Label styling within dynamic rows */
+.legendary-action-row label,
+.spell-row label {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--spacing-xs);
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    .modal-large {
+        max-width: 100%;
+        width: 100%;
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+    
+    .modal-large .modal-body {
+        max-height: calc(100vh - 60px);
+        padding: var(--spacing-sm);
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .skill-row {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-sm);
+    }
+    
+    .skill-row .form-group {
+        margin-bottom: var(--spacing-sm);
+    }
+    
+    .skill-row .form-group:last-child {
+        margin-bottom: 0;
+    }
+    
+    /* Stack ability scores vertically on mobile */
+    .form-row:has(input[name*="Score"]) {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Animation for row removal */
+@keyframes slideOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+}
+
+.skill-row.removing,
+.trait-row.removing,
+.action-row.removing,
+.legendary-action-row.removing,
+.spell-row.removing {
+    animation: slideOut var(--animation-duration-short) forwards;
+}
+
+/* Hover effects for dynamic rows */
+.skill-row:hover,
+.trait-row:hover,
+.action-row:hover,
+.legendary-action-row:hover,
+.spell-row:hover {
+    background-color: var(--color-bg-hover);
+    border-color: var(--color-border-primary);
+}
+
+/* Focus-within styling for better UX */
+.skill-row:focus-within,
+.trait-row:focus-within,
+.action-row:focus-within,
+.legendary-action-row:focus-within,
+.spell-row:focus-within {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+/* Compact number inputs */
+input[type="number"][name*="Save"],
+input[type="number"][name*="Modifier"],
+input[type="number"][name*="Score"],
+input[type="number"][name*="speed"],
+input[type="number"][name*="sight"],
+input[type="number"][name="passivePerception"],
+input[type="number"][name="proficiencyBonus"],
+input[type="number"][name="legendaryActionCost[]"] {
+    text-align: center;
+}
+
+/* Spell frequency select styling */
+select[name="spellFrequency[]"] {
+    min-width: 100px;
+}
+
+/* Action type select styling */
+select[name="actionType[]"] {
+    min-width: 120px;
+}
+
+/* Add spacing after dynamic rows */
+.skill-row,
+.trait-row,
+.action-row,
+.legendary-action-row,
+.spell-row {
+    margin-bottom: var(--spacing-sm);  /* Space between rows */
+}
+
+/* Style the Add buttons in containers */
+#skills-container > button,
+#traits-container > button,
+#actions-container > button,
+#legendary-actions-container > button,
+#spells-container > button {
+    margin-top: var(--spacing-md);
+    /* Don't override display property - let .btn handle it */
+}
+
+/* Add visual separator above the button when rows exist */
+#skills-container:has(.skill-row) > button,
+#traits-container:has(.trait-row) > button,
+#actions-container:has(.action-row) > button,
+#legendary-actions-container:has(.legendary-action-row) > button,
+#spells-container:has(.spell-row) > button {
+    margin-top: var(--spacing-lg);
+    position: relative;
+}
+
+/* Create separator using pseudo-element */
+#skills-container:has(.skill-row) > button::before,
+#traits-container:has(.trait-row) > button::before,
+#actions-container:has(.action-row) > button::before,
+#legendary-actions-container:has(.legendary-action-row) > button::before,
+#spells-container:has(.spell-row) > button::before {
+    content: '';
+    position: absolute;
+    top: calc(-1 * var(--spacing-md));
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 1px;
+    background-color: var(--color-border-muted);
+}
+
+/* Ensure the button container centers the button */
+#skills-container,
+#traits-container,
+#actions-container,
+#legendary-actions-container,
+#spells-container {
+    text-align: left;  /* Aligns the "Add..." button to the left */
+}
+
+/* Empty state for containers */
+#skills-container:has(> button:only-child)::before,
+#traits-container:has(> button:only-child)::before,
+#actions-container:has(> button:only-child)::before,
+#legendary-actions-container:has(> button:only-child)::before,
+#spells-container:has(> button:only-child)::before {
+    content: "No items added yet";
+    display: block;
+    text-align: center;
+    color: var(--color-text-muted);
+    font-style: italic;
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--spacing-sm);
+}
+
+/* =============================================================================
+   STAT BLOCK PARSER MODAL STYLES
+   ============================================================================= */
+
+/* Stat block preview scrollbar styling */
+#stat-block-preview {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-primary) var(--color-bg-tertiary);
+}
+
+#stat-block-preview::-webkit-scrollbar {
+    width: 8px;
+}
+
+#stat-block-preview::-webkit-scrollbar-track {
+    background: var(--color-bg-tertiary);
+    border-radius: var(--border-radius);
+}
+
+#stat-block-preview::-webkit-scrollbar-thumb {
+    background: var(--color-border-primary);
+    border-radius: var(--border-radius);
+}
+
+#stat-block-preview::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-disabled);
+}
+
+/* Import button styling */
+#import-parsed-creature {
+    margin-left: auto;
+}
+
+/* Ensure proper layout for the modal footer */
+.modal-footer-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--spacing-xl);
+    padding-top: var(--spacing-lg);
+    border-top: var(--border-width) solid var(--color-border-muted);
+}
+
+/* Stat block parser specific modal adjustments */
+[data-modal="stat-block-parser"] .modal-body {
+    height: calc(80vh - 120px);
+}
+
+/* Preview section responsive height */
+.stat-block-preview-section {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+#stat-block-preview {
+    flex: 1;
+    min-height: 400px;
+    max-height: calc(70vh - 200px);
+}

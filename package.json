@@ -1,0 +1,25 @@
+{
+  "name": "dnd-encounter-manager",
+  "version": "1.0.0",
+  "description": "Browser-based D&D Encounter Manager for combat tracking",
+  "main": "index.html",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "serve": "vite preview --port 3000"
+  },
+  "keywords": ["dnd", "encounter", "combat", "tracker", "dungeons-dragons"],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "@vitejs/plugin-legacy": "^5.0.0"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ]
+}

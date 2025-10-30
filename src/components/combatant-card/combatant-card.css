@@ -1,0 +1,814 @@
+/**
+ * =============================================================================
+ * COMBATANT CARD COMPONENT STYLES
+ * =============================================================================
+ * 
+ * Complete styling for combatant cards in initiative order
+ * Includes health tracking, status management, and interactive elements
+ * 
+ * @component CombatantCard
+ * @version 1.0.0
+ */
+
+/* Initiative order list container */
+.initiative-order-list {
+    display: grid;
+    gap: 3px;
+    padding-right: var(--spacing-xs);
+}
+
+/* Individual combatant card */
+.combatant-card {
+    background-color: var(--color-bg-card);
+    border: var(--border-width) solid var(--color-border-muted);
+    border-radius: var(--border-radius);
+    transition: all var(--transition-normal);
+    position: relative;
+}
+
+/* Combatant card hover effects */
+.combatant-card:hover {
+    border-color: var(--color-border-primary);
+    transform: translateY(-1px);
+    box-shadow: var(--box-shadow-sm);
+}
+
+/* Combatant card content wrapper */
+.combatant-content {
+    display: flex;
+    align-items: stretch;
+}
+
+/* Order controls sidebar */
+.combatant-order-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-right: var(--border-width) solid var(--color-border-primary);
+    padding: 2px;
+    background-color: var(--color-bg-hover);
+    border-radius: var(--border-radius) 0 0 var(--border-radius);
+    min-width: 32px;
+}
+
+/* Order number display */
+.order-number {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    font-weight: var(--font-weight-semibold);
+    font-family: var(--font-family-mono);
+    margin-bottom: 2px;
+}
+
+/* Order control buttons */
+.order-btn {
+    width: var(--order-button-size);
+    height: var(--order-button-size);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--color-bg-tertiary);
+    color: var(--color-text-secondary);
+    border: var(--border-width) solid var(--color-border-primary);
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-bold);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    margin: 1px 0;
+}
+
+.order-btn:hover:not(:disabled) {
+    background-color: var(--color-bg-hover);
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.order-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* Batch selection checkbox */
+.batch-select-checkbox {
+    margin-top: 4px;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.batch-select-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    padding: 0;
+    accent-color: var(--color-primary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.batch-select-checkbox input[type="checkbox"]:hover {
+    transform: scale(1.1);
+}
+
+.batch-select-checkbox input[type="checkbox"]:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+/* Visual feedback when combatant is selected */
+.combatant-card.batch-selected {
+    /* border-color: var(--color-primary); */
+    /* box-shadow: 0 0 0 2px var(--focus-ring-color); */
+    /* background-color: rgba(88, 166, 255, 0.05); */
+}
+
+.combatant-card.batch-selected .combatant-order-controls {
+    /* background-color: rgba(88, 166, 255, 0.1); */
+    /* border-right-color: var(--color-primary); */
+}
+
+/* Action completed state */
+.combatant-order-controls.hold-action {
+    background-color: rgba(255, 255, 191, 0.3);
+}
+
+/* Main combatant content area */
+.combatant-main {
+    flex: 1;
+    padding: 4px var(--spacing-xs);
+    position: relative;
+}
+
+/* Remove combatant button */
+.combatant-remove-button {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 24px;
+    height: 24px;
+    background-color: transparent;
+    color: var(--color-text-primary);
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-xl);
+    line-height: 1;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.8;
+    z-index: 1;
+}
+
+.combatant-remove-button:hover {
+    background-color: var(--color-danger);
+    color: white;
+    opacity: 1;
+}
+
+/* Combatant header layout */
+.combatant-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+/* Initiative circle */
+.initiative-circle {
+    width: var(--initiative-circle-size);
+    height: var(--initiative-circle-size);
+    border-radius: var(--border-radius-full);
+    background-color: var(--color-bg-hover);
+    border: var(--border-width-thick) solid var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-primary);
+    flex-shrink: 0;
+    transition: all var(--transition-fast);
+}
+
+.editable-initiative {
+    cursor: pointer;
+    position: relative;
+}
+
+.editable-initiative:hover {
+    background-color: var(--color-bg-tertiary);
+}
+
+/* Current turn state for initiative circle */
+.active-in-initiative .initiative-circle {
+    background-color: var(--color-primary);
+    color: var(--color-bg-primary);
+}
+
+/* Surprise status indicator */
+.surprise-status-indicator {
+    font-size: var(--font-size-lg);
+    cursor: pointer;
+    margin: 0 var(--spacing-xs);
+    transition: transform var(--transition-fast);
+    user-select: none;
+}
+
+.surprise-status-indicator:hover {
+    transform: scale(1.1);
+}
+
+.surprise-status-indicator:active {
+    transform: scale(0.95);
+}
+
+/* Status indicators for unconscious/dead */
+.status-unconscious {
+    font-size: var(--font-size-lg);
+    margin: 0 var(--spacing-xs);
+    user-select: none;
+}
+
+/* Combatant name */
+.combatant-name {
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-semibold);
+    margin: 0;
+}
+
+/* Combatant name colors by type */
+.combatant-name-player {
+    color: var(--color-player);
+}
+
+.combatant-name-enemy {
+    color: var(--color-warning);
+}
+
+.combatant-name-npc {
+    color: var(--color-npc);
+}
+
+/* Make creature names clickable */
+.combatant-name {
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: inline-block;
+    position: relative;
+}
+
+.combatant-name:hover {
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 3px;
+    transform: translateY(-1px);
+}
+
+/* Add a subtle icon indicator on hover 
+.combatant-name:hover::after {
+    content: " 📖";
+    font-size: 0.8em;
+    position: relative;
+    margin-left: 4px;
+    margin-right: 4px;
+    opacity: 0.7;
+    display: inline-block;
+} */
+
+/* Maintain color inheritance for different types */
+.combatant-name-player:hover {
+    color: var(--color-player);
+    text-shadow: 0 0 10px rgba(57, 211, 83, 0.3);
+}
+
+.combatant-name-enemy:hover {
+    color: var(--color-warning);
+    text-shadow: 0 0 10px rgba(240, 136, 62, 0.3);
+}
+
+.combatant-name-npc:hover {
+    color: var(--color-npc);
+    text-shadow: 0 0 10px rgba(255, 235, 59, 0.3);
+}
+
+/* AC Display */
+.ac-display {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-sm);
+    margin: 0 var(--spacing-md);
+    cursor: pointer;
+    position: relative;
+    white-space: nowrap;
+    transition: color var(--transition-fast);
+}
+
+.ac-display:hover {
+    color: var(--color-primary);
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 3px;
+}
+
+.ac-label {
+    font-weight: var(--font-weight-medium);
+}
+
+.ac-value {
+    font-weight: var(--font-weight-semibold);
+}
+
+/* Conditions and Effects container */
+.combatant-conditions-effects {
+    display: flex;
+    gap: var(--spacing-xs);
+    flex-wrap: wrap;
+    flex: 1;
+}
+
+/* Combatant card states */
+.combatant-card.combatant-deceased {
+    opacity: 0.5;
+    filter: grayscale(100%);
+}
+
+.combatant-card.combatant-unconscious {
+    border-color: var(--color-warning);
+    box-shadow: 0 0 0 2px rgba(240, 136, 62, 0.2);
+}
+
+.combatant-card.active-in-initiative {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--focus-ring-color);
+    background-color: var(--color-bg-tertiary);
+}
+
+/* Stats grid layout */
+.combatant-stats {
+    display: grid;
+    grid-template-columns: 3fr 1fr;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+}
+
+/* Pencil icon for editing name note */
+.name-note-edit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-left: 6px;
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+    opacity: 0.6;
+    transition: all var(--transition-fast);
+    vertical-align: middle;
+}
+
+.name-note-edit:hover {
+    opacity: 1;
+    color: var(--color-text-primary);
+    transform: scale(1.1);
+}
+
+.name-note-edit:active {
+    transform: scale(0.95);
+}
+
+/* Combatant name note styling */
+.combatant-name-note {
+    font-weight: var(--font-weight-normal);
+    font-style: italic;
+    opacity: 0.9;
+}
+
+/* Inherit color from parent combatant name */
+.combatant-name-player .combatant-name-note {
+    color: var(--color-player);
+}
+
+.combatant-name-enemy .combatant-name-note {
+    color: var(--color-warning);
+}
+
+.combatant-name-npc .combatant-name-note {
+    color: var(--color-npc);
+}
+
+.stat-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.stat-value {
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    min-width: 80px;
+    flex-shrink: 0;
+}
+
+/* HP display container */
+.health-points-display {
+    display: flex;
+    align-items: baseline;
+    gap: var(--spacing-xs);
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    flex-wrap: wrap;
+}
+
+/* HP components */
+.current-health {
+    color: var(--color-success);
+    font-weight: var(--font-weight-bold);
+}
+
+.temporary-health {
+    color: var(--color-info);
+    font-weight: var(--font-weight-bold);
+}
+
+.hp-separator {
+    color: var(--color-text-muted);
+    font-weight: var(--font-weight-normal);
+}
+
+.maximum-health {
+    color: var(--color-text-secondary);
+    font-weight: var(--font-weight-medium);
+}
+
+/* Health status icons */
+.health-icon {
+    display: inline-block;
+    font-size: var(--font-size-base);
+    margin-left: var(--spacing-xs);
+}
+
+.bloodied-indicator {
+    color: var(--color-danger);
+    filter: drop-shadow(0 0 2px rgba(248, 81, 73, 0.6));
+}
+
+.unconscious-death-indicator {
+    color: var(--color-text-muted);
+    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.8));
+}
+
+/* Status indicators */
+.cover-status-indicator {
+    margin-left: var(--spacing-lg);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    cursor: pointer;
+    user-select: none;
+    padding: 2px 6px;
+    border-radius: var(--border-radius);
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.cover-status-indicator:hover {
+    background-color: var(--color-bg-hover);
+    color: var(--color-primary);
+}
+
+.cover-status-indicator[data-cover-level="none"]::before {
+    content: "○ ";
+}
+
+.cover-status-indicator[data-cover-level="half"]::before {
+    content: "◐ ";
+}
+
+.cover-status-indicator[data-cover-level="three-quarters"]::before {
+    content: "◕ ";
+    font-size: calc(var(--font-size-sm) + 3px);
+}
+
+.cover-status-indicator[data-cover-level="full"]::before {
+    content: "● ";
+}
+
+/* Concentration and stealth indicators */
+.concentration-indicator,
+.stealth-indicator {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: var(--border-radius);
+    transition: all var(--transition-fast);
+    user-select: none;
+}
+
+.concentration-indicator:hover,
+.stealth-indicator:hover {
+    background-color: var(--color-bg-hover);
+    color: var(--color-text-primary);
+}
+
+.concentration-indicator[data-is-concentrating="true"] {
+    color: var(--color-text-primary);
+    background-color: rgba(88, 166, 255, 0.1);
+}
+
+.concentration-indicator[data-is-concentrating="true"]::before {
+    content: "🧠 ";
+}
+
+.stealth-indicator[data-is-hiding="true"] {
+    color: var(--color-text-primary);
+    background-color: rgba(163, 113, 247, 0.1);
+}
+
+.stealth-indicator[data-is-hiding="true"]::before {
+    content: "👤 ";
+}
+
+/* Condition/Effect badges */
+.combatant-condition-badge,
+.combatant-effect-badge {
+    color: var(--color-purple);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background-color: var(--color-bg-hover);
+    padding: 2px 6px;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--color-purple);
+    margin-right: var(--spacing-xs);
+    margin-bottom: var(--spacing-xs);
+    transition: all var(--transition-fast);
+}
+
+/* Condition note styling - same as effect notes */
+.condition-note,
+.effect-note {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    font-style: italic;
+    margin: 0 2px;
+}
+
+.combatant-condition-badge:hover,
+.combatant-effect-badge:hover {
+    background-color: var(--color-bg-tertiary);
+    border-color: var(--color-purple-hover);
+}
+
+/* Duration states */
+.condition-duration-counter,
+.effect-duration-counter {
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--font-size-sm);
+    padding: 0 4px;
+    margin-left: 2px;
+}
+
+.condition-duration-counter.duration-remaining,
+.effect-duration-counter.duration-remaining {
+    color: var(--color-npc);
+}
+
+.condition-duration-counter.duration-expired,
+.effect-duration-counter.duration-expired {
+    color: var(--color-danger);
+}
+
+.condition-duration-counter.duration-permanent,
+.effect-duration-counter.duration-permanent {
+    color: var(--color-npc);
+    font-weight: var(--font-weight-bold);
+    font-size: var(--font-size-base);
+}
+
+/* Clear buttons */
+.condition-clear,
+.effect-clear {
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    cursor: pointer;
+    padding: 0;
+    margin-left: 4px;
+    line-height: 1;
+    transition: all var(--transition-fast);
+    opacity: 0.7;
+}
+
+.condition-clear:hover,
+.effect-clear:hover {
+    color: var(--color-text-primary);
+    transform: scale(1.1);
+    opacity: 1;
+}
+
+/* Actions container */
+.combatant-actions {
+    display: flex;
+    gap: var(--spacing-xs);
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.combatant-actions .btn {
+    width: auto;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: var(--font-size-xs);
+    height: var(--button-height-sm);
+}
+
+/* Editable action buttons */
+.editable-action {
+    position: relative;
+    cursor: pointer;
+    min-width: 60px;
+}
+
+.editable-action:hover {
+    transform: translateY(-1px);
+}
+
+.editable-action[data-action-type="damage"] {
+    background-color: var(--color-danger);
+    color: var(--color-text-primary);
+}
+
+.editable-action[data-action-type="heal"] {
+    background-color: var(--color-success);
+    color: var(--color-bg-primary);
+}
+
+.editable-action[data-action-type="temp-hp"] {
+    background-color: var(--color-info);
+    color: var(--color-bg-primary);
+}
+
+/* Responsive mobile adjustments */
+@media (max-width: 768px) {
+    .combatant-stats {
+        grid-template-columns: 2fr 1fr;
+        gap: var(--spacing-sm);
+    }
+    
+    .health-points-display {
+        font-size: var(--font-size-base);
+        gap: 2px;
+    }
+    
+    .cover-status-indicator {
+        margin-left: var(--spacing-sm);
+        font-size: var(--font-size-xs);
+    }
+    
+    .combatant-actions {
+        gap: 4px;
+    }
+    
+    .combatant-actions .btn {
+        padding: var(--spacing-xs);
+        min-width: 50px;
+    }
+    
+    .combatant-condition-badge,
+    .combatant-effect-badge {
+        font-size: var(--font-size-xs);
+        padding: 1px 4px;
+    }
+    
+    .order-btn {
+        width: 28px;
+        height: 28px;
+        font-size: var(--font-size-base);
+    }
+}
+
+/* Initiative inline editing */
+.initiative-edit-input {
+    outline: 2px solid var(--color-primary);
+    outline-offset: -2px;
+    border-radius: 50%;
+}
+
+/* Hide number spinner buttons for cleaner look */
+.initiative-edit-input::-webkit-inner-spin-button,
+.initiative-edit-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.initiative-edit-input[type=number] {
+    -moz-appearance: textfield;
+}
+
+/* Combatant note display */
+.combatant-note-display {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background-color: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-muted);
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-primary);
+    margin-left: var(--spacing-xs);
+}
+
+.note-clear {
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    padding: 0;
+    margin-left: 4px;
+    transition: color var(--transition-fast);
+    font-weight: var(--font-weight-normal);
+}
+
+.note-clear:hover {
+    color: var(--color-danger);
+}
+
+/* Ensure the pencil button has proper styling */
+.btn-icon.btn-secondary {
+    background-color: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-primary);
+}
+
+.btn-icon.btn-secondary:hover {
+    background-color: var(--color-bg-hover);
+}
+
+/* Combatant name note styling */
+.combatant-name-note {
+    font-weight: var(--font-weight-normal);
+    font-style: italic;
+    opacity: 0.9;
+}
+
+/* Inherit color from parent combatant name */
+.combatant-name-player .combatant-name-note {
+    color: var(--color-player);
+}
+
+.combatant-name-enemy .combatant-name-note {
+    color: var(--color-warning);
+}
+
+.combatant-name-npc .combatant-name-note {
+    color: var(--color-npc);
+}
+
+/* Stat block view button */
+.stat-block-view-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-left: 6px;
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+    opacity: 0.6;
+    transition: all var(--transition-fast);
+    vertical-align: middle;
+}
+
+.stat-block-view-btn:hover {
+    opacity: 1;
+    color: var(--color-text-primary);
+    transform: scale(1.1);
+}
+
+.stat-block-view-btn:active {
+    transform: scale(0.95);
+}

@@ -1,0 +1,238 @@
+/**
+ * =============================================================================
+ * LAYOUT STYLES - APPLICATION STRUCTURE
+ * =============================================================================
+ * 
+ * This file contains:
+ * - Main application layout and grid systems
+ * - Page structure and positioning
+ * - Responsive layout patterns
+ * - Container and wrapper styles
+ * 
+ * @author Your Team
+ * @version 1.0.0
+ */
+
+/* =============================================================================
+   MAIN APPLICATION LAYOUT
+   ============================================================================= */
+
+/* Application container */
+#app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--color-bg-primary);
+}
+
+/* =============================================================================
+   HEADER LAYOUT
+   ============================================================================= */
+
+.app-header {
+    background-color: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: var(--border-width) solid var(--color-border-primary);
+    position: sticky;
+    top: 0;
+    z-index: var(--z-index-sticky);
+}
+
+.app-header h1 {
+    margin: 0;
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-bold);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.app-header h1::before {
+    content: "⚔️";
+    font-size: var(--font-size-2xl);
+    margin-right: var(--spacing-xs);
+}
+
+/* =============================================================================
+   MAIN CONTENT LAYOUT
+   ============================================================================= */
+
+.app-main {
+    flex: 1;
+    padding: var(--spacing-lg);
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* =============================================================================
+   COMBAT CONTAINER LAYOUT
+   ============================================================================= */
+
+.combat-container {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--spacing-section-gap);
+    height: 100%;
+    align-items: start;
+}
+
+/* =============================================================================
+   SECTION LAYOUTS
+   ============================================================================= */
+
+.initiative-order-section,
+.encounter-controls-section,
+.compendium-section {
+    background-color: var(--color-bg-secondary);
+    border-radius: var(--border-radius-lg);
+    border: var(--border-width) solid var(--color-border-primary);
+    overflow: hidden;
+    box-shadow: var(--box-shadow-sm);
+}
+
+/* Ensure all sidebar sections have consistent width */
+.encounter-controls-section,
+.compendium-section {
+    width: 100%;
+    min-width: 0; /* Allow proper flex shrinking */
+}
+
+/* Initiative order section - scrollable list */
+.initiative-order-section {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 120px);
+    max-height: 800px;
+}
+
+/* Sidebar container */
+.sidebar-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
+    height: fit-content;
+    width: 100%;
+}
+
+/* Sidebar container - ensure proper stacking */
+.sidebar-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    height: calc(100vh - 40px);
+    position: sticky;
+    top: 20px;
+    width: 100%;
+}
+
+/* Encounter controls section - fixed height at top */
+.encounter-controls-section {
+    flex-shrink: 0;
+    overflow-y: auto;
+}
+
+/* Compendium section - fills remaining space to bottom */
+.compendium-section {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+/* Section headers */
+.section-header {
+    background-color: var(--color-bg-tertiary);
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: var(--border-width) solid var(--color-border-primary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: var(--z-index-dropdown);
+    flex-wrap: wrap;
+}
+
+.section-header h2 {
+    margin: 0;
+    font-size: var(--font-size-base);
+    color: var(--color-text-primary);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    width: 100%;
+}
+
+/* Section content areas */
+.section-content {
+    padding: var(--spacing-lg);
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* =============================================================================
+   TOAST NOTIFICATION CONTAINER
+   ============================================================================= */
+
+.toast-container {
+    position: fixed;
+    top: var(--spacing-lg);
+    right: var(--spacing-lg);
+    z-index: var(--z-index-toast);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    pointer-events: none;
+}
+
+/* =============================================================================
+   RESPONSIVE LAYOUT
+   ============================================================================= */
+
+/* Mobile and tablet adjustments */
+@media (max-width: 768px) {
+    .combat-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .app-main {
+        padding: var(--spacing-md);
+    }
+    
+    .initiative-order-section {
+        height: 60vh;
+        max-height: none;
+    }
+    
+    .encounter-controls-section {
+        position: relative;
+        top: auto;
+        max-height: none;
+    }
+    
+    .section-header,
+    .section-content {
+        padding: var(--spacing-md);
+    }
+}
+
+/* Print styles */
+@media print {
+    .app-header,
+    .encounter-controls-section,
+    .compendium-section,
+    .toast-container {
+        display: none !important;
+    }
+    
+    .combat-container {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .initiative-order-section {
+        height: auto !important;
+        max-height: none !important;
+    }
+}
