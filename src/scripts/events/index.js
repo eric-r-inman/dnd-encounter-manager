@@ -11,6 +11,9 @@
 import { TooltipEvents } from './tooltip-events.js';
 import { HPEvents } from './hp-events.js';
 import { CombatantEvents } from './combatant-events.js';
+import { ModalEvents } from './modal-events.js';
+import { CombatEvents } from './combat-events.js';
+import { KeyboardEvents } from './keyboard-events.js';
 import { StateManager } from '../state-manager.js';
 import { ToastSystem } from '../../components/toast/ToastSystem.js';
 import { ModalSystem } from '../../components/modals/ModalSystem.js';
@@ -28,6 +31,9 @@ export class EventCoordinator {
 
         // Initialize specialized event modules
         TooltipEvents.init();
+        ModalEvents.init();
+        CombatEvents.init();
+        KeyboardEvents.init();
 
         // Initialize other systems that have setup methods
         this.setupCombatControls();
@@ -108,10 +114,16 @@ export class EventCoordinator {
     static handleAction(action, target, event) {
         switch (action) {
             case 'next-turn':
-                this.handleNextTurn();
+                CombatEvents.handleNextTurn();
                 break;
             case 'reset-combat':
-                this.handleResetCombat();
+                CombatEvents.handleResetCombat();
+                break;
+            case 'clear-encounter':
+                CombatEvents.handleClearEncounter();
+                break;
+            case 'start-combat':
+                CombatEvents.startCombat();
                 break;
             case 'edit-combatant-initiative':
                 this.handleEditInitiative(target);
@@ -120,10 +132,10 @@ export class EventCoordinator {
                 this.handleEditAC(target);
                 break;
             case 'move-combatant-up-initiative':
-                // TODO: Implement initiative reordering
+                CombatEvents.handleInitiativeReorder(target, 'up');
                 break;
             case 'move-combatant-down-initiative':
-                // TODO: Implement initiative reordering
+                CombatEvents.handleInitiativeReorder(target, 'down');
                 break;
             case 'toggle-hold-action':
                 this.handleToggleHoldAction(target);
@@ -163,6 +175,9 @@ export class EventCoordinator {
             case 'clear-effect':
                 this.handleClearEffect(target);
                 break;
+            case 'toggle-infinity':
+                KeyboardEvents.handleInfinityToggle(target);
+                break;
             default:
                 console.warn('Unhandled action:', action);
         }
@@ -175,18 +190,11 @@ export class EventCoordinator {
     static handleFormSubmission(form) {
         const formType = form.getAttribute('data-form-type');
 
-        switch (formType) {
-            case 'hp-modification':
-                this.handleHPModificationForm(form);
-                break;
-            case 'condition-application':
-                this.handleConditionForm(form);
-                break;
-            case 'effect-application':
-                this.handleEffectForm(form);
-                break;
-            default:
-                console.warn('Unhandled form type:', formType);
+        // Route HP modifications to HPEvents, everything else to ModalEvents
+        if (formType === 'hp-modification') {
+            HPEvents.handleHPModificationForm(form);
+        } else {
+            ModalEvents.handleFormSubmission(formType, form);
         }
     }
 
@@ -199,13 +207,6 @@ export class EventCoordinator {
         ToastSystem.show('Add new creature functionality - TODO', 'info');
     }
 
-    static handleNextTurn() {
-        ToastSystem.show('Next turn functionality - TODO', 'info');
-    }
-
-    static handleResetCombat() {
-        ToastSystem.show('Reset combat functionality - TODO', 'info');
-    }
 
     static handleEditInitiative(target) {
         ToastSystem.show('Edit initiative functionality - TODO', 'info');
@@ -259,17 +260,7 @@ export class EventCoordinator {
         CombatantEvents.handleClearEffect(target);
     }
 
-    static handleHPModificationForm(form) {
-        HPEvents.handleHPModificationForm(form);
-    }
-
-    static handleConditionForm(form) {
-        ToastSystem.show('Condition form functionality - TODO', 'info');
-    }
-
-    static handleEffectForm(form) {
-        ToastSystem.show('Effect form functionality - TODO', 'info');
-    }
+    // Note: Form handling now routed through handleFormSubmission
 
     /**
      * Set up combat control handlers
@@ -283,8 +274,8 @@ export class EventCoordinator {
      * Set up modal handlers
      */
     static setupModalHandlers() {
-        // Modal handlers setup will be moved here from EventHandlers
-        console.log('Modal handlers setup - TODO');
+        // Modal handlers are now managed by ModalEvents module
+        console.log('Modal handlers managed by ModalEvents module');
     }
 
     /**

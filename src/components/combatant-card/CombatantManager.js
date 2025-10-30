@@ -9,7 +9,7 @@
  */
 
 import { CombatantCard } from './CombatantCard.js';
-import { EventHandlers } from '../../scripts/event-handlers.js';
+import { CombatEvents } from '../../scripts/events/combat-events.js';
 
 export class CombatantManager {
     constructor() {
@@ -62,7 +62,7 @@ export class CombatantManager {
         this.renderAll();
         
         // Update combat header after initial render
-        EventHandlers.updateCombatHeader();
+        CombatEvents.updateCombatHeader();
         
         console.log('✅ CombatantManager initialized');
     }
