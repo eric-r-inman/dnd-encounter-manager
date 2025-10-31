@@ -298,15 +298,26 @@ localStorage.setItem('debug', 'true');
 location.reload();
 ```
 
+## 📚 Documentation
+
+Complete documentation is available in the `docs/` folder:
+
+- **[Architecture Guide](docs/ARCHITECTURE.md)** - System design and module structure
+- **[API Reference](docs/API.md)** - Complete API documentation for all services
+- **[Development Guide](docs/DEVELOPMENT.md)** - Setup, patterns, and contribution guidelines
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment and hosting options
+- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
+
 ## 🤝 Contributing
 
 ### For New Developers
 
-1. **Start Here**: Read `docs/DEVELOPMENT.md` for detailed setup
-2. **Architecture**: Review `docs/ARCHITECTURE.md` for system design
-3. **Code Style**: Follow existing patterns and JSDoc standards
-4. **Small Changes**: Start with tooltip text, condition descriptions
-5. **Test Thoroughly**: Verify all functionality before committing
+1. **Start Here**: Read [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) for detailed setup
+2. **Architecture**: Review [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for system design
+3. **API Reference**: Check [`docs/API.md`](docs/API.md) for service documentation
+4. **Code Style**: Follow existing patterns and JSDoc standards
+5. **Small Changes**: Start with tooltip text, condition descriptions
+6. **Test Thoroughly**: Verify all functionality before committing
 
 ### Making Changes
 
@@ -328,10 +339,12 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 📞 Support
 
-- **Documentation**: Check `docs/` folder for detailed guides
-- **Issues**: Review troubleshooting section above
-- **Code Questions**: All functions documented with JSDoc
-- **Architecture**: See `docs/ARCHITECTURE.md` for system overview
+- **Documentation**: Check [`docs/`](docs/) folder for detailed guides
+- **Issues**: Review [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) for solutions
+- **Code Questions**: See [`docs/API.md`](docs/API.md) for complete API reference
+- **Architecture**: See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for system overview
+- **Development**: See [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) for setup and patterns
+- **Deployment**: See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for hosting options
 
 ---
 

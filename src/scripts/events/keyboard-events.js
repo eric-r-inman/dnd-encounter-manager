@@ -60,24 +60,49 @@ export class KeyboardEvents {
 
     /**
      * Handle add combatant keyboard shortcut
+     * Triggered by 'A' key when not in input field
+     * @static
+     * @memberof KeyboardEvents
      */
     static handleAddCombatant() {
-        // TODO: Implement add combatant functionality
-        ToastSystem.show('Add combatant functionality - TODO', 'info');
+        // Create a temporary trigger element to properly initialize modal
+        const trigger = document.createElement('div');
+        // Import ModalEvents to handle the modal
+        import('./modal-events.js').then(({ ModalEvents }) => {
+            ModalEvents.handleModalShow('add-combatant', trigger);
+        });
     }
 
     /**
      * Handle creature database close
+     * Closes the creature database modal when escape is pressed
+     * @static
+     * @memberof KeyboardEvents
      */
     static handleCreatureDatabaseClose() {
-        // TODO: Implement creature database close functionality
-        console.log('Creature database close - TODO');
+        // This is already handled by the escape key in the main keyboard handler
+        // which calls ModalSystem.hideAll() - no additional functionality needed
+        console.log('Creature database closing via escape key');
     }
 
     /**
      * Set up input field keydown handlers for numeric validation
-     * @param {HTMLInputElement} input - The input element
+     * Configures an input field to only accept numeric values with optional validation rules
+     * @param {HTMLInputElement} input - The input element to configure
      * @param {Object} options - Validation options
+     * @param {boolean} [options.allowNegative=false] - Allow negative numbers
+     * @param {boolean} [options.allowDecimal=false] - Allow decimal numbers
+     * @param {number|null} [options.maxLength=null] - Maximum character length
+     * @param {Function|null} [options.onEnter=null] - Callback when Enter key is pressed
+     * @static
+     * @memberof KeyboardEvents
+     * @example
+     * // Setup an HP input that only allows positive integers
+     * KeyboardEvents.setupNumericInput(hpInput, {
+     *     allowNegative: false,
+     *     maxLength: 4,
+     *     onEnter: () => submitForm()
+     * });
      */
     static setupNumericInput(input, options = {}) {
         const {

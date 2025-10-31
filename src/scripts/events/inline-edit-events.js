@@ -1,0 +1,160 @@
+/**
+ * InlineEditEvents - Inline editing functionality
+ *
+ * Handles inline editing for various combatant properties:
+ * - Initiative values
+ * - Armor Class values
+ * - Other editable fields
+ *
+ * @version 1.0.0
+ */
+
+import { ToastSystem } from '../../components/toast/ToastSystem.js';
+import { DataServices } from '../data-services.js';
+import { CombatEvents } from './combat-events.js';
+
+export class InlineEditEvents {
+    /**
+     * Handle initiative inline editing
+     * @param {HTMLElement} target - The initiative element that was clicked
+     */
+    static handleInitiativeEdit(target) {
+        const combatantCard = target.closest('[data-combatant-id]');
+        const combatantId = combatantCard?.getAttribute('data-combatant-id');
+
+        if (!combatantId) return;
+
+        const combatant = DataServices.combatantManager.getCombatant(combatantId);
+        if (!combatant) {
+            console.error('Combatant not found:', combatantId);
+            return;
+        }
+
+        // Find the initiative value element - it might be the target itself or inside the target
+        let initiativeValue = target.classList.contains('initiative-value') ? target : target.querySelector('.initiative-value');
+        if (!initiativeValue || initiativeValue.querySelector('input')) return; // Already editing
+
+        this.createInlineInput(initiativeValue, combatant.initiative, {
+            type: 'initiative',
+            combatantId: combatantId,
+            combatant: combatant,
+            min: 0,
+            max: 99,
+            width: '40px',
+            height: '20px'
+        });
+    }
+
+    /**
+     * Handle AC inline editing
+     * @param {HTMLElement} target - The AC element that was clicked
+     */
+    static handleACEdit(target) {
+        const combatantCard = target.closest('[data-combatant-id]');
+        const combatantId = combatantCard?.getAttribute('data-combatant-id');
+
+        if (!combatantId) return;
+
+        const combatant = DataServices.combatantManager.getCombatant(combatantId);
+        if (!combatant) {
+            console.error('Combatant not found:', combatantId);
+            return;
+        }
+
+        // Find the AC value element - it might be the target itself or inside the target
+        let acValue = target.classList.contains('ac-value') ? target : target.querySelector('.ac-value');
+        if (!acValue || acValue.querySelector('input')) return; // Already editing
+
+        this.createInlineInput(acValue, combatant.ac, {
+            type: 'ac',
+            combatantId: combatantId,
+            combatant: combatant,
+            min: 1,
+            max: 30,
+            width: '35px',
+            height: '18px'
+        });
+    }
+
+    /**
+     * Create an inline input for editing
+     * @param {HTMLElement} valueElement - The element to replace with input
+     * @param {number} currentValue - Current value to edit
+     * @param {Object} options - Configuration options
+     */
+    static createInlineInput(valueElement, currentValue, options) {
+        const { type, combatantId, combatant, min, max, width, height } = options;
+
+        // Create input element
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.value = currentValue;
+        input.min = min.toString();
+        input.max = max.toString();
+        input.style.width = type === 'initiative' ? '50px' : '45px';
+        input.style.height = height;
+        input.style.border = 'none';
+        input.style.background = 'rgba(255, 255, 255, 0.9)';
+        input.style.borderRadius = '3px';
+        input.style.textAlign = 'center';
+        input.style.fontSize = type === 'initiative' ? '12px' : '11px';
+        input.style.fontWeight = 'bold';
+        input.style.color = '#000000';
+
+        // Remove number input arrows
+        input.style.MozAppearance = 'textfield';
+        input.style.WebkitAppearance = 'none';
+        input.style.appearance = 'none';
+
+        // Replace the text with input
+        const originalText = valueElement.textContent;
+        valueElement.innerHTML = '';
+        valueElement.appendChild(input);
+
+        // Focus and select the input
+        input.focus();
+        input.select();
+
+        // Handle save
+        const saveValue = () => {
+            const newValue = parseInt(input.value);
+            if (isNaN(newValue) || newValue < min || newValue > max) {
+                const fieldName = type === 'initiative' ? 'Initiative' : 'AC';
+                ToastSystem.show(`${fieldName} must be between ${min} and ${max}`, 'error', 2000);
+                input.focus();
+                return;
+            }
+
+            // Update the combatant
+            DataServices.combatantManager.updateCombatant(combatantId, type, newValue);
+
+            // Restore the display
+            valueElement.textContent = newValue;
+
+            const fieldName = type === 'initiative' ? 'initiative' : 'AC';
+            ToastSystem.show(`${combatant.name}'s ${fieldName} updated to ${newValue}`, 'success', 2000);
+
+            // Re-render if initiative changed (to update order)
+            if (type === 'initiative') {
+                DataServices.combatantManager.renderAll();
+            }
+        };
+
+        // Handle cancel
+        const cancelEdit = () => {
+            valueElement.textContent = originalText;
+        };
+
+        // Event listeners
+        input.addEventListener('blur', saveValue);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveValue();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                cancelEdit();
+            }
+        });
+    }
+}

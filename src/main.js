@@ -149,21 +149,35 @@ class DnDEncounterManager {
      */
     async loadMainTemplate() {
         console.log('📄 Loading main template...');
-        
+
         // Load main application HTML structure
         const templateResponse = await fetch('/src/templates/index.html');
         const templateHTML = await templateResponse.text();
-        
-        // Insert into app container
+
+        // Create a temporary container to hold the new content
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = templateHTML;
+
+        // Get the app container and clear it properly
         const appContainer = document.getElementById('app');
-        appContainer.innerHTML = templateHTML;
-        
+
+        // Remove loading screen first
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+            loadingScreen.remove();
+        }
+
+        // Append the new content
+        while (tempDiv.firstChild) {
+            appContainer.appendChild(tempDiv.firstChild);
+        }
+
         // Initialize components that need DOM to be ready
         await this.appCore.initializePostDOM();
-        
+
         // Initialize the CombatantManager now that DOM is ready
         await DataServices.initializeCombatantManager();
-        
+
         console.log('✅ Main template loaded');
     }
 
@@ -203,19 +217,18 @@ class DnDEncounterManager {
                         console.groupEnd();
                     }
                     break;
-
-                    case 'c':
+                case 'c':
                     if (e.ctrlKey || e.metaKey) {
                         // Ctrl+C is copy, don't interfere
                         return;
                     }
                     e.preventDefault();
-                    // TODO: Implement clear encounter in EventCoordinator
-                    console.log('Clear encounter - TODO');
+                    // Use EventCoordinator to handle the clear encounter action
+                    EventCoordinator.handleAction('clear-encounter', null, e);
                     break;
-                            }
-                        });
-                    }
+            }
+        });
+    }
 
     /**
      * Show loading screen

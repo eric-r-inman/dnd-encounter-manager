@@ -66,6 +66,13 @@ export class CombatEvents {
             }
         }
 
+        // Clear surprised status from the current active combatant (their turn is ending)
+        const currentActiveCombatant = allCombatants.find(c => c.status.isActive);
+        if (currentActiveCombatant && currentActiveCombatant.status.surprised) {
+            DataServices.combatantManager.updateCombatant(currentActiveCombatant.id, 'status.surprised', false);
+            ToastSystem.show(`${currentActiveCombatant.name} is no longer surprised`, 'info', 2000);
+        }
+
         // Clear all active states
         allCombatants.forEach(combatant => {
             DataServices.combatantManager.updateCombatant(combatant.id, 'status.isActive', false);
@@ -280,9 +287,15 @@ export class CombatEvents {
         const combatant = DataServices.combatantManager.getCombatant(combatantId);
         if (!combatant) return;
 
-        // Get all combatants sorted by initiative
+        // Get all combatants in their current display order (same logic as CombatantManager.renderAll)
         const allCombatants = DataServices.combatantManager.getAllCombatants();
         const sortedCombatants = allCombatants.sort((a, b) => {
+            // Use the same sorting logic as CombatantManager.renderAll
+            if (a.manualOrder !== null && b.manualOrder !== null) {
+                return a.manualOrder - b.manualOrder;
+            }
+            if (a.manualOrder !== null) return -1;
+            if (b.manualOrder !== null) return 1;
             if (b.initiative !== a.initiative) {
                 return b.initiative - a.initiative;
             }
@@ -301,14 +314,34 @@ export class CombatEvents {
             return; // Can't move further in that direction
         }
 
-        // Swap initiative values
+        // Remember if this combatant was the active combatant
+        const wasActiveCombatant = combatant.status.isActive;
         const targetCombatant = sortedCombatants[targetIndex];
-        const tempInitiative = combatant.initiative;
 
-        DataServices.combatantManager.updateCombatant(combatantId, 'initiative', targetCombatant.initiative);
-        DataServices.combatantManager.updateCombatant(targetCombatant.id, 'initiative', tempInitiative);
+        // Assign manual order values to all combatants to preserve current order
+        // then swap the two positions
+        const newManualOrders = new Map();
+        sortedCombatants.forEach((c, index) => {
+            newManualOrders.set(c.id, index);
+        });
+
+        // Swap the manual order positions
+        const currentManualOrder = newManualOrders.get(combatantId);
+        const targetManualOrder = newManualOrders.get(targetCombatant.id);
+        newManualOrders.set(combatantId, targetManualOrder);
+        newManualOrders.set(targetCombatant.id, currentManualOrder);
+
+        // Apply the new manual orders
+        for (const [id, manualOrder] of newManualOrders) {
+            DataServices.combatantManager.updateCombatant(id, 'manualOrder', manualOrder);
+        }
+
+        // Force a re-render to show the new order
+        DataServices.combatantManager.renderAll();
 
         ToastSystem.show(`Moved ${combatant.name} ${direction} in initiative order`, 'success', 2000);
+
+        console.log(`✅ Moved ${combatant.name} ${direction} in combat order${wasActiveCombatant ? ' (active turn preserved)' : ''}`);
     }
 
     /**

@@ -29,23 +29,27 @@ export class CalculationService {
 
         let effectiveDamage = damage;
 
-        // Apply resistances and immunities
+        // Apply resistances and immunities according to D&D 5e rules
+        // Resistance halves damage, immunity negates it completely
         if (!ignoreResistance && !ignoreImmunity) {
             effectiveDamage = this.applyDamageResistances(effectiveDamage, damageType, combatant);
         }
 
-        // Apply damage to temp HP first, then current HP
+        // D&D 5e Rule: Temporary HP is lost first, then current HP
+        // Temp HP acts as a buffer and doesn't stack with new temp HP
         let newTempHP = combatant.tempHP;
         let newCurrentHP = combatant.currentHP;
         let damageToTempHP = 0;
         let damageToCurrentHP = 0;
 
+        // First, apply damage to temporary HP (if any exists)
         if (newTempHP > 0) {
             damageToTempHP = Math.min(effectiveDamage, newTempHP);
             newTempHP -= damageToTempHP;
-            effectiveDamage -= damageToTempHP;
+            effectiveDamage -= damageToTempHP; // Reduce remaining damage
         }
 
+        // Then apply any remaining damage to current HP
         if (effectiveDamage > 0) {
             damageToCurrentHP = Math.min(effectiveDamage, newCurrentHP);
             newCurrentHP -= damageToCurrentHP;
@@ -76,10 +80,12 @@ export class CalculationService {
             healingType = 'magical'
         } = options;
 
+        // D&D 5e Rule: Healing cannot exceed maximum HP unless specifically allowed
+        // This prevents accidental HP inflation from healing spells/potions
         const maxPossibleHP = allowOverheal ? healing : combatant.maxHP;
         const newCurrentHP = Math.min(maxPossibleHP, combatant.currentHP + healing);
         const actualHealing = newCurrentHP - combatant.currentHP;
-        const overheal = healing - actualHealing;
+        const overheal = healing - actualHealing; // Track "wasted" healing for feedback
 
         return {
             originalHealing: healing,

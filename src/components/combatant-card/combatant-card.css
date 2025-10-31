@@ -170,6 +170,33 @@
     opacity: 1;
 }
 
+.combatant-set-active-button {
+    position: absolute;
+    top: 2px;
+    right: 28px; /* Position to the left of the remove button */
+    width: 24px;
+    height: 24px;
+    background-color: transparent;
+    color: var(--color-text-primary);
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-lg);
+    font-weight: bold;
+    cursor: pointer;
+    opacity: 0.7;
+    z-index: 3;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.combatant-set-active-button:hover {
+    background-color: var(--color-primary);
+    color: white;
+    opacity: 1;
+}
+
 /* Combatant header layout */
 .combatant-header {
     display: flex;
@@ -205,6 +232,49 @@
     background-color: var(--color-bg-tertiary);
 }
 
+.editable-ac {
+    cursor: pointer;
+    position: relative;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: background-color var(--transition-fast);
+}
+
+.editable-ac:hover {
+    background-color: var(--color-bg-tertiary);
+}
+
+/* Remove number input arrows for inline editing */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+/* Death saving throws */
+.death-saves-container {
+    display: inline-flex;
+    gap: 4px;
+    margin-left: 8px;
+    align-items: center;
+}
+
+.death-save-indicator {
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    transition: transform var(--transition-fast);
+    user-select: none;
+}
+
+.death-save-indicator:hover {
+    transform: scale(1.1);
+}
+
 /* Current turn state for initiative circle */
 .active-in-initiative .initiative-circle {
     background-color: var(--color-primary);
@@ -226,6 +296,15 @@
 
 .surprise-status-indicator:active {
     transform: scale(0.95);
+}
+
+/* Red exclamation mark for critical status (surprised, unconscious, dead) */
+.surprised-exclamation {
+    color: red;
+    font-weight: bold;
+    font-size: 14px;
+    margin-left: 0;
+    vertical-align: middle;
 }
 
 /* Status indicators for unconscious/dead */

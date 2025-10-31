@@ -30,7 +30,7 @@ export class CombatantEvents {
             combatant.isSelected = isChecked;
         }
 
-        // Update visual state
+        // Update visual state immediately
         const combatantCard = target.closest('[data-combatant-id]');
         combatantCard.classList.toggle('batch-selected', isChecked);
 
@@ -188,6 +188,49 @@ export class CombatantEvents {
     }
 
     /**
+     * Handle cover states cycling for combatant
+     * @param {HTMLElement} target - The cover indicator that was clicked
+     */
+    static handleCycleCoverStates(target) {
+        const combatantCard = target.closest('[data-combatant-id]');
+        const combatantId = combatantCard?.getAttribute('data-combatant-id');
+
+        if (!combatantId) return;
+
+        const combatant = DataServices.combatantManager.getCombatant(combatantId);
+        if (!combatant) {
+            console.error('Combatant not found:', combatantId);
+            return;
+        }
+
+        // Define cover states cycle: none -> half -> three-quarters -> full -> none
+        const coverStates = ['none', 'half', 'three-quarters', 'full'];
+        const currentCover = combatant.status.cover || 'none';
+        const currentIndex = coverStates.indexOf(currentCover);
+        const nextIndex = (currentIndex + 1) % coverStates.length;
+        const newCoverState = coverStates[nextIndex];
+
+        // Update cover status
+        DataServices.combatantManager.updateCombatant(combatantId, 'status.cover', newCoverState);
+
+        // Create user-friendly cover messages
+        const coverMessages = {
+            'none': 'no cover',
+            'half': 'half cover',
+            'three-quarters': 'three-quarters cover',
+            'full': 'full cover'
+        };
+
+        ToastSystem.show(`${combatant.name} now has ${coverMessages[newCoverState]}`, 'info', 2000);
+
+        // Update combat header if this is the active combatant
+        if (combatant.status.isActive) {
+            // TODO: This will be moved to combat events module
+            console.log('Update combat header - TODO');
+        }
+    }
+
+    /**
      * Handle surprise status toggle for combatant
      * @param {HTMLElement} target - The surprise indicator that was clicked
      */
@@ -290,5 +333,32 @@ export class CombatantEvents {
         });
 
         return selectedCombatants;
+    }
+
+    /**
+     * Handle death saving throw toggle
+     * @param {HTMLElement} target - The death save indicator that was clicked
+     */
+    static handleToggleDeathSave(target) {
+        const combatantCard = target.closest('[data-combatant-id]');
+        const combatantId = combatantCard?.getAttribute('data-combatant-id');
+        const saveIndex = parseInt(target.getAttribute('data-save-index'));
+
+        if (!combatantId || isNaN(saveIndex)) return;
+
+        const combatant = DataServices.combatantManager.getCombatant(combatantId);
+        if (!combatant) {
+            console.error('Combatant not found:', combatantId);
+            return;
+        }
+
+        // Toggle the death save
+        combatant.deathSaves[saveIndex] = !combatant.deathSaves[saveIndex];
+
+        // Update the card
+        DataServices.combatantManager.updateCombatant(combatantId, 'deathSaves', combatant.deathSaves);
+
+        const statusText = combatant.deathSaves[saveIndex] ? 'Failed' : 'Reset';
+        ToastSystem.show(`${combatant.name} death save ${saveIndex + 1}: ${statusText}`, 'info', 2000);
     }
 }

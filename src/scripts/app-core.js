@@ -1,3 +1,5 @@
+import { CombatEvents } from './events/combat-events.js';
+
 export class AppCore {
     async init() {
         console.log('📱 App Core initialized');
@@ -8,10 +10,12 @@ export class AppCore {
     }
 
     advanceToNextTurn() {
-        console.log('⏭️ Next turn - TODO: Implement');
+        // Delegate to CombatEvents module
+        CombatEvents.handleNextTurn();
     }
 
     resetCombat() {
-        console.log('🔄 Reset combat - TODO: Implement');
+        // Delegate to CombatEvents module
+        CombatEvents.handleResetCombat();
     }
 }

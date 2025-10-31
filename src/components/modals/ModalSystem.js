@@ -35,10 +35,18 @@ export class ModalSystem {
                 this.hideAll();
             }
         });
-        
+
         // Handle clicks on modal overlay to close
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('modal-overlay') && e.target === e.currentTarget) {
+                this.hideAll();
+            }
+        });
+
+        // Handle close button clicks
+        document.addEventListener('click', (e) => {
+            if (e.target.hasAttribute('data-modal-close') || e.target.closest('[data-modal-close]')) {
+                e.preventDefault();
                 this.hideAll();
             }
         });

@@ -1039,10 +1039,17 @@
             
             <!-- Current HP Override (optional) -->
             <div class="form-group">
-                <label for="combatant-current-hp">Current HP (optional)</label>
-                <input type="number" 
-                       id="combatant-current-hp" 
-                       name="currentHP" 
+                <div class="hp-label-container">
+                    <label for="combatant-current-hp">Current HP (optional)</label>
+                    <div class="hp-percentage-buttons">
+                        <button type="button" class="hp-percentage-btn" data-percentage="100">100%</button>
+                        <button type="button" class="hp-percentage-btn" data-percentage="50">50%</button>
+                        <button type="button" class="hp-percentage-btn" data-percentage="25">25%</button>
+                    </div>
+                </div>
+                <input type="number"
+                       id="combatant-current-hp"
+                       name="currentHP"
                        placeholder="Leave blank for max HP"
                        min="0"
                        max="999"
@@ -1238,19 +1245,15 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label for="effect-note">Note (optional, max 14 chars):</label>
-                    <input type="text" id="effect-note" name="note" maxlength="14" placeholder="Short description">
+                    <label for="custom-effect">Enter Effect (max 14 chars):</label>
+                    <input type="text" id="custom-effect" name="custom-effect" maxlength="14" placeholder="Enter effect name..." class="custom-effect-field" list="recent-effects-list" autocomplete="off">
+                    <datalist id="recent-effects-list">
+                        <!-- Recent effects will be populated here -->
+                    </datalist>
                 </div>
                 <div class="form-group">
-                    <label>Select Effect:</label>
-                    <div class="custom-effect-input">
-                        <input type="text" id="custom-effect" name="custom-effect" placeholder="Enter custom effect, or select from list below..." class="custom-effect-field">
-                    </div>
-                    <div class="effect-dropdown-container">
-                        <select id="effect-dropdown" class="effect-dropdown">
-                            <option value="" disabled selected>Select from recent effects...</option>
-                        </select>
-                    </div>
+                    <label for="effect-note">Note (optional, max 14 chars):</label>
+                    <input type="text" id="effect-note" name="note" maxlength="14" placeholder="Short description">
                 </div>
                 <div class="modal-footer-actions">
                     <button type="button" class="btn btn-secondary" data-modal-close>
@@ -1344,19 +1347,24 @@
                 <h2>Add Note for <span data-target-name>Combatant</span></h2>
                 <button class="modal-close" aria-label="Close modal" data-modal-close>&times;</button>
             </div>
-            <form class="modal-body" 
-                data-modal-form="combatant-note" 
-                data-form-type="note-entry"
+            <form class="modal-body"
+                data-modal-form="combatant-note"
+                data-form-type="combatant-note"
                 novalidate>
                 <div class="form-group">
                     <label for="combatant-note-text">Note (max 20 characters):</label>
-                    <input type="text" 
-                        id="combatant-note-text" 
-                        name="noteText" 
-                        maxlength="20" 
-                        placeholder="Enter a short note..." 
+                    <input type="text"
+                        id="combatant-note-text"
+                        name="noteText"
+                        maxlength="20"
+                        placeholder="Enter a short note..."
+                        list="recent-notes-list"
+                        autocomplete="off"
                         autofocus
                         required>
+                    <datalist id="recent-notes-list">
+                        <!-- Recent notes will be populated here -->
+                    </datalist>
                     <small style="color: var(--color-text-muted);">
                         <span id="note-char-count">0</span>/20 characters
                     </small>

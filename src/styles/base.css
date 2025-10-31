@@ -503,6 +503,55 @@ textarea::placeholder {
     opacity: 1;
 }
 
+/* Hide datalist dropdown indicators */
+input[list]::-webkit-calendar-picker-indicator {
+    display: none !important;
+}
+
+input[list]::-webkit-list-button {
+    display: none;
+}
+
+/* Firefox datalist styling */
+input[list] {
+    -moz-appearance: textfield;
+}
+
+/* HP percentage buttons styling */
+.hp-label-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-xs);
+}
+
+.hp-percentage-buttons {
+    display: flex;
+    gap: var(--spacing-xs);
+}
+
+.hp-percentage-btn {
+    background: none;
+    border: 1px solid var(--color-border-primary);
+    color: var(--color-text-primary);
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.hp-percentage-btn:hover {
+    background-color: var(--color-bg-secondary);
+    border-color: var(--color-primary);
+}
+
+.hp-percentage-btn:active {
+    background-color: var(--color-primary);
+    color: white;
+    transform: scale(0.95);
+}
+
 /* Select specific styles */
 select {
     cursor: pointer;
@@ -613,6 +662,7 @@ select {
     .modal-overlay,
     .keyboard-shortcuts-hint,
     .combatant-remove-button,
+    .combatant-set-active-button,
     .order-btn,
     .combatant-actions {
         display: none !important;

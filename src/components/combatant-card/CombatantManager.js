@@ -116,10 +116,10 @@ export class CombatantManager {
         
         // Store in map
         this.combatants.set(combatantCard.id, combatantCard);
-        
-        // Schedule render update
-        this.scheduleUpdate(combatantCard.id);
-        
+
+        // Immediately render all combatants to show new addition in correct initiative order
+        this.renderAll();
+
         // Save instances
         this.saveInstances();
         
@@ -169,8 +169,8 @@ export class CombatantManager {
         // Update the property
         combatant.updateProperty(property, value);
         
-        // For status changes, we need immediate visual update
-        if (property.startsWith('status.') || property === 'conditions' || property === 'effects') {
+        // For status changes and notes, we need immediate visual update
+        if (property.startsWith('status.') || property === 'conditions' || property === 'effects' || property === 'notes' || property === 'nameNote') {
             // Force immediate update instead of scheduling
             if (combatant.element) {
                 combatant.update();
@@ -233,17 +233,9 @@ export class CombatantManager {
         
         console.log(`🎨 Rendering ${this.combatants.size} combatants`);
         
-        // Preserve checkbox states before re-render
-        const selectedIds = new Set();
-        const checkboxes = document.querySelectorAll('input[name="batch-select"]:checked');
-        checkboxes.forEach(checkbox => {
-            selectedIds.add(checkbox.value);
-        });
-        
-        // Update combatant selection states
-        for (const [id, combatant] of this.combatants) {
-            combatant.isSelected = selectedIds.has(id);
-        }
+        // Preserve combatant selection states in memory (don't read from DOM)
+        // The combatant objects already have the correct isSelected state
+        // No need to override them by reading from DOM checkboxes
         
         // Use document fragment for performance
         const fragment = document.createDocumentFragment();

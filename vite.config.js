@@ -27,37 +27,18 @@ export default defineConfig({
     port: 3000,
     open: true, // Automatically open browser
     host: true, // Listen on all addresses
-    
-    // Hot Module Replacement settings
+
+    // Simplified Hot Module Replacement settings
     hmr: {
       overlay: true
     }
   },
-  
+
   // CSS processing options
   css: {
     devSourcemap: true,
     preprocessorOptions: {
       // Future: Add Sass/Less options if needed
-    }
-  },
-
-  // Enhanced HMR configuration
-  server: {
-    port: 3000,
-    open: true,
-    host: true,
-    
-    // Enhanced Hot Module Replacement settings
-    hmr: {
-      overlay: true,
-      port: 3001
-    },
-    
-    // Watch configuration for better file watching
-    watch: {
-      usePolling: true,
-      interval: 100
     }
   },
   

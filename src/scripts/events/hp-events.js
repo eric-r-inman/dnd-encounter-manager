@@ -287,6 +287,12 @@ export class HPEvents {
             DataServices.combatantManager.updateCombatant(combatant.id, 'tempHP', newTempHP);
         }
 
+        // Clear death saves if HP goes above 0 (from healing)
+        if (originalHP === 0 && newHP > 0) {
+            const clearedDeathSaves = [false, false, false];
+            DataServices.combatantManager.updateCombatant(combatant.id, 'deathSaves', clearedDeathSaves);
+        }
+
         // Add to history
         this.addToHistory(combatant, actionType, amount, originalHP, newHP, originalTempHP, newTempHP);
 

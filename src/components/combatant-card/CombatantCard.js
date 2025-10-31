@@ -32,15 +32,15 @@ export class CombatantCard {
         this.manualOrder = instanceData.manualOrder || null;
         this.nameNote = instanceData.nameNote || '';
         
-        // Status flags
+        // Status flags - handle both nested status object and top-level properties
         this.status = {
-            isActive: instanceData.isActive || false,
-            holdAction: instanceData.holdAction || false,
-            concentration: instanceData.concentration || false,
-            concentrationSpell: instanceData.concentrationSpell || '',
-            hiding: instanceData.hiding || false,
-            cover: instanceData.cover || 'none', // none, half, three-quarters, full
-            surprised: instanceData.surprised || false
+            isActive: instanceData.status?.isActive || instanceData.isActive || false,
+            holdAction: instanceData.status?.holdAction || instanceData.holdAction || false,
+            concentration: instanceData.status?.concentration || instanceData.concentration || false,
+            concentrationSpell: instanceData.status?.concentrationSpell || instanceData.concentrationSpell || '',
+            hiding: instanceData.status?.hiding || instanceData.hiding || false,
+            cover: instanceData.status?.cover || instanceData.cover || 'none', // none, half, three-quarters, full
+            surprised: instanceData.status?.surprised || instanceData.surprised || false
         };
         
         // Conditions and effects arrays
@@ -54,6 +54,9 @@ export class CombatantCard {
         this.damageHistory = instanceData.damageHistory || [];
         this.healHistory = instanceData.healHistory || [];
         this.tempHPHistory = instanceData.tempHPHistory || [];
+
+        // Death saving throws (array of 3 booleans: false = circle, true = skull)
+        this.deathSaves = instanceData.deathSaves || [false, false, false];
         
         // DOM element reference
         this.element = null;
@@ -180,12 +183,13 @@ export class CombatantCard {
                     <button class="order-btn order-down" data-action="move-combatant-down-initiative">↓</button>
                 </div>
                 <div class="combatant-main">
+                    <button class="combatant-set-active-button" title="Set as active combatant" data-action="set-active-combatant">←</button>
                     <button class="combatant-remove-button" title="Remove combatant" data-action="remove-combatant-from-encounter">×</button>
                     <div class="combatant-header">
                         <div class="initiative-circle editable-initiative" data-action="edit-combatant-initiative">
                             <span class="initiative-value">${this.initiative}</span>
                         </div>
-                        <span class="surprise-status-indicator" title="Click to toggle surprised" data-action="toggle-surprise-status">${statusEmoji}</span>
+                        <span class="surprise-status-indicator" title="Click to toggle surprised" data-action="toggle-surprise-status">${statusEmoji}</span>${(this.status.surprised || healthState === 'unconscious' || healthState === 'dead') ? '<span class="surprised-exclamation">!</span>' : ''}
                         <h3 class="combatant-name ${nameColorClass}">
                             ${this.name}${this.nameNote ? ` <span class="combatant-name-note">${this.nameNote}</span>` : ''}
                             <button class="name-note-edit" 
@@ -212,7 +216,8 @@ export class CombatantCard {
                                     <span class="hp-separator">/</span>
                                     <span class="maximum-health">${this.maxHP}</span>
                                     ${healthState === 'bloodied' ? '<span class="health-icon bloodied-indicator">🩸</span>' : ''}
-                                    ${(healthState === 'unconscious' || healthState === 'dead') ? '<span class="health-icon unconscious-death-indicator">💀</span>' : ''}
+                                    ${healthState === 'dead' ? '<span class="health-icon unconscious-death-indicator">💀</span>' : ''}
+                                    ${this.currentHP === 0 ? this.getDeathSavesHTML() : ''}
                                     <span class="cover-status-indicator" data-cover-level="${this.status.cover}" title="Click to change cover" data-action="cycle-cover-states">${this.getCoverText()}</span>
                                     <span class="status-separator">|</span>
                                     <span class="concentration-indicator" data-is-concentrating="${this.status.concentration}" title="Click to toggle concentration" data-action="toggle-concentration-status">${this.status.concentration ? 'Concentrating' : 'Not concentrating'}</span>
@@ -233,6 +238,11 @@ export class CombatantCard {
                             </div>
                             <button class="btn btn-sm btn-purple" data-modal-show="condition" data-modal-target="${this.id}">Condition</button>
                             <button class="btn btn-sm btn-purple" data-modal-show="effect" data-modal-target="${this.id}">Effect</button>
+                            <button class="btn btn-sm ${this.status.holdAction ? 'btn-warning' : 'btn-outline-warning'}"
+                                    title="${this.status.holdAction ? 'Release held action' : 'Hold action'}"
+                                    data-action="toggle-hold-action">
+                                ${this.status.holdAction ? '✊ Holding' : '✋ Hold'}
+                            </button>
                             <button class="btn btn-sm btn-secondary btn-icon" 
                                     title="Add note" 
                                     data-modal-show="combatant-note" 
@@ -264,6 +274,25 @@ export class CombatantCard {
             'full': 'Full cover'
         };
         return coverTexts[this.status.cover] || 'No cover';
+    }
+
+    /**
+     * Generate HTML for death saving throws
+     * @returns {string} HTML string for death saves
+     */
+    getDeathSavesHTML() {
+        return `
+            <span class="death-saves-container">
+                ${this.deathSaves.map((isFailed, index) => `
+                    <span class="death-save-indicator"
+                          data-action="toggle-death-save"
+                          data-save-index="${index}"
+                          title="Click to toggle death save">
+                        ${isFailed ? '💀' : '○'}
+                    </span>
+                `).join('')}
+            </span>
+        `;
     }
     
     /**
@@ -324,9 +353,9 @@ export class CombatantCard {
             nameNote: this.nameNote,
             manualOrder: this.manualOrder,
             damageHistory: this.damageHistory,
-            damageHistory: this.damageHistory,
             healHistory: this.healHistory,
-            tempHPHistory: this.tempHPHistory
+            tempHPHistory: this.tempHPHistory,
+            deathSaves: this.deathSaves
         };
     }
     

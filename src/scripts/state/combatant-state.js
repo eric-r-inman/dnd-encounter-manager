@@ -99,14 +99,15 @@ export class CombatantState {
         let updated = { ...combatant };
         let remainingDamage = damage;
 
-        // Apply damage to temp HP first
+        // D&D 5e Rule: Apply damage to temporary HP first, then current HP
+        // This ensures temp HP acts as a protective buffer
         if (updated.tempHP > 0) {
             const tempDamage = Math.min(remainingDamage, updated.tempHP);
             updated.tempHP -= tempDamage;
             remainingDamage -= tempDamage;
         }
 
-        // Apply remaining damage to current HP
+        // Apply any remaining damage to current HP (cannot go below 0)
         if (remainingDamage > 0) {
             updated.currentHP = Math.max(0, updated.currentHP - remainingDamage);
         }
@@ -166,7 +167,9 @@ export class CombatantState {
         let updated = { ...combatant };
         const oldTempHP = updated.tempHP;
 
-        // Temp HP doesn't stack - take the higher value
+        // D&D 5e Rule: Temporary HP doesn't stack - you take the higher value
+        // If you have 5 temp HP and gain 3 temp HP, you still have 5 temp HP
+        // If you have 5 temp HP and gain 8 temp HP, you now have 8 temp HP
         updated.tempHP = Math.max(updated.tempHP, tempHP);
 
         // Add to HP history if temp HP changed
@@ -399,15 +402,20 @@ export class CombatantState {
     }
 
     /**
-     * Compare two combatants for initiative order
+     * Compare two combatants for initiative sorting
      * @param {Object} a - First combatant
      * @param {Object} b - Second combatant
      * @returns {number} Comparison result for sorting
      */
     static compareInitiative(a, b) {
+        // D&D 5e Rule: Higher initiative acts first
         if (b.initiative !== a.initiative) {
-            return b.initiative - a.initiative;
+            return b.initiative - a.initiative; // Descending order (highest first)
         }
+
+        // D&D 5e Tie-breaker: When initiative is tied, sort alphabetically
+        // Note: RAW would be by dexterity modifier, then dexterity score
+        // but we use name for simplicity and consistency
         return a.name.localeCompare(b.name);
     }
 }
