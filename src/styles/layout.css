@@ -136,8 +136,13 @@
 /* Compendium section - fills remaining space to bottom */
 .compendium-section {
     flex: 1;
-    overflow-y: auto;
+    overflow-y: hidden;
     min-height: 0;
+}
+
+/* Remove overflow from compendium section-content to prevent double scrollbars */
+.compendium-section .section-content {
+    overflow-y: hidden;
 }
 
 /* Section headers */

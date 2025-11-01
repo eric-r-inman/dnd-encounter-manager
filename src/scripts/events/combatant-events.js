@@ -14,16 +14,61 @@ import { ToastSystem } from '../../components/toast/ToastSystem.js';
 import { ModalSystem } from '../../components/modals/ModalSystem.js';
 import { DataServices } from '../data-services.js';
 import { TooltipEvents } from './tooltip-events.js';
+import { CombatEvents } from './combat-events.js';
 
 export class CombatantEvents {
     /**
      * Handle batch selection toggle for combatants
      * @param {HTMLElement} target - The checkbox that was clicked
+     * @param {Event} event - The click event (to check for shift key)
      */
-    static handleToggleBatchSelect(target) {
+    static handleToggleBatchSelect(target, event) {
         const combatantId = target.value;
         const isChecked = target.checked;
 
+        // Check if Shift key is pressed for select all / deselect all
+        if (event && event.shiftKey) {
+            // Get all batch select checkboxes
+            const allCheckboxes = document.querySelectorAll('[data-action="toggle-batch-select"]');
+
+            // Select all or deselect all based on the current checkbox state
+            allCheckboxes.forEach(checkbox => {
+                const checkboxCombatantId = checkbox.value;
+                const combatant = DataServices.combatantManager.getCombatant(checkboxCombatantId);
+
+                // Set checkbox state to match the clicked checkbox
+                checkbox.checked = isChecked;
+
+                // Update combatant data
+                if (combatant) {
+                    combatant.isSelected = isChecked;
+                }
+
+                // Update visual state
+                const combatantCard = checkbox.closest('[data-combatant-id]');
+                if (combatantCard) {
+                    combatantCard.classList.toggle('batch-selected', isChecked);
+                }
+            });
+
+            // Get current selection count
+            const selectedCombatants = this.getSelectedCombatants();
+            const count = selectedCombatants.length;
+
+            // Update batch buttons in any open modal
+            this.updateBatchButtonsInModal(selectedCombatants);
+
+            // Show appropriate toast
+            if (isChecked) {
+                ToastSystem.show(`All ${count} combatants selected`, 'info', 1500);
+            } else {
+                ToastSystem.show('All combatants deselected', 'info', 1500);
+            }
+
+            return;
+        }
+
+        // Normal single checkbox toggle (no shift key)
         // Get the combatant and update its selection state
         const combatant = DataServices.combatantManager.getCombatant(combatantId);
         if (combatant) {
@@ -79,8 +124,7 @@ export class CombatantEvents {
 
         // Update combat header if this is the active combatant
         if (combatant.status.isActive) {
-            // TODO: This will be moved to combat events module
-            console.log('Update combat header - TODO');
+            CombatEvents.updateCombatHeader();
         }
     }
 
@@ -116,8 +160,7 @@ export class CombatantEvents {
 
         // Update combat header if this is the active combatant
         if (combatant.status.isActive) {
-            // TODO: This will be moved to combat events module
-            console.log('Update combat header - TODO');
+            CombatEvents.updateCombatHeader();
         }
     }
 
@@ -149,8 +192,7 @@ export class CombatantEvents {
 
         // Update combat header if this is the active combatant
         if (combatant.status.isActive) {
-            // TODO: This will be moved to combat events module
-            console.log('Update combat header - TODO');
+            CombatEvents.updateCombatHeader();
         }
     }
 
@@ -182,8 +224,7 @@ export class CombatantEvents {
 
         // Update combat header if this is the active combatant
         if (combatant.status.isActive) {
-            // TODO: This will be moved to combat events module
-            console.log('Update combat header - TODO');
+            CombatEvents.updateCombatHeader();
         }
     }
 
@@ -225,8 +266,7 @@ export class CombatantEvents {
 
         // Update combat header if this is the active combatant
         if (combatant.status.isActive) {
-            // TODO: This will be moved to combat events module
-            console.log('Update combat header - TODO');
+            CombatEvents.updateCombatHeader();
         }
     }
 
@@ -258,8 +298,7 @@ export class CombatantEvents {
 
         // Update combat header if this is the active combatant
         if (combatant.status.isActive) {
-            // TODO: This will be moved to combat events module
-            console.log('Update combat header - TODO');
+            CombatEvents.updateCombatHeader();
         }
     }
 

@@ -356,3 +356,228 @@
     color: var(--color-warning);
     margin: 0;
 }
+
+/* =============================================================================
+ * COMPREHENSIVE STAT BLOCK STYLES (for detailed creature display)
+ * =============================================================================
+ */
+
+/* Ability Scores Table */
+.ability-scores-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: var(--spacing-sm) 0;
+}
+
+.ability-scores-table th {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-primary);
+    padding: var(--spacing-xs);
+    background-color: var(--color-bg-hover);
+    border-bottom: 2px solid var(--color-border-primary);
+    text-align: center;
+}
+
+.ability-scores-table td {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    padding: var(--spacing-xs);
+    text-align: center;
+    border-bottom: 1px solid var(--color-border-muted);
+}
+
+/* Stat Block Section Headings (Actions, Reactions, etc.) */
+.stat-block-heading {
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-warning);
+    margin: var(--spacing-sm) 0;
+    padding-bottom: var(--spacing-xs);
+    border-bottom: 2px solid var(--color-border-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Full Creature Type */
+.creature-full-type {
+    font-style: italic;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    margin: 0;
+    padding: var(--spacing-xs) 0;
+}
+
+/* Creature Description */
+.creature-description {
+    font-style: italic;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+    line-height: var(--line-height-relaxed);
+    margin: var(--spacing-sm) 0;
+    padding: var(--spacing-sm);
+    background-color: var(--color-bg-hover);
+    border-left: 3px solid var(--color-border-primary);
+    border-radius: var(--border-radius);
+}
+
+/* Creature Source */
+.creature-source {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    margin: var(--spacing-xs) 0;
+    padding-top: var(--spacing-xs);
+}
+
+/* Stat Block Sections */
+.stat-block-section p {
+    margin: var(--spacing-xs) 0;
+    line-height: var(--line-height-relaxed);
+    color: var(--color-text-secondary);
+}
+
+.stat-block-section p strong {
+    color: var(--color-text-primary);
+    font-weight: var(--font-weight-semibold);
+}
+
+.stat-block-section p em {
+    font-style: italic;
+}
+
+/* Traits section with better spacing */
+.stat-block-traits p {
+    margin-bottom: var(--spacing-sm);
+}
+
+.stat-block-traits p:last-child {
+    margin-bottom: 0;
+}
+
+/* Condensed stat block - minimal spacing between lines */
+.stat-block-condensed p {
+    margin: 2px 0;
+    line-height: var(--line-height-normal);
+}
+
+.stat-block-condensed p:first-child {
+    margin-top: 0;
+}
+
+.stat-block-condensed p:last-child {
+    margin-bottom: 0;
+}
+
+/* Creature Details Panel Scrolling */
+.creature-details-column {
+    overflow-y: auto;
+    max-height: calc(100vh - 200px);
+    padding-left: var(--spacing-md);
+    padding-right: var(--spacing-sm);
+}
+
+/* Scrollbar styling for creature details */
+.creature-details-column::-webkit-scrollbar,
+.creature-details-scrollable::-webkit-scrollbar {
+    width: 8px;
+}
+
+.creature-details-column::-webkit-scrollbar-track,
+.creature-details-scrollable::-webkit-scrollbar-track {
+    background: var(--color-bg-secondary);
+    border-radius: var(--border-radius);
+}
+
+.creature-details-column::-webkit-scrollbar-thumb,
+.creature-details-scrollable::-webkit-scrollbar-thumb {
+    background: var(--color-border-primary);
+    border-radius: var(--border-radius);
+}
+
+.creature-details-column::-webkit-scrollbar-thumb:hover,
+.creature-details-scrollable::-webkit-scrollbar-thumb:hover {
+    background: var(--color-border-hover);
+}
+
+/* Creature Details Header */
+.creature-details-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 2px solid var(--color-border-primary);
+    flex-wrap: wrap;
+}
+
+.creature-details-header h3 {
+    margin: 0;
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-warning);
+    flex: 1;
+}
+
+/* Creature Type Badge */
+.creature-type-badge {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.badge-enemy {
+    background-color: rgba(220, 53, 69, 0.2);
+    color: var(--color-danger);
+    border: 1px solid var(--color-danger);
+}
+
+.badge-ally {
+    background-color: rgba(63, 185, 80, 0.2);
+    color: var(--color-success);
+    border: 1px solid var(--color-success);
+}
+
+.badge-neutral {
+    background-color: rgba(255, 193, 7, 0.2);
+    color: var(--color-warning);
+    border: 1px solid var(--color-warning);
+}
+
+.badge-info {
+    background-color: rgba(13, 110, 253, 0.2);
+    color: #0d6efd;
+    border: 1px solid #0d6efd;
+}
+
+/* Creature Actions (Add/Edit/Delete buttons) */
+.creature-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-md);
+    padding-top: var(--spacing-md);
+    border-top: 2px solid var(--color-border-primary);
+    flex-wrap: wrap;
+}
+
+/* Responsive adjustments for comprehensive stat blocks */
+@media (max-width: 768px) {
+    .ability-scores-table {
+        font-size: var(--font-size-xs);
+    }
+
+    .ability-scores-table th,
+    .ability-scores-table td {
+        padding: var(--spacing-xs) 2px;
+    }
+
+    .stat-block-heading {
+        font-size: var(--font-size-sm);
+    }
+
+    .creature-details-header h3 {
+        font-size: var(--font-size-lg);
+    }
+}

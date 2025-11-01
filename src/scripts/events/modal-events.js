@@ -15,6 +15,10 @@ import { StateManager } from '../state-manager.js';
 import { ToastSystem } from '../../components/toast/ToastSystem.js';
 import { ModalSystem } from '../../components/modals/ModalSystem.js';
 import { DataServices } from '../data-services.js';
+import { CombatEvents } from './combat-events.js';
+import { RecentItems } from './recent-items.js';
+import { FormHandlers } from './form-handlers.js';
+import { CreatureModalEvents } from './creature-modal-events.js';
 
 export class ModalEvents {
     /**
@@ -95,7 +99,10 @@ export class ModalEvents {
                 this.setupAddCombatantModal(modal);
                 break;
             case 'creature-database':
-                this.setupCreatureDatabaseModal(modal);
+                CreatureModalEvents.setupCreatureDatabaseModal(modal, trigger);
+                break;
+            case 'creature-form':
+                CreatureModalEvents.setupCreatureFormForAdd();
                 break;
             case 'combatant-note':
                 this.setupNoteModal(modal, targetCombatant, trigger);
@@ -118,8 +125,14 @@ export class ModalEvents {
         if (!creatureSelect) return;
 
         try {
-            // Get creatures from CombatantManager (which loads from JSON file)
-            const creatures = DataServices.combatantManager?.creatureDatabase || [];
+            // Get creatures from CombatantManager (consolidated database with both JSON and custom creatures)
+            const allCreatures = DataServices.combatantManager?.creatureDatabase || [];
+
+            // Get hidden creatures list
+            const hiddenCreatures = JSON.parse(localStorage.getItem('dnd-hidden-creatures') || '[]');
+
+            // Filter out hidden creatures
+            const creatures = allCreatures.filter(c => !hiddenCreatures.includes(c.id));
 
             // Clear existing options (except the placeholder)
             const placeholder = creatureSelect.querySelector('option[disabled]');
@@ -135,7 +148,7 @@ export class ModalEvents {
                 creatureSelect.appendChild(defaultOption);
             }
 
-            // Populate with creatures from database
+            // Populate with creatures from Compendium (database + custom)
             if (creatures && creatures.length > 0) {
                 creatures.forEach(creature => {
                     const option = document.createElement('option');
@@ -145,7 +158,7 @@ export class ModalEvents {
                 });
             }
 
-            console.log(`📝 Populated creature dropdown with ${creatures.length} creatures`);
+            console.log(`📝 Populated creature dropdown with ${creatures.length} creatures from Compendium`);
         } catch (error) {
             console.error('Failed to populate creature dropdown:', error);
             ToastSystem.show('Failed to load creatures', 'error');
@@ -237,17 +250,27 @@ export class ModalEvents {
     /**
      * Set up creature database modal by populating creature list
      * @param {HTMLElement} modal - Modal element
+     * @param {HTMLElement} trigger - Trigger element (optional, may contain selected creature ID)
      */
-    static async setupCreatureDatabaseModal(modal) {
+    static async setupCreatureDatabaseModal(modal, trigger = null) {
         const creatureListContainer = modal.querySelector('#creature-list .creature-list-viewport');
         const totalCountElement = modal.querySelector('#total-count');
         const visibleCountElement = modal.querySelector('#visible-count');
 
         if (!creatureListContainer) return;
 
+        // Check if a specific creature should be selected (from Quick View)
+        const selectedCreatureId = trigger?.getAttribute('data-selected-creature-id');
+
         try {
-            // Get creatures from CombatantManager (which loads from JSON file)
-            const creatures = DataServices.combatantManager?.creatureDatabase || [];
+            // Get creatures from CombatantManager (consolidated database with both JSON and custom creatures)
+            const allCreatures = DataServices.combatantManager?.creatureDatabase || [];
+
+            // Get hidden creatures list
+            const hiddenCreatures = JSON.parse(localStorage.getItem('dnd-hidden-creatures') || '[]');
+
+            // Filter out hidden creatures
+            const creatures = allCreatures.filter(c => !hiddenCreatures.includes(c.id));
 
             // Clear existing placeholder content
             creatureListContainer.innerHTML = '';
@@ -285,12 +308,47 @@ export class ModalEvents {
                         // Add active class to clicked item
                         creatureItem.classList.add('active');
 
-                        // Update details pane (to be implemented)
+                        // Update details pane
                         this.updateCreatureDetails(modal, creature);
                     });
 
                     creatureListContainer.appendChild(creatureItem);
                 });
+
+                // If a specific creature should be selected (Quick View), select it now
+                if (selectedCreatureId) {
+                    // Use setTimeout to ensure DOM is fully updated
+                    setTimeout(() => {
+                        const selectedItem = modal.querySelector(`.creature-list-item[data-creature-id="${selectedCreatureId}"]`);
+                        if (selectedItem) {
+                            // Remove active from all items
+                            modal.querySelectorAll('.creature-list-item').forEach(item => {
+                                item.classList.remove('active');
+                            });
+
+                            // Add active to selected item
+                            selectedItem.classList.add('active');
+
+                            // Find the creature data
+                            const selectedCreature = creatures.find(c => c.id === selectedCreatureId);
+                            if (selectedCreature) {
+                                // Update details pane
+                                this.updateCreatureDetails(modal, selectedCreature);
+
+                                // Scroll the selected item into view
+                                selectedItem.scrollIntoView({
+                                    behavior: 'smooth',
+                                    block: 'center'
+                                });
+
+                                console.log(`🔍 Quick View: Selected creature "${selectedCreature.name}" in compendium`);
+                            }
+                        } else {
+                            console.warn(`Quick View: Creature with ID "${selectedCreatureId}" not found in compendium`);
+                            ToastSystem.show('Creature not found in compendium', 'warning', 2000);
+                        }
+                    }, 100);
+                }
             } else {
                 creatureListContainer.innerHTML = '<div class="no-creatures">No creatures found in database.</div>';
             }
@@ -311,32 +369,659 @@ export class ModalEvents {
         const detailsPane = modal.querySelector('.creature-details-column');
         if (!detailsPane) return;
 
-        // For now, just show basic info. This can be expanded later
-        detailsPane.innerHTML = `
-            <div class="creature-details-header">
-                <h3>${creature.name}</h3>
-                <span class="creature-type-badge badge-${creature.type}">${creature.type.toUpperCase()}</span>
-            </div>
-            <div class="creature-stats-grid">
-                <div class="stat-block">
-                    <label>Armor Class</label>
-                    <value>${creature.ac}</value>
-                </div>
-                <div class="stat-block">
-                    <label>Hit Points</label>
-                    <value>${creature.maxHP}</value>
-                </div>
-                <div class="stat-block">
-                    <label>Challenge Rating</label>
-                    <value>${creature.cr || 'Unknown'}</value>
-                </div>
-            </div>
-            <div class="creature-actions">
-                <button class="btn btn-primary" onclick="console.log('Add to encounter - TODO')">
+        // Store creature ID on the modal for later use
+        modal.setAttribute('data-selected-creature-id', creature.id);
+
+        // Check if this is a custom creature (marked during database load)
+        const isCustom = creature.isCustom === true;
+
+        // Get stat block if available
+        const statBlock = creature.statBlock || {};
+        const hasFullStatBlock = creature.hasFullStatBlock && statBlock;
+
+        // Build sticky action buttons at the top
+        let html = `
+            <div class="creature-actions-sticky" style="position: sticky; top: 0; z-index: 10; background-color: var(--color-bg-secondary); padding: var(--spacing-md); border-bottom: var(--border-width) solid var(--color-border-primary); display: flex; gap: var(--spacing-xs); flex-wrap: wrap;">
+                <button class="btn btn-primary"
+                        data-action="add-creature-to-encounter"
+                        data-creature-id="${creature.id}">
                     ➕ Add to Encounter
                 </button>
+                <button class="btn btn-secondary"
+                        data-action="edit-creature"
+                        data-creature-id="${creature.id}">
+                    ✏️ Edit
+                </button>
+                <button class="btn btn-secondary"
+                        data-action="duplicate-creature"
+                        data-creature-id="${creature.id}">
+                    📋 Duplicate
+                </button>
+                <button class="btn btn-danger"
+                        data-action="delete-creature"
+                        data-creature-id="${creature.id}">
+                    🗑️ Delete
+                </button>
             </div>
+            <div class="creature-details-scrollable" style="overflow-y: auto; padding: var(--spacing-md) var(--spacing-lg);">
+                <div class="creature-details-header" style="padding: 0; background: transparent; border: none; margin-bottom: var(--spacing-md);">
+                    <h3>${creature.name}</h3>
+                    <span class="creature-type-badge badge-${creature.type}">${creature.type.toUpperCase()}</span>
+                </div>
         `;
+
+        // Full type description
+        if (hasFullStatBlock && statBlock.fullType) {
+            html += `<div class="stat-block-section">
+                <p class="creature-full-type">${statBlock.fullType}</p>
+            </div>`;
+        } else if (creature.size || creature.race || creature.alignment) {
+            const parts = [];
+            if (creature.size) parts.push(creature.size);
+            if (creature.race) parts.push(creature.race);
+            if (creature.subrace) parts.push(`(${creature.subrace})`);
+            if (creature.alignment) parts.push(`, ${creature.alignment}`);
+            html += `<div class="stat-block-section">
+                <p class="creature-full-type">${parts.join(' ')}</p>
+            </div>`;
+        }
+
+        // Armor Class
+        html += `<div class="stat-block-section">`;
+        if (hasFullStatBlock && statBlock.armorClass) {
+            html += `<p><strong>Armor Class</strong> ${statBlock.armorClass.value}`;
+            if (statBlock.armorClass.type) html += ` (${statBlock.armorClass.type})`;
+            html += `</p>`;
+        } else {
+            html += `<p><strong>Armor Class</strong> ${creature.ac}</p>`;
+        }
+
+        // Hit Points
+        if (hasFullStatBlock && statBlock.hitPoints) {
+            html += `<p><strong>Hit Points</strong> ${statBlock.hitPoints.average}`;
+            if (statBlock.hitPoints.formula) html += ` (${statBlock.hitPoints.formula})`;
+            html += `</p>`;
+        } else {
+            html += `<p><strong>Hit Points</strong> ${creature.maxHP}</p>`;
+        }
+
+        // Speed
+        if (hasFullStatBlock && statBlock.speed) {
+            const speeds = [];
+            if (statBlock.speed.walk) speeds.push(`${statBlock.speed.walk} ft.`);
+            if (statBlock.speed.burrow) speeds.push(`burrow ${statBlock.speed.burrow} ft.`);
+            if (statBlock.speed.climb) speeds.push(`climb ${statBlock.speed.climb} ft.`);
+            if (statBlock.speed.fly) {
+                speeds.push(`fly ${statBlock.speed.fly} ft.${statBlock.speed.hover ? ' (hover)' : ''}`);
+            }
+            if (statBlock.speed.swim) speeds.push(`swim ${statBlock.speed.swim} ft.`);
+            if (speeds.length > 0) {
+                html += `<p><strong>Speed</strong> ${speeds.join(', ')}</p>`;
+            }
+        }
+        html += `</div>`;
+
+        // Ability Scores
+        if (hasFullStatBlock && statBlock.abilities) {
+            html += `<div class="stat-block-section">
+                <table class="ability-scores-table">
+                    <thead>
+                        <tr>
+                            <th>STR</th>
+                            <th>DEX</th>
+                            <th>CON</th>
+                            <th>INT</th>
+                            <th>WIS</th>
+                            <th>CHA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>${statBlock.abilities.str.score} (${this.formatModifier(statBlock.abilities.str.modifier)})</td>
+                            <td>${statBlock.abilities.dex.score} (${this.formatModifier(statBlock.abilities.dex.modifier)})</td>
+                            <td>${statBlock.abilities.con.score} (${this.formatModifier(statBlock.abilities.con.modifier)})</td>
+                            <td>${statBlock.abilities.int.score} (${this.formatModifier(statBlock.abilities.int.modifier)})</td>
+                            <td>${statBlock.abilities.wis.score} (${this.formatModifier(statBlock.abilities.wis.modifier)})</td>
+                            <td>${statBlock.abilities.cha.score} (${this.formatModifier(statBlock.abilities.cha.modifier)})</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>`;
+        }
+
+        // Combined stat section (Saves, Skills, Resistances, Senses, Languages, CR)
+        html += `<div class="stat-block-section stat-block-condensed">`;
+
+        // Saving Throws
+        if (hasFullStatBlock && statBlock.savingThrows) {
+            const saves = [];
+            for (const [ability, bonus] of Object.entries(statBlock.savingThrows)) {
+                if (bonus !== null && bonus !== undefined) {
+                    saves.push(`${ability.toUpperCase()} ${this.formatModifier(bonus)}`);
+                }
+            }
+            if (saves.length > 0) {
+                html += `<p><strong>Saving Throws</strong> ${saves.join(', ')}</p>`;
+            }
+        }
+
+        // Skills
+        if (hasFullStatBlock && statBlock.skills && Object.keys(statBlock.skills).length > 0) {
+            const skills = [];
+            for (const [skill, bonus] of Object.entries(statBlock.skills)) {
+                const skillName = skill.replace(/([A-Z])/g, ' $1').trim();
+                const capitalizedSkill = skillName.charAt(0).toUpperCase() + skillName.slice(1);
+                skills.push(`${capitalizedSkill} ${this.formatModifier(bonus)}`);
+            }
+            html += `<p><strong>Skills</strong> ${skills.join(', ')}</p>`;
+        }
+
+        // Damage Vulnerabilities
+        if (hasFullStatBlock && statBlock.damageVulnerabilities && statBlock.damageVulnerabilities.length > 0) {
+            html += `<p><strong>Damage Vulnerabilities</strong> ${statBlock.damageVulnerabilities.join(', ')}</p>`;
+        }
+
+        // Damage Resistances
+        if (hasFullStatBlock && statBlock.damageResistances && statBlock.damageResistances.length > 0) {
+            html += `<p><strong>Damage Resistances</strong> ${statBlock.damageResistances.join(', ')}</p>`;
+        }
+
+        // Damage Immunities
+        if (hasFullStatBlock && statBlock.damageImmunities && statBlock.damageImmunities.length > 0) {
+            html += `<p><strong>Damage Immunities</strong> ${statBlock.damageImmunities.join(', ')}</p>`;
+        }
+
+        // Condition Immunities
+        if (hasFullStatBlock && statBlock.conditionImmunities && statBlock.conditionImmunities.length > 0) {
+            html += `<p><strong>Condition Immunities</strong> ${statBlock.conditionImmunities.join(', ')}</p>`;
+        }
+
+        // Senses
+        if (hasFullStatBlock && statBlock.senses) {
+            const senses = [];
+            if (statBlock.senses.blindsight) senses.push(`Blindsight ${statBlock.senses.blindsight} ft.`);
+            if (statBlock.senses.darkvision) senses.push(`Darkvision ${statBlock.senses.darkvision} ft.`);
+            if (statBlock.senses.tremorsense) senses.push(`Tremorsense ${statBlock.senses.tremorsense} ft.`);
+            if (statBlock.senses.truesight) senses.push(`Truesight ${statBlock.senses.truesight} ft.`);
+            if (statBlock.senses.passivePerception) senses.push(`Passive Perception ${statBlock.senses.passivePerception}`);
+            if (senses.length > 0) {
+                html += `<p><strong>Senses</strong> ${senses.join(', ')}</p>`;
+            }
+        }
+
+        // Languages
+        if (hasFullStatBlock && statBlock.languages && statBlock.languages.length > 0) {
+            html += `<p><strong>Languages</strong> ${statBlock.languages.join(', ')}</p>`;
+        }
+
+        // Challenge Rating
+        if (hasFullStatBlock && statBlock.challengeRating) {
+            html += `<p><strong>CR</strong> ${statBlock.challengeRating.cr}`;
+            if (statBlock.challengeRating.xp) html += ` (${statBlock.challengeRating.xp.toLocaleString()} XP`;
+            if (statBlock.challengeRating.xpInLair) html += `, or ${statBlock.challengeRating.xpInLair.toLocaleString()} in lair`;
+            if (statBlock.challengeRating.proficiencyBonus) html += `; PB +${statBlock.challengeRating.proficiencyBonus}`;
+            html += `)</p>`;
+        } else if (creature.cr) {
+            html += `<p><strong>CR</strong> ${creature.cr}</p>`;
+        }
+
+        html += `</div>`;
+
+        // Traits
+        if (hasFullStatBlock && statBlock.traits && statBlock.traits.length > 0) {
+            html += `<div class="stat-block-section stat-block-traits">`;
+            statBlock.traits.forEach(trait => {
+                html += `<p><strong><em>${trait.name}.</em></strong> ${trait.description}</p>`;
+            });
+            html += `</div>`;
+        }
+
+        // Actions
+        if (hasFullStatBlock && statBlock.actions && statBlock.actions.length > 0) {
+            html += `<div class="stat-block-section"><h4 class="stat-block-heading">Actions</h4>`;
+            statBlock.actions.forEach(action => {
+                html += `<p><strong><em>${action.name}.</em></strong> ${action.description}</p>`;
+            });
+            html += `</div>`;
+        }
+
+        // Reactions
+        if (hasFullStatBlock && statBlock.reactions && statBlock.reactions.length > 0) {
+            html += `<div class="stat-block-section"><h4 class="stat-block-heading">Reactions</h4>`;
+            statBlock.reactions.forEach(reaction => {
+                html += `<p><strong><em>${reaction.name}.</em></strong> ${reaction.description}</p>`;
+            });
+            html += `</div>`;
+        }
+
+        // Legendary Actions
+        if (hasFullStatBlock && statBlock.legendaryActions && statBlock.legendaryActions.options) {
+            html += `<div class="stat-block-section"><h4 class="stat-block-heading">Legendary Actions</h4>`;
+            if (statBlock.legendaryActions.description) {
+                html += `<p>${statBlock.legendaryActions.description}</p>`;
+            }
+            statBlock.legendaryActions.options.forEach(option => {
+                html += `<p><strong><em>${option.name}`;
+                if (option.cost && option.cost > 1) html += ` (Costs ${option.cost} Actions)`;
+                html += `.</em></strong> ${option.description}</p>`;
+            });
+            html += `</div>`;
+        }
+
+        // Lair Actions
+        if (hasFullStatBlock && statBlock.lairActions) {
+            html += `<div class="stat-block-section"><h4 class="stat-block-heading">Lair Actions</h4>`;
+            if (statBlock.lairActions.description) {
+                html += `<p>${statBlock.lairActions.description}</p>`;
+            }
+            if (statBlock.lairActions.options && statBlock.lairActions.options.length > 0) {
+                statBlock.lairActions.options.forEach(option => {
+                    html += `<p><strong><em>${option.name}.</em></strong> ${option.description}</p>`;
+                });
+            }
+            html += `</div>`;
+        }
+
+        // Regional Effects
+        if (hasFullStatBlock && statBlock.regionalEffects) {
+            html += `<div class="stat-block-section"><h4 class="stat-block-heading">Regional Effects</h4>`;
+            if (statBlock.regionalEffects.description) {
+                html += `<p>${statBlock.regionalEffects.description}</p>`;
+            }
+            if (statBlock.regionalEffects.effects && statBlock.regionalEffects.effects.length > 0) {
+                statBlock.regionalEffects.effects.forEach(effect => {
+                    html += `<p><strong><em>${effect.name}.</em></strong> ${effect.description}</p>`;
+                });
+            }
+            html += `</div>`;
+        }
+
+        // Spellcasting
+        if (hasFullStatBlock && statBlock.spellcasting) {
+            html += `<div class="stat-block-section"><h4 class="stat-block-heading">Spellcasting</h4>`;
+            if (statBlock.spellcasting.description) {
+                html += `<p>${statBlock.spellcasting.description}</p>`;
+            }
+
+            if (statBlock.spellcasting.spells) {
+                // At-will spells
+                if (statBlock.spellcasting.spells.atWill && statBlock.spellcasting.spells.atWill.length > 0) {
+                    const spellNames = statBlock.spellcasting.spells.atWill.map(s => {
+                        return s.level !== null ? `${s.name} (${s.level})` : s.name;
+                    }).join(', ');
+                    html += `<p><strong>At will:</strong> ${spellNames}</p>`;
+                }
+
+                // Per day spells
+                if (statBlock.spellcasting.spells.perDay) {
+                    for (const [times, spells] of Object.entries(statBlock.spellcasting.spells.perDay)) {
+                        const spellNames = spells.map(s => {
+                            return s.level !== null ? `${s.name} (${s.level})` : s.name;
+                        }).join(', ');
+                        html += `<p><strong>${times}/day each:</strong> ${spellNames}</p>`;
+                    }
+                }
+
+                // Spell slots (if using spell slots system)
+                if (statBlock.spellcasting.spells.slots) {
+                    const slotInfo = [];
+                    for (const [level, count] of Object.entries(statBlock.spellcasting.spells.slots)) {
+                        slotInfo.push(`${level}${this.getOrdinalSuffix(level)} level (${count} slots)`);
+                    }
+                    if (slotInfo.length > 0) {
+                        html += `<p><strong>Spell Slots:</strong> ${slotInfo.join(', ')}</p>`;
+                    }
+                }
+            }
+            html += `</div>`;
+        }
+
+        // Source
+        if (creature.source) {
+            html += `<div class="stat-block-section"><p class="creature-source"><strong>Source:</strong> ${creature.source}</p></div>`;
+        }
+
+        // Close the scrollable container
+        html += `</div>`;
+
+        detailsPane.innerHTML = html;
+    }
+
+    /**
+     * Display creature stat block in the right pane compendium section
+     * @param {string} creatureId - ID of the creature to display
+     */
+    static displayCreatureInRightPane(creatureId) {
+        const statBlockDisplay = document.getElementById('stat-block-display');
+        if (!statBlockDisplay) {
+            console.error('Stat block display element not found');
+            return;
+        }
+
+        // Find the creature in the consolidated database
+        const allCreatures = DataServices.combatantManager?.creatureDatabase || [];
+        const creature = allCreatures.find(c => c.id === creatureId);
+
+        if (!creature) {
+            statBlockDisplay.innerHTML = `<div class="empty-state" style="text-align: center; color: var(--color-text-muted); padding: var(--spacing-xl);">
+                <p>Creature not found</p>
+            </div>`;
+            return;
+        }
+
+        // Store the current creature ID for the Quick View button
+        statBlockDisplay.setAttribute('data-current-creature-id', creatureId);
+
+        // Get stat block if available
+        const statBlock = creature.statBlock || {};
+        const hasFullStatBlock = creature.hasFullStatBlock && statBlock;
+
+        // Build the stat block HTML (similar to updateCreatureDetails but without action buttons)
+        let html = `
+            <div class="creature-stat-block" style="max-height: calc(100vh - 300px); overflow-y: auto; padding: var(--spacing-md);">
+                <div class="creature-details-header" style="padding: 0; background: transparent; border: none; margin-bottom: var(--spacing-md);">
+                    <h3>${creature.name}</h3>
+                    <span class="creature-type-badge badge-${creature.type}">${creature.type.toUpperCase()}</span>
+                </div>
+        `;
+
+        // Full type description
+        if (hasFullStatBlock && statBlock.fullType) {
+            html += `<div class="stat-block-section">
+                <p class="creature-full-type">${statBlock.fullType}</p>
+            </div>`;
+        } else if (creature.size || creature.race || creature.alignment) {
+            const parts = [];
+            if (creature.size) parts.push(creature.size);
+            if (creature.race) parts.push(creature.race);
+            if (creature.subrace) parts.push(`(${creature.subrace})`);
+            if (creature.alignment) parts.push(`, ${creature.alignment}`);
+            html += `<div class="stat-block-section">
+                <p class="creature-full-type">${parts.join(' ')}</p>
+            </div>`;
+        }
+
+        // Armor Class
+        html += `<div class="stat-block-section">`;
+        if (hasFullStatBlock && statBlock.armorClass) {
+            html += `<p><strong>Armor Class</strong> ${statBlock.armorClass.value}`;
+            if (statBlock.armorClass.type) html += ` (${statBlock.armorClass.type})`;
+            html += `</p>`;
+        } else {
+            html += `<p><strong>Armor Class</strong> ${creature.ac}</p>`;
+        }
+
+        // Hit Points
+        if (hasFullStatBlock && statBlock.hitPoints) {
+            html += `<p><strong>Hit Points</strong> ${statBlock.hitPoints.average}`;
+            if (statBlock.hitPoints.formula) html += ` (${statBlock.hitPoints.formula})`;
+            html += `</p>`;
+        } else {
+            html += `<p><strong>Hit Points</strong> ${creature.maxHP}</p>`;
+        }
+
+        // Speed
+        if (hasFullStatBlock && statBlock.speed) {
+            const speeds = [];
+            if (statBlock.speed.walk) speeds.push(`${statBlock.speed.walk} ft.`);
+            if (statBlock.speed.burrow) speeds.push(`burrow ${statBlock.speed.burrow} ft.`);
+            if (statBlock.speed.climb) speeds.push(`climb ${statBlock.speed.climb} ft.`);
+            if (statBlock.speed.fly) {
+                speeds.push(`fly ${statBlock.speed.fly} ft.${statBlock.speed.hover ? ' (hover)' : ''}`);
+            }
+            if (statBlock.speed.swim) speeds.push(`swim ${statBlock.speed.swim} ft.`);
+            if (speeds.length > 0) {
+                html += `<p><strong>Speed</strong> ${speeds.join(', ')}</p>`;
+            }
+        }
+        html += `</div>`;
+
+        // Ability Scores
+        if (hasFullStatBlock && statBlock.abilities) {
+            html += `<div class="stat-block-section">
+                <table class="ability-scores-table">
+                    <thead>
+                        <tr>
+                            <th>STR</th>
+                            <th>DEX</th>
+                            <th>CON</th>
+                            <th>INT</th>
+                            <th>WIS</th>
+                            <th>CHA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>${statBlock.abilities.str.score} (${this.formatModifier(statBlock.abilities.str.modifier)})</td>
+                            <td>${statBlock.abilities.dex.score} (${this.formatModifier(statBlock.abilities.dex.modifier)})</td>
+                            <td>${statBlock.abilities.con.score} (${this.formatModifier(statBlock.abilities.con.modifier)})</td>
+                            <td>${statBlock.abilities.int.score} (${this.formatModifier(statBlock.abilities.int.modifier)})</td>
+                            <td>${statBlock.abilities.wis.score} (${this.formatModifier(statBlock.abilities.wis.modifier)})</td>
+                            <td>${statBlock.abilities.cha.score} (${this.formatModifier(statBlock.abilities.cha.modifier)})</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>`;
+        }
+
+        // Combined stat section (Saves, Skills, Resistances, Senses, Languages, CR)
+        html += `<div class="stat-block-section stat-block-condensed">`;
+
+        // Saving Throws
+        if (hasFullStatBlock && statBlock.savingThrows) {
+            const saves = [];
+            for (const [ability, bonus] of Object.entries(statBlock.savingThrows)) {
+                if (bonus !== null && bonus !== undefined) {
+                    saves.push(`${ability.toUpperCase()} ${this.formatModifier(bonus)}`);
+                }
+            }
+            if (saves.length > 0) {
+                html += `<p><strong>Saving Throws</strong> ${saves.join(', ')}</p>`;
+            }
+        }
+
+        // Skills
+        if (hasFullStatBlock && statBlock.skills && Object.keys(statBlock.skills).length > 0) {
+            const skills = [];
+            for (const [skill, bonus] of Object.entries(statBlock.skills)) {
+                const skillName = skill.replace(/([A-Z])/g, ' $1').trim();
+                const capitalizedSkill = skillName.charAt(0).toUpperCase() + skillName.slice(1);
+                skills.push(`${capitalizedSkill} ${this.formatModifier(bonus)}`);
+            }
+            html += `<p><strong>Skills</strong> ${skills.join(', ')}</p>`;
+        }
+
+        // Damage Vulnerabilities
+        if (hasFullStatBlock && statBlock.damageVulnerabilities && statBlock.damageVulnerabilities.length > 0) {
+            html += `<p><strong>Damage Vulnerabilities</strong> ${statBlock.damageVulnerabilities.join(', ')}</p>`;
+        }
+
+        // Damage Resistances
+        if (hasFullStatBlock && statBlock.damageResistances && statBlock.damageResistances.length > 0) {
+            html += `<p><strong>Damage Resistances</strong> ${statBlock.damageResistances.join(', ')}</p>`;
+        }
+
+        // Damage Immunities
+        if (hasFullStatBlock && statBlock.damageImmunities && statBlock.damageImmunities.length > 0) {
+            html += `<p><strong>Damage Immunities</strong> ${statBlock.damageImmunities.join(', ')}</p>`;
+        }
+
+        // Condition Immunities
+        if (hasFullStatBlock && statBlock.conditionImmunities && statBlock.conditionImmunities.length > 0) {
+            html += `<p><strong>Condition Immunities</strong> ${statBlock.conditionImmunities.join(', ')}</p>`;
+        }
+
+        // Senses
+        if (hasFullStatBlock && statBlock.senses) {
+            const senses = [];
+            if (statBlock.senses.blindsight) senses.push(`Blindsight ${statBlock.senses.blindsight} ft.`);
+            if (statBlock.senses.darkvision) senses.push(`Darkvision ${statBlock.senses.darkvision} ft.`);
+            if (statBlock.senses.tremorsense) senses.push(`Tremorsense ${statBlock.senses.tremorsense} ft.`);
+            if (statBlock.senses.truesight) senses.push(`Truesight ${statBlock.senses.truesight} ft.`);
+            if (statBlock.senses.passivePerception) senses.push(`Passive Perception ${statBlock.senses.passivePerception}`);
+            if (senses.length > 0) {
+                html += `<p><strong>Senses</strong> ${senses.join(', ')}</p>`;
+            }
+        }
+
+        // Languages
+        if (hasFullStatBlock && statBlock.languages && statBlock.languages.length > 0) {
+            html += `<p><strong>Languages</strong> ${statBlock.languages.join(', ')}</p>`;
+        }
+
+        // Challenge Rating
+        if (hasFullStatBlock && statBlock.challengeRating) {
+            html += `<p><strong>CR</strong> ${statBlock.challengeRating.cr}`;
+            if (statBlock.challengeRating.xp) html += ` (${statBlock.challengeRating.xp.toLocaleString()} XP`;
+            if (statBlock.challengeRating.xpInLair) html += `, or ${statBlock.challengeRating.xpInLair.toLocaleString()} in lair`;
+            if (statBlock.challengeRating.proficiencyBonus) html += `; PB +${statBlock.challengeRating.proficiencyBonus}`;
+            html += `)</p>`;
+        } else if (creature.cr) {
+            html += `<p><strong>CR</strong> ${creature.cr}</p>`;
+        }
+
+        html += `</div>`;
+
+        // Traits
+        if (hasFullStatBlock && statBlock.traits && statBlock.traits.length > 0) {
+            html += `<div class="stat-block-section stat-block-traits">`;
+            statBlock.traits.forEach(trait => {
+                html += `<p><strong><em>${trait.name}.</em></strong> ${trait.description}</p>`;
+            });
+            html += `</div>`;
+        }
+
+        // Actions
+        if (hasFullStatBlock && statBlock.actions && statBlock.actions.length > 0) {
+            html += `<div class="stat-block-section"><h4 class="stat-block-heading">Actions</h4>`;
+            statBlock.actions.forEach(action => {
+                html += `<p><strong><em>${action.name}.</em></strong> ${action.description}</p>`;
+            });
+            html += `</div>`;
+        }
+
+        // Reactions
+        if (hasFullStatBlock && statBlock.reactions && statBlock.reactions.length > 0) {
+            html += `<div class="stat-block-section"><h4 class="stat-block-heading">Reactions</h4>`;
+            statBlock.reactions.forEach(reaction => {
+                html += `<p><strong><em>${reaction.name}.</em></strong> ${reaction.description}</p>`;
+            });
+            html += `</div>`;
+        }
+
+        // Legendary Actions
+        if (hasFullStatBlock && statBlock.legendaryActions && statBlock.legendaryActions.options) {
+            html += `<div class="stat-block-section"><h4 class="stat-block-heading">Legendary Actions</h4>`;
+            if (statBlock.legendaryActions.description) {
+                html += `<p>${statBlock.legendaryActions.description}</p>`;
+            }
+            statBlock.legendaryActions.options.forEach(option => {
+                html += `<p><strong><em>${option.name}`;
+                if (option.cost && option.cost > 1) html += ` (Costs ${option.cost} Actions)`;
+                html += `.</em></strong> ${option.description}</p>`;
+            });
+            html += `</div>`;
+        }
+
+        // Lair Actions
+        if (hasFullStatBlock && statBlock.lairActions) {
+            html += `<div class="stat-block-section"><h4 class="stat-block-heading">Lair Actions</h4>`;
+            if (statBlock.lairActions.description) {
+                html += `<p>${statBlock.lairActions.description}</p>`;
+            }
+            if (statBlock.lairActions.options && statBlock.lairActions.options.length > 0) {
+                statBlock.lairActions.options.forEach(option => {
+                    html += `<p><strong><em>${option.name}.</em></strong> ${option.description}</p>`;
+                });
+            }
+            html += `</div>`;
+        }
+
+        // Regional Effects
+        if (hasFullStatBlock && statBlock.regionalEffects) {
+            html += `<div class="stat-block-section"><h4 class="stat-block-heading">Regional Effects</h4>`;
+            if (statBlock.regionalEffects.description) {
+                html += `<p>${statBlock.regionalEffects.description}</p>`;
+            }
+            if (statBlock.regionalEffects.effects && statBlock.regionalEffects.effects.length > 0) {
+                statBlock.regionalEffects.effects.forEach(effect => {
+                    html += `<p><strong><em>${effect.name}.</em></strong> ${effect.description}</p>`;
+                });
+            }
+            html += `</div>`;
+        }
+
+        // Spellcasting
+        if (hasFullStatBlock && statBlock.spellcasting) {
+            html += `<div class="stat-block-section"><h4 class="stat-block-heading">Spellcasting</h4>`;
+            if (statBlock.spellcasting.description) {
+                html += `<p>${statBlock.spellcasting.description}</p>`;
+            }
+
+            if (statBlock.spellcasting.spells) {
+                // At-will spells
+                if (statBlock.spellcasting.spells.atWill && statBlock.spellcasting.spells.atWill.length > 0) {
+                    const spellNames = statBlock.spellcasting.spells.atWill.map(s => {
+                        return s.level !== null ? `${s.name} (${s.level})` : s.name;
+                    }).join(', ');
+                    html += `<p><strong>At will:</strong> ${spellNames}</p>`;
+                }
+
+                // Per day spells
+                if (statBlock.spellcasting.spells.perDay) {
+                    for (const [times, spells] of Object.entries(statBlock.spellcasting.spells.perDay)) {
+                        const spellNames = spells.map(s => {
+                            return s.level !== null ? `${s.name} (${s.level})` : s.name;
+                        }).join(', ');
+                        html += `<p><strong>${times}/day each:</strong> ${spellNames}</p>`;
+                    }
+                }
+
+                // Spell slots (if using spell slots system)
+                if (statBlock.spellcasting.spells.slots) {
+                    const slotInfo = [];
+                    for (const [level, count] of Object.entries(statBlock.spellcasting.spells.slots)) {
+                        slotInfo.push(`${level}${this.getOrdinalSuffix(level)} level (${count} slots)`);
+                    }
+                    if (slotInfo.length > 0) {
+                        html += `<p><strong>Spell Slots:</strong> ${slotInfo.join(', ')}</p>`;
+                    }
+                }
+            }
+            html += `</div>`;
+        }
+
+        // Source
+        if (creature.source) {
+            html += `<div class="stat-block-section"><p class="creature-source"><strong>Source:</strong> ${creature.source}</p></div>`;
+        }
+
+        // Close the stat block container
+        html += `</div>`;
+
+        statBlockDisplay.innerHTML = html;
+        console.log(`📚 Displayed ${creature.name} in right pane Compendium`);
+    }
+
+    /**
+     * Format modifier with + or - sign
+     * @param {number} modifier - Modifier value
+     * @returns {string} Formatted modifier
+     */
+    static formatModifier(modifier) {
+        return modifier >= 0 ? `+${modifier}` : `${modifier}`;
+    }
+
+    /**
+     * Get ordinal suffix for a number (1st, 2nd, 3rd, etc.)
+     * @param {number|string} num - Number to get suffix for
+     * @returns {string} Ordinal suffix
+     */
+    static getOrdinalSuffix(num) {
+        const n = parseInt(num);
+        const s = ['th', 'st', 'nd', 'rd'];
+        const v = n % 100;
+        return n + (s[(v - 20) % 10] || s[v] || s[0]);
     }
 
     /**
@@ -353,7 +1038,7 @@ export class ModalEvents {
         modal.setAttribute('data-current-note-type', noteType);
 
         // Populate the recent notes datalist for suggestions
-        this.populateRecentNotesDatalist(noteType);
+        RecentItems.populateRecentNotesDatalist(noteType);
 
         // Update modal title based on note type
         const modalTitle = modal.querySelector('.modal-header h2');
@@ -389,7 +1074,7 @@ export class ModalEvents {
      */
     static setupEffectModal(modal) {
         // Populate the recent effects datalist for suggestions
-        this.populateRecentEffectsDatalist();
+        RecentItems.populateRecentEffectsDatalist();
 
         // Clear the custom effect input
         const customEffectInput = modal.querySelector('#custom-effect');
@@ -408,6 +1093,9 @@ export class ModalEvents {
         conditionInputs.forEach(input => {
             input.checked = false;
         });
+
+        // Update batch button visibility based on selected combatants
+        this.updateBatchButtons('condition', modal);
     }
 
     /**
@@ -453,549 +1141,8 @@ export class ModalEvents {
      * @param {HTMLFormElement} form - Form element
      */
     static handleFormSubmission(formType, form) {
-        console.log(`📝 Form submission: ${formType}`);
-
-        switch (formType) {
-            case 'add-combatant':
-            case 'combatant-creation':
-                this.handleAddCombatantForm(form);
-                break;
-            case 'condition-application':
-                this.handleConditionForm(form);
-                break;
-            case 'effect-application':
-                this.handleEffectForm(form);
-                break;
-            case 'combatant-note':
-                this.handleNoteForm(form);
-                break;
-            case 'creature':
-                this.handleCreatureForm(form);
-                break;
-            default:
-                console.log(`⚠️ Unhandled form type: ${formType}`);
-        }
+        // Delegate to FormHandlers module
+        FormHandlers.handleFormSubmission(formType, form);
     }
 
-    /**
-     * Handle condition form submission
-     * @param {HTMLFormElement} form - Condition form
-     */
-    static handleConditionForm(form) {
-        const formData = new FormData(form);
-
-        // Get form values
-        const condition = formData.get('condition');
-        const turns = formData.get('turns');
-        const note = formData.get('note')?.trim() || '';
-
-        // Get target from modal
-        const modal = form.closest('.modal-overlay');
-        const targetId = modal?.getAttribute('data-current-target');
-
-        // Validation
-        if (!condition) {
-            ToastSystem.show('Please select a condition', 'error', 2000);
-            return;
-        }
-
-        if (!targetId) {
-            ToastSystem.show('No target selected', 'error', 2000);
-            return;
-        }
-
-        // Get the combatant
-        const combatant = DataServices.combatantManager.getCombatant(targetId);
-        if (!combatant) {
-            console.error('Combatant not found:', targetId);
-            return;
-        }
-
-        // Create condition object
-        const conditionObj = {
-            name: condition,
-            duration: turns === 'infinite' ? 'infinite' : parseInt(turns) || 1,
-            note: note
-        };
-
-        // Check if condition already exists
-        const existingIndex = combatant.conditions.findIndex(c => c.name === condition);
-        if (existingIndex !== -1) {
-            // Update existing condition
-            combatant.conditions[existingIndex] = conditionObj;
-            ToastSystem.show(`Updated ${condition} on ${combatant.name}`, 'success', 2000);
-        } else {
-            // Add new condition
-            combatant.conditions.push(conditionObj);
-            ToastSystem.show(`Applied ${condition} to ${combatant.name}`, 'success', 2000);
-        }
-
-        // Update the combatant
-        DataServices.combatantManager.updateCombatant(targetId, 'conditions', combatant.conditions);
-
-        // Close modal
-        ModalSystem.hideAll();
-
-        // Update combat header if this is the active combatant
-        if (combatant.status.isActive) {
-            // TODO: This will be moved to combat events module
-            console.log('Update combat header - TODO');
-        }
-    }
-
-    /**
-     * Handle effect form submission
-     * @param {HTMLFormElement} form - Effect form
-     */
-    static handleEffectForm(form) {
-        const formData = new FormData(form);
-
-        // Get form values - check both custom input and dropdown
-        let effectName = formData.get('custom-effect')?.trim();
-        if (!effectName) {
-            effectName = formData.get('effect-dropdown');
-        }
-
-        const turns = formData.get('turns');
-        const note = formData.get('note')?.trim() || '';
-
-        // Get target from modal
-        const modal = form.closest('.modal-overlay');
-        const targetId = modal?.getAttribute('data-current-target');
-
-        // Validation
-        if (!effectName) {
-            ToastSystem.show('Please enter or select an effect', 'error', 2000);
-            return;
-        }
-
-        if (!targetId) {
-            ToastSystem.show('No target selected', 'error', 2000);
-            return;
-        }
-
-        // Get the combatant
-        const combatant = DataServices.combatantManager.getCombatant(targetId);
-        if (!combatant) {
-            console.error('Combatant not found:', targetId);
-            return;
-        }
-
-        // Create effect object
-        const effectObj = {
-            name: effectName,
-            duration: turns === 'infinite' ? 'infinite' : parseInt(turns) || 1,
-            note: note
-        };
-
-        // Check if effect already exists
-        const existingIndex = combatant.effects.findIndex(e => e.name === effectName);
-        if (existingIndex !== -1) {
-            // Update existing effect
-            combatant.effects[existingIndex] = effectObj;
-            ToastSystem.show(`Updated ${effectName} on ${combatant.name}`, 'success', 2000);
-        } else {
-            // Add new effect
-            combatant.effects.push(effectObj);
-            ToastSystem.show(`Applied ${effectName} to ${combatant.name}`, 'success', 2000);
-        }
-
-        // Add to recent effects for future use (both new and updated effects)
-        this.addToRecentEffects(effectName);
-
-        // Update the combatant
-        DataServices.combatantManager.updateCombatant(targetId, 'effects', combatant.effects);
-
-        // Close modal
-        ModalSystem.hideAll();
-
-        // Update combat header if this is the active combatant
-        if (combatant.status.isActive) {
-            // TODO: This will be moved to combat events module
-            console.log('Update combat header - TODO');
-        }
-    }
-
-    /**
-     * Handle note form submission
-     * @param {HTMLFormElement} form - Note form
-     */
-    static handleNoteForm(form) {
-        const formData = new FormData(form);
-        const noteText = formData.get('noteText')?.trim() || '';
-
-        // Get target and note type from modal
-        const modal = form.closest('.modal-overlay');
-        const targetId = modal?.getAttribute('data-current-target');
-        const noteType = modal?.getAttribute('data-current-note-type') || 'general';
-
-        if (!targetId) {
-            ToastSystem.show('No target selected', 'error', 2000);
-            return;
-        }
-
-        // Get the combatant
-        const combatant = DataServices.combatantManager.getCombatant(targetId);
-        if (!combatant) {
-            console.error('Combatant not found:', targetId);
-            return;
-        }
-
-        // Update the appropriate note field
-        if (noteType === 'name') {
-            DataServices.combatantManager.updateCombatant(targetId, 'nameNote', noteText);
-            ToastSystem.show(`Name note updated for ${combatant.name}`, 'success', 2000);
-        } else {
-            DataServices.combatantManager.updateCombatant(targetId, 'notes', noteText);
-            ToastSystem.show(`Note updated for ${combatant.name}`, 'success', 2000);
-        }
-
-        // Add to recent notes for future use (only if noteText is not empty)
-        if (noteText.trim()) {
-            this.addToRecentNotes(noteText, noteType);
-        }
-
-        // Close modal
-        ModalSystem.hideAll();
-    }
-
-    /**
-     * Handle add combatant form submission
-     * @param {HTMLFormElement} form - Add combatant form
-     */
-    static handleAddCombatantForm(form) {
-        const formData = new FormData(form);
-
-        // Get form values
-        const creatureId = formData.get('creatureId');
-        const initiative = parseInt(formData.get('initiative'));
-        const currentHP = formData.get('currentHP') ? parseInt(formData.get('currentHP')) : null;
-        const nameNote = formData.get('nameNote')?.trim() || '';
-        const startingSurprised = formData.get('startingSurprised') === 'true';
-        const startingHiding = formData.get('startingHiding') === 'true';
-
-        // Validation
-        if (!creatureId) {
-            ToastSystem.show('Please select a creature', 'error', 3000);
-            return;
-        }
-
-        if (isNaN(initiative)) {
-            ToastSystem.show('Please enter a valid initiative', 'error', 3000);
-            return;
-        }
-
-        // Create instance data from form inputs
-        const instanceData = {
-            initiative: initiative,
-            nameNote: nameNote
-        };
-
-        // Set custom HP if provided
-        if (currentHP !== null && !isNaN(currentHP)) {
-            instanceData.currentHP = currentHP;
-        }
-
-        // Set starting status conditions
-        if (startingSurprised || startingHiding) {
-            instanceData.status = {};
-            if (startingSurprised) {
-                instanceData.status.surprised = true;
-            }
-            if (startingHiding) {
-                instanceData.status.hiding = true;
-            }
-        }
-
-        try {
-            // Add combatant using the global CombatantManager
-            const combatantCard = DataServices.combatantManager.addCombatant(creatureId, instanceData);
-
-            if (combatantCard) {
-                ToastSystem.show(`Added ${combatantCard.name} to encounter`, 'success', 3000);
-                console.log(`✅ Successfully added combatant: ${combatantCard.name}`);
-            } else {
-                ToastSystem.show('Failed to add combatant: Creature not found', 'error', 3000);
-                return;
-            }
-        } catch (error) {
-            console.error('❌ Error adding combatant:', error);
-            ToastSystem.show('Failed to add combatant: ' + error.message, 'error', 3000);
-            return;
-        }
-
-        ModalSystem.hideAll();
-    }
-
-    /**
-     * Handle creature form submission (for adding new creatures to database)
-     * @param {HTMLFormElement} form - Creature form
-     */
-    static handleCreatureForm(form) {
-        const formData = new FormData(form);
-
-        // Extract basic required fields
-        const name = formData.get('name')?.trim();
-        const type = formData.get('type');
-        const ac = parseInt(formData.get('ac'));
-        const maxHP = parseInt(formData.get('maxHP'));
-
-        // Validate required fields
-        if (!name || !type || isNaN(ac) || isNaN(maxHP)) {
-            ToastSystem.show('Please fill in all required fields (Name, Type, AC, HP)', 'error', 3000);
-            return;
-        }
-
-        // Generate a unique ID for the creature
-        const id = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-
-        // Check if creature with this ID already exists
-        const existingCreatures = DataServices.combatantManager.getAvailableCreatures();
-        if (existingCreatures.some(creature => creature.id === id)) {
-            ToastSystem.show(`A creature named "${name}" already exists`, 'error', 3000);
-            return;
-        }
-
-        // Build creature data structure
-        const creatureData = {
-            id: id,
-            name: name,
-            type: type,
-            ac: ac,
-            maxHP: maxHP,
-            cr: formData.get('cr') || '0',
-            size: formData.get('size') || 'Medium',
-            race: formData.get('race') || '',
-            subrace: formData.get('subrace') || '',
-            alignment: formData.get('alignment') || '',
-            description: formData.get('description') || '',
-            source: formData.get('source') || 'Custom',
-            hasFullStatBlock: false // For now, just basic stats
-        };
-
-        // Optional: Build stat block if we have ability scores
-        const str = parseInt(formData.get('str'));
-        const dex = parseInt(formData.get('dex'));
-        const con = parseInt(formData.get('con'));
-        const int = parseInt(formData.get('int'));
-        const wis = parseInt(formData.get('wis'));
-        const cha = parseInt(formData.get('cha'));
-
-        if (!isNaN(str) && !isNaN(dex) && !isNaN(con) && !isNaN(int) && !isNaN(wis) && !isNaN(cha)) {
-            creatureData.hasFullStatBlock = true;
-            creatureData.statBlock = {
-                fullType: `${creatureData.size} ${creatureData.race}${creatureData.subrace ? ` (${creatureData.subrace})` : ''}, ${creatureData.alignment}`,
-                armorClass: {
-                    value: ac,
-                    type: formData.get('acType') || 'Natural Armor'
-                },
-                hitPoints: {
-                    average: maxHP,
-                    formula: formData.get('hpFormula') || ''
-                },
-                initiative: {
-                    modifier: parseInt(formData.get('initiativeModifier')) || Math.floor((dex - 10) / 2),
-                    total: parseInt(formData.get('initiativeTotal')) || 0
-                },
-                speed: {
-                    walk: parseInt(formData.get('walkSpeed')) || 30,
-                    burrow: parseInt(formData.get('burrowSpeed')) || null,
-                    climb: parseInt(formData.get('climbSpeed')) || null,
-                    fly: parseInt(formData.get('flySpeed')) || null,
-                    swim: parseInt(formData.get('swimSpeed')) || null
-                },
-                abilities: {
-                    str: { score: str, modifier: Math.floor((str - 10) / 2) },
-                    dex: { score: dex, modifier: Math.floor((dex - 10) / 2) },
-                    con: { score: con, modifier: Math.floor((con - 10) / 2) },
-                    int: { score: int, modifier: Math.floor((int - 10) / 2) },
-                    wis: { score: wis, modifier: Math.floor((wis - 10) / 2) },
-                    cha: { score: cha, modifier: Math.floor((cha - 10) / 2) }
-                },
-                proficiencyBonus: parseInt(formData.get('proficiencyBonus')) || 2
-            };
-        }
-
-        try {
-            // Add creature to the database
-            // Note: This is a temporary solution since we can't actually save to the JSON file
-            // In a real app, this would be sent to a backend API
-            const currentDatabase = DataServices.combatantManager.creatureDatabase || [];
-            currentDatabase.push(creatureData);
-
-            // Store in localStorage for persistence during the session
-            const customCreatures = JSON.parse(localStorage.getItem('dnd-custom-creatures') || '[]');
-            customCreatures.push(creatureData);
-            localStorage.setItem('dnd-custom-creatures', JSON.stringify(customCreatures));
-
-            ToastSystem.show(`Created creature: ${name}`, 'success', 3000);
-            console.log(`✅ Created custom creature: ${name} (${id})`);
-
-            ModalSystem.hideAll();
-
-            // Refresh the creature database in memory
-            if (DataServices.combatantManager.creatureDatabase) {
-                DataServices.combatantManager.creatureDatabase.push(creatureData);
-            }
-
-        } catch (error) {
-            console.error('❌ Error creating creature:', error);
-            ToastSystem.show('Failed to create creature: ' + error.message, 'error', 4000);
-        }
-    }
-
-    /**
-     * Populate recent effects dropdown
-     */
-    static populateRecentEffectsDropdown() {
-        const dropdown = document.getElementById('effect-dropdown');
-        if (!dropdown) return;
-
-        // Get recent effects from localStorage
-        const recentEffects = this.getRecentEffects();
-
-        // Clear existing options (except the first placeholder)
-        while (dropdown.children.length > 1) {
-            dropdown.removeChild(dropdown.lastChild);
-        }
-
-        // Add recent effects
-        recentEffects.forEach(effect => {
-            const option = document.createElement('option');
-            option.value = effect;
-            option.textContent = effect;
-            dropdown.appendChild(option);
-        });
-    }
-
-    /**
-     * Get recent effects from localStorage
-     * @returns {Array} Array of recent effect names
-     */
-    static getRecentEffects() {
-        try {
-            const stored = localStorage.getItem('recentEffects');
-            return stored ? JSON.parse(stored) : [];
-        } catch (error) {
-            console.warn('Failed to load recent effects:', error);
-            return [];
-        }
-    }
-
-    /**
-     * Populate the datalist with recent effects for suggestions
-     */
-    static populateRecentEffectsDatalist() {
-        const datalist = document.getElementById('recent-effects-list');
-        if (!datalist) return;
-
-        const recentEffects = this.getRecentEffects();
-
-        // Clear existing options
-        datalist.innerHTML = '';
-
-        // Add recent effects as options
-        recentEffects.forEach(effect => {
-            const option = document.createElement('option');
-            option.value = effect;
-            datalist.appendChild(option);
-        });
-    }
-
-    /**
-     * Add effect to recent effects list
-     * @param {string} effectName - Name of the effect to add
-     */
-    static addToRecentEffects(effectName) {
-        if (!effectName) return;
-
-        const recentEffects = this.getRecentEffects();
-
-        // Remove if already exists (to move to front)
-        const existingIndex = recentEffects.indexOf(effectName);
-        if (existingIndex !== -1) {
-            recentEffects.splice(existingIndex, 1);
-        }
-
-        // Add to front
-        recentEffects.unshift(effectName);
-
-        // Limit to 12 recent effects
-        const limitedEffects = recentEffects.slice(0, 12);
-
-        // Save back to localStorage
-        try {
-            localStorage.setItem('recentEffects', JSON.stringify(limitedEffects));
-        } catch (error) {
-            console.warn('Failed to save recent effects:', error);
-        }
-    }
-
-    /**
-     * Get recent notes from localStorage
-     * @param {string} noteType - Type of note ('name' or 'general')
-     * @returns {Array} Array of recent note texts
-     */
-    static getRecentNotes(noteType) {
-        try {
-            const storageKey = noteType === 'name' ? 'recentNameNotes' : 'recentGeneralNotes';
-            const stored = localStorage.getItem(storageKey);
-            return stored ? JSON.parse(stored) : [];
-        } catch (error) {
-            console.warn(`Failed to load recent ${noteType} notes:`, error);
-            return [];
-        }
-    }
-
-    /**
-     * Populate the datalist with recent notes for suggestions
-     * @param {string} noteType - Type of note ('name' or 'general')
-     */
-    static populateRecentNotesDatalist(noteType) {
-        const datalist = document.getElementById('recent-notes-list');
-        if (!datalist) return;
-
-        const recentNotes = this.getRecentNotes(noteType);
-
-        // Clear existing options
-        datalist.innerHTML = '';
-
-        // Add recent notes as options
-        recentNotes.forEach(note => {
-            const option = document.createElement('option');
-            option.value = note;
-            datalist.appendChild(option);
-        });
-    }
-
-    /**
-     * Add note to recent notes list
-     * @param {string} noteText - Text of the note to add
-     * @param {string} noteType - Type of note ('name' or 'general')
-     */
-    static addToRecentNotes(noteText, noteType) {
-        if (!noteText) return;
-
-        const storageKey = noteType === 'name' ? 'recentNameNotes' : 'recentGeneralNotes';
-        const recentNotes = this.getRecentNotes(noteType);
-
-        // Remove if already exists (to move to front)
-        const existingIndex = recentNotes.indexOf(noteText);
-        if (existingIndex !== -1) {
-            recentNotes.splice(existingIndex, 1);
-        }
-
-        // Add to front
-        recentNotes.unshift(noteText);
-
-        // Limit to 12 recent notes
-        const limitedNotes = recentNotes.slice(0, 12);
-
-        // Save back to localStorage
-        try {
-            localStorage.setItem(storageKey, JSON.stringify(limitedNotes));
-        } catch (error) {
-            console.warn(`Failed to save recent ${noteType} notes:`, error);
-        }
-    }
 }

@@ -68,14 +68,32 @@ export class CombatantManager {
     }
     
     /**
-     * Load the creature database from JSON
+     * Load the creature database from JSON and merge with custom creatures
      */
     async loadCreatureDatabase() {
         try {
+            // Load base creatures from JSON file
             const response = await fetch('/src/data/creatures/creature-database.json');
             const data = await response.json();
-            this.creatureDatabase = data.creatures;
-            console.log(`📚 Loaded ${this.creatureDatabase.length} creatures from database`);
+            const baseCreatures = data.creatures;
+
+            // Load custom creatures from localStorage
+            let customCreatures = [];
+            try {
+                const stored = localStorage.getItem('dnd-custom-creatures');
+                if (stored) {
+                    customCreatures = JSON.parse(stored);
+                    // Mark them as custom for identification
+                    customCreatures = customCreatures.map(c => ({ ...c, isCustom: true }));
+                }
+            } catch (error) {
+                console.warn('Failed to load custom creatures:', error);
+            }
+
+            // Merge both databases (custom creatures first so they appear at top)
+            this.creatureDatabase = [...customCreatures, ...baseCreatures];
+
+            console.log(`📚 Loaded ${baseCreatures.length} base creatures and ${customCreatures.length} custom creatures`);
         } catch (error) {
             console.error('❌ Failed to load creature database:', error);
             // Fallback to empty array
@@ -103,8 +121,9 @@ export class CombatantManager {
      * @returns {CombatantCard} The created combatant card
      */
     addCombatant(creatureId, instanceData = {}) {
-        // Find creature in database
+        // Find creature in consolidated database (includes both JSON and custom creatures)
         const creatureData = this.creatureDatabase.find(c => c.id === creatureId);
+
         if (!creatureData) {
             console.error(`Creature ${creatureId} not found in database`);
             return null;

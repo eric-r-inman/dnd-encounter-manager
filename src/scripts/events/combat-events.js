@@ -66,11 +66,16 @@ export class CombatEvents {
             }
         }
 
-        // Clear surprised status from the current active combatant (their turn is ending)
+        // Process end-of-turn effects for the current active combatant (their turn is ending)
         const currentActiveCombatant = allCombatants.find(c => c.status.isActive);
-        if (currentActiveCombatant && currentActiveCombatant.status.surprised) {
-            DataServices.combatantManager.updateCombatant(currentActiveCombatant.id, 'status.surprised', false);
-            ToastSystem.show(`${currentActiveCombatant.name} is no longer surprised`, 'info', 2000);
+        if (currentActiveCombatant) {
+            this.processEndOfTurnEffects(currentActiveCombatant);
+
+            // Clear surprised status
+            if (currentActiveCombatant.status.surprised) {
+                DataServices.combatantManager.updateCombatant(currentActiveCombatant.id, 'status.surprised', false);
+                ToastSystem.show(`${currentActiveCombatant.name} is no longer surprised`, 'info', 2000);
+            }
         }
 
         // Clear all active states
@@ -201,7 +206,7 @@ export class CombatEvents {
 
         headerElement.innerHTML = `
             <span class="combat-round">Round ${round}</span>
-            <span class="current-turn-name clickable-name">${activeCombatant.name}</span>
+            <span class="current-turn-name clickable-name" data-combatant-id="${activeCombatant.id}">${activeCombatant.name}</span>
             <span class="current-turn-hp">${activeCombatant.currentHP}/${activeCombatant.maxHP} HP</span>
             ${statusList ? `<span class="conditions-list">${statusList}</span>` : ''}
         `;
@@ -216,7 +221,10 @@ export class CombatEvents {
 
         // Process conditions that decrement on turn start
         combatant.conditions = combatant.conditions.filter(condition => {
-            if (condition.duration !== 'infinite' && condition.duration > 0) {
+            // Only decrement conditions that expire at start of turn (or legacy conditions without expiresAt)
+            const expiresAtStart = !condition.expiresAt || condition.expiresAt === 'start';
+
+            if (expiresAtStart && condition.duration !== 'infinite' && condition.duration > 0) {
                 condition.duration--;
                 hasChanges = true;
 
@@ -231,7 +239,10 @@ export class CombatEvents {
 
         // Process effects that decrement on turn start
         combatant.effects = combatant.effects.filter(effect => {
-            if (effect.duration !== 'infinite' && effect.duration > 0) {
+            // Only decrement effects that expire at start of turn (or legacy effects without expiresAt)
+            const expiresAtStart = !effect.expiresAt || effect.expiresAt === 'start';
+
+            if (expiresAtStart && effect.duration !== 'infinite' && effect.duration > 0) {
                 effect.duration--;
                 hasChanges = true;
 
@@ -239,6 +250,76 @@ export class CombatEvents {
                 if (effect.duration === 0) {
                     ToastSystem.show(`${effect.name} ended on ${combatant.name}`, 'info', 2000);
                     return false;
+                }
+            }
+            return true;
+        });
+
+        // Update combatant if there were changes
+        if (hasChanges) {
+            DataServices.combatantManager.updateCombatant(combatant.id, 'conditions', combatant.conditions);
+            DataServices.combatantManager.updateCombatant(combatant.id, 'effects', combatant.effects);
+        }
+    }
+
+    /**
+     * Process end-of-turn effects (called when a combatant's turn ends)
+     * @param {Object} combatant - The combatant whose turn is ending
+     */
+    static processEndOfTurnEffects(combatant) {
+        let hasChanges = false;
+
+        // Process conditions that decrement at end of turn
+        combatant.conditions = combatant.conditions.filter(condition => {
+            // Only process conditions that expire at end of turn
+            const expiresAtEnd = condition.expiresAt === 'end';
+
+            if (expiresAtEnd) {
+                // Check if this condition should skip decrement this time
+                if (condition.skipNextEndDecrement) {
+                    // Remove the flag and skip decrement
+                    delete condition.skipNextEndDecrement;
+                    hasChanges = true;
+                    return true;
+                }
+
+                if (condition.duration !== 'infinite' && condition.duration > 0) {
+                    condition.duration--;
+                    hasChanges = true;
+
+                    // Remove if duration reaches 0
+                    if (condition.duration === 0) {
+                        ToastSystem.show(`${condition.name} ended on ${combatant.name}`, 'info', 2000);
+                        return false;
+                    }
+                }
+            }
+            return true;
+        });
+
+        // Process effects that decrement at end of turn
+        combatant.effects = combatant.effects.filter(effect => {
+            // Only process effects that expire at end of turn
+            const expiresAtEnd = effect.expiresAt === 'end';
+
+            if (expiresAtEnd) {
+                // Check if this effect should skip decrement this time
+                if (effect.skipNextEndDecrement) {
+                    // Remove the flag and skip decrement
+                    delete effect.skipNextEndDecrement;
+                    hasChanges = true;
+                    return true;
+                }
+
+                if (effect.duration !== 'infinite' && effect.duration > 0) {
+                    effect.duration--;
+                    hasChanges = true;
+
+                    // Remove if duration reaches 0
+                    if (effect.duration === 0) {
+                        ToastSystem.show(`${effect.name} ended on ${combatant.name}`, 'info', 2000);
+                        return false;
+                    }
                 }
             }
             return true;
@@ -263,11 +344,43 @@ export class CombatEvents {
             // Process conditions that might have round-based effects
             // (Most D&D conditions are turn-based, but some house rules might use round-based)
 
-            // Example: Ongoing damage effects that trigger each round
+            // Process ongoing damage/healing effects
             combatant.effects.forEach(effect => {
-                if (effect.name.toLowerCase().includes('ongoing') && effect.duration !== 'infinite') {
-                    // TODO: Implement ongoing damage/healing effects
-                    console.log(`Processing ongoing effect: ${effect.name} on ${combatant.name}`);
+                if (effect.duration === 'infinite') return;
+
+                const effectName = effect.name.toLowerCase();
+
+                // Check for ongoing damage keywords
+                const damageKeywords = ['poison', 'burning', 'bleeding', 'acid', 'ongoing damage'];
+                const healingKeywords = ['regeneration', 'healing', 'ongoing healing'];
+
+                const isOngoingDamage = damageKeywords.some(keyword => effectName.includes(keyword));
+                const isOngoingHealing = healingKeywords.some(keyword => effectName.includes(keyword));
+
+                if (isOngoingDamage || isOngoingHealing) {
+                    // Extract damage/healing amount from effect name (e.g., "Poison (5 damage)")
+                    const amountMatch = effect.name.match(/\((\d+)\s*(damage|healing|hp)\)/i);
+                    const amount = amountMatch ? parseInt(amountMatch[1]) : 0;
+
+                    if (amount > 0) {
+                        if (isOngoingDamage) {
+                            // Apply ongoing damage
+                            combatant.currentHP = Math.max(0, combatant.currentHP - amount);
+                            ToastSystem.show(`${combatant.name} takes ${amount} ${effectName} damage`, 'warning', 2000);
+                            hasChanges = true;
+                        } else if (isOngoingHealing) {
+                            // Apply ongoing healing
+                            const healAmount = Math.min(amount, combatant.maxHP - combatant.currentHP);
+                            combatant.currentHP = Math.min(combatant.maxHP, combatant.currentHP + healAmount);
+                            if (healAmount > 0) {
+                                ToastSystem.show(`${combatant.name} heals ${healAmount} HP from ${effect.name}`, 'success', 2000);
+                                hasChanges = true;
+                            }
+                        }
+                    } else {
+                        // Just log the effect without amount
+                        console.log(`Processing ongoing effect: ${effect.name} on ${combatant.name} (no amount specified)`);
+                    }
                 }
             });
         });

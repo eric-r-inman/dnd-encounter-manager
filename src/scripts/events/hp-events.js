@@ -15,6 +15,7 @@ import { StateManager } from '../state-manager.js';
 import { ToastSystem } from '../../components/toast/ToastSystem.js';
 import { ModalSystem } from '../../components/modals/ModalSystem.js';
 import { DataServices } from '../data-services.js';
+import { CombatEvents } from './combat-events.js';
 
 export class HPEvents {
     /**
@@ -180,8 +181,7 @@ export class HPEvents {
 
         // Update combat header if this is the active combatant
         if (combatant.status.isActive) {
-            // Note: This will need to be updated when we extract combat events
-            console.log('Update combat header - TODO');
+            CombatEvents.updateCombatHeader();
         }
     }
 

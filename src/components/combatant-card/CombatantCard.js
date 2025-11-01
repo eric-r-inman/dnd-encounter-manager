@@ -190,11 +190,12 @@ export class CombatantCard {
                             <span class="initiative-value">${this.initiative}</span>
                         </div>
                         <span class="surprise-status-indicator" title="Click to toggle surprised" data-action="toggle-surprise-status">${statusEmoji}</span>${(this.status.surprised || healthState === 'unconscious' || healthState === 'dead') ? '<span class="surprised-exclamation">!</span>' : ''}
-                        <h3 class="combatant-name ${nameColorClass}">
+                        <h3 class="combatant-name ${nameColorClass}"
+                            ${this.creatureId ? `data-action="view-creature-stat-block" data-creature-id="${this.creatureId}" title="Click to view stat block in Compendium"` : ''}>
                             ${this.name}${this.nameNote ? ` <span class="combatant-name-note">${this.nameNote}</span>` : ''}
-                            <button class="name-note-edit" 
-                                    title="Edit name note" 
-                                    data-modal-show="combatant-note" 
+                            <button class="name-note-edit"
+                                    title="Edit name note"
+                                    data-modal-show="combatant-note"
                                     data-modal-target="${this.id}"
                                     data-note-type="name">✏️</button>
                         </h3>

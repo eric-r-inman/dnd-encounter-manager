@@ -450,12 +450,6 @@
                             <button class="btn btn-primary" data-action="open-creature-database">
                                 📖 Open
                             </button>
-                            <!-- <button class="btn btn-secondary" data-action="import-creature-database">
-                                📥 Import
-                            </button> -->
-                            <button class="btn btn-primary" data-action="import-stat-block">
-                                📋 Paste
-                            </button>
                         </div>
                     </div>
                     
@@ -505,6 +499,12 @@
                         </select>
                         <button class="btn btn-success btn-sm" data-action="add-new-creature">
                             ➕ New Creature
+                        </button>
+                        <button class="btn btn-primary btn-sm" data-action="import-creature">
+                            📥 Import
+                        </button>
+                        <button class="btn btn-primary btn-sm" data-action="import-stat-block">
+                            📋 Paste
                         </button>
                     </div>
                 </div>
@@ -584,12 +584,12 @@
                 <h2 id="creature-form-title">Add New Creature</h2>
                 <button class="modal-close" aria-label="Close modal" data-modal-close>&times;</button>
             </div>
-            <form class="modal-body" 
+            <form class="modal-body"
                 id="creature-form"
-                data-modal-form="creature" 
-                data-form-type="creature-edit"
+                data-modal-form="creature"
+                data-form-type="creature"
                 novalidate
-                style="overflow-y: auto; max-height: calc(85vh - 120px);">
+                style="overflow-y: auto; max-height: calc(85vh - 180px);">
                 
                 <!-- ==================== BASIC INFORMATION ==================== -->
                 <h3 class="form-section-title">Basic Information</h3>
@@ -961,19 +961,32 @@
                         + Add Spell
                     </button>
                 </div>
-                
-                <!-- Hidden field for creature ID when editing -->
-                <input type="hidden" id="creature-form-id" name="id">
-                
-                <div class="modal-footer-actions">
-                    <button type="button" class="btn btn-secondary" data-modal-close>
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        <span id="creature-form-submit-text">Add Creature</span>
+
+                <!-- ==================== CUSTOM SECTIONS ==================== -->
+                <h3 class="form-section-title">Custom Sections</h3>
+                <p style="font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: var(--spacing-md);">
+                    Add custom sections like Habitat, Lair Actions, Regional Effects, Treasure, etc.
+                </p>
+
+                <div id="custom-sections-container">
+                    <button type="button" class="btn btn-sm btn-secondary" data-action="add-custom-section">
+                        + Add Custom Section
                     </button>
                 </div>
+
+                <!-- Hidden field for creature ID when editing -->
+                <input type="hidden" id="creature-form-id" name="id">
             </form>
+
+            <!-- Fixed footer buttons outside the scrollable form -->
+            <div class="modal-footer" style="position: sticky; bottom: 0; background: var(--color-bg-card); padding: var(--spacing-md); border-top: 1px solid var(--color-border-primary); display: flex; gap: var(--spacing-sm); justify-content: flex-end; z-index: 10;">
+                <button type="button" class="btn btn-secondary" data-modal-close>
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-primary" form="creature-form">
+                    <span id="creature-form-submit-text">Add Creature</span>
+                </button>
+            </div>
         </div>
     </div>
     
@@ -1125,14 +1138,25 @@
                 </div>
                 <div class="form-group">
                     <label for="condition-note">Note (optional, max 14 chars):</label>
-                    <input type="text" 
-                           id="condition-note" 
-                           name="note" 
-                           maxlength="14" 
-                           placeholder="Short description" 
+                    <input type="text"
+                           id="condition-note"
+                           name="note"
+                           maxlength="14"
+                           placeholder="Short description"
                            data-field-type="note"
                            data-validation="maxlength"
                            data-char-counter="true">
+                </div>
+                <div class="form-group" style="display: flex; align-items: center; gap: 12px;">
+                    <span>Countdown on turn:</span>
+                    <label class="radio-label" style="display: inline-flex; align-items: center; margin-bottom: 0;">
+                        <input type="radio" name="expiresAt" value="start" checked>
+                        <span>Beginning</span>
+                    </label>
+                    <label class="radio-label" style="display: inline-flex; align-items: center; margin-bottom: 0;">
+                        <input type="radio" name="expiresAt" value="end">
+                        <span>End</span>
+                    </label>
                 </div>
                 <div class="form-group">
                     <label>Select Condition:</label>
@@ -1250,6 +1274,17 @@
                     <datalist id="recent-effects-list">
                         <!-- Recent effects will be populated here -->
                     </datalist>
+                </div>
+                <div class="form-group" style="display: flex; align-items: center; gap: 12px;">
+                    <span>Countdown on turn:</span>
+                    <label class="radio-label" style="display: inline-flex; align-items: center; margin-bottom: 0;">
+                        <input type="radio" name="expiresAt" value="start" checked>
+                        <span>Beginning</span>
+                    </label>
+                    <label class="radio-label" style="display: inline-flex; align-items: center; margin-bottom: 0;">
+                        <input type="radio" name="expiresAt" value="end">
+                        <span>End</span>
+                    </label>
                 </div>
                 <div class="form-group">
                     <label for="effect-note">Note (optional, max 14 chars):</label>
@@ -1422,7 +1457,7 @@
                                 <option value="book">Book/PDF</option>
                             </select>
                         </div>
-                        <button class="btn btn-primary" onclick="parseStatBlock()">
+                        <button class="btn btn-primary" data-action="parse-stat-block">
                             🔍 Parse Stat Block
                         </button>
                     </div>
@@ -1452,7 +1487,7 @@
                     <button type="button" class="btn btn-secondary" data-modal-close>
                         Cancel
                     </button>
-                    <button type="button" class="btn btn-success" id="import-parsed-creature" style="display: none;" onclick="importParsedCreature()">
+                    <button type="button" class="btn btn-success" id="import-parsed-creature" style="display: none;" data-action="import-parsed-creature">
                         ✅ Import Creature
                     </button>
                 </div>
