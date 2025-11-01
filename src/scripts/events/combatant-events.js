@@ -28,44 +28,50 @@ export class CombatantEvents {
 
         // Check if Shift key is pressed for select all / deselect all
         if (event && event.shiftKey) {
-            // Get all batch select checkboxes
-            const allCheckboxes = document.querySelectorAll('[data-action="toggle-batch-select"]');
+            try {
+                // Get all batch select checkboxes
+                const allCheckboxes = document.querySelectorAll('[data-action="toggle-batch-select"]');
 
-            // Select all or deselect all based on the current checkbox state
-            allCheckboxes.forEach(checkbox => {
-                const checkboxCombatantId = checkbox.value;
-                const combatant = DataServices.combatantManager.getCombatant(checkboxCombatantId);
+                // Select all or deselect all based on the current checkbox state
+                allCheckboxes.forEach(checkbox => {
+                    const checkboxCombatantId = checkbox.value;
+                    const combatant = DataServices.combatantManager.getCombatant(checkboxCombatantId);
 
-                // Set checkbox state to match the clicked checkbox
-                checkbox.checked = isChecked;
+                    // Set checkbox state to match the clicked checkbox
+                    checkbox.checked = isChecked;
 
-                // Update combatant data
-                if (combatant) {
-                    combatant.isSelected = isChecked;
+                    // Update combatant data
+                    if (combatant) {
+                        combatant.isSelected = isChecked;
+                    }
+
+                    // Update visual state
+                    const combatantCard = checkbox.closest('[data-combatant-id]');
+                    if (combatantCard) {
+                        combatantCard.classList.toggle('batch-selected', isChecked);
+                    }
+                });
+
+                // Get current selection count
+                const selectedCombatants = this.getSelectedCombatants();
+                const count = selectedCombatants.length;
+
+                // Update batch buttons in any open modal
+                this.updateBatchButtonsInModal(selectedCombatants);
+
+                // Show appropriate toast
+                if (isChecked) {
+                    ToastSystem.show(`All ${count} combatants selected`, 'info', 1500);
+                } else {
+                    ToastSystem.show('All combatants deselected', 'info', 1500);
                 }
 
-                // Update visual state
-                const combatantCard = checkbox.closest('[data-combatant-id]');
-                if (combatantCard) {
-                    combatantCard.classList.toggle('batch-selected', isChecked);
-                }
-            });
-
-            // Get current selection count
-            const selectedCombatants = this.getSelectedCombatants();
-            const count = selectedCombatants.length;
-
-            // Update batch buttons in any open modal
-            this.updateBatchButtonsInModal(selectedCombatants);
-
-            // Show appropriate toast
-            if (isChecked) {
-                ToastSystem.show(`All ${count} combatants selected`, 'info', 1500);
-            } else {
-                ToastSystem.show('All combatants deselected', 'info', 1500);
+                return;
+            } catch (error) {
+                console.error('❌ Error in batch select:', error);
+                ToastSystem.show('Failed to select all combatants', 'error', 2000);
+                return;
             }
-
-            return;
         }
 
         // Normal single checkbox toggle (no shift key)

@@ -16,6 +16,8 @@ import { CreatureModalEvents } from './creature-modal-events.js';
 import { CombatEvents } from './combat-events.js';
 import { KeyboardEvents } from './keyboard-events.js';
 import { InlineEditEvents } from './inline-edit-events.js';
+import { EncounterEvents } from './encounter-events.js';
+import { ImportExportEvents } from './import-export-events.js';
 import { StateManager } from '../state-manager.js';
 import { ToastSystem } from '../../components/toast/ToastSystem.js';
 import { ModalSystem } from '../../components/modals/ModalSystem.js';
@@ -302,177 +304,11 @@ export class EventCoordinator {
     }
 
     static async handleSaveEncounter() {
-        // Check if there are any combatants to save
-        const allCombatants = DataServices.combatantManager.getAllCombatants();
-        if (allCombatants.length === 0) {
-            ToastSystem.show('No combatants to save', 'info', 3000);
-            return;
-        }
-
-        try {
-            // Generate default filename with timestamp
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-            const defaultFileName = `encounter-${timestamp}.json`;
-
-            // Prepare encounter data for export
-            const encounterData = {
-                name: '', // Will be filled from filename
-                timestamp: new Date().toISOString(),
-                version: '1.0',
-                combatants: allCombatants.map(combatant => ({
-                    creatureId: combatant.creatureId,
-                    instanceData: combatant
-                }))
-            };
-
-            // Convert to JSON
-            const jsonString = JSON.stringify(encounterData, null, 2);
-
-            // Check if File System Access API is supported
-            if ('showSaveFilePicker' in window) {
-                try {
-                    // Use File System Access API to show save dialog
-                    const fileHandle = await window.showSaveFilePicker({
-                        suggestedName: defaultFileName,
-                        types: [{
-                            description: 'JSON Files',
-                            accept: { 'application/json': ['.json'] }
-                        }]
-                    });
-
-                    // Get the filename from the file handle
-                    const savedFileName = fileHandle.name.replace('.json', '');
-                    encounterData.name = savedFileName;
-
-                    // Update JSON with the actual filename
-                    const updatedJsonString = JSON.stringify(encounterData, null, 2);
-
-                    // Write the file
-                    const writable = await fileHandle.createWritable();
-                    await writable.write(updatedJsonString);
-                    await writable.close();
-
-                    ToastSystem.show(`Encounter saved successfully!`, 'success', 3000);
-                    console.log(`✅ Saved encounter: ${savedFileName}`);
-                } catch (err) {
-                    // User cancelled the save dialog
-                    if (err.name === 'AbortError') {
-                        ToastSystem.show('Save cancelled', 'info', 2000);
-                    } else {
-                        throw err;
-                    }
-                }
-            } else {
-                // Fallback to traditional download method
-                encounterData.name = defaultFileName.replace('.json', '');
-                const updatedJsonString = JSON.stringify(encounterData, null, 2);
-                const blob = new Blob([updatedJsonString], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = defaultFileName;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-
-                ToastSystem.show(`Encounter saved successfully!`, 'success', 3000);
-                console.log(`✅ Saved encounter: ${defaultFileName}`);
-            }
-        } catch (error) {
-            console.error('❌ Error saving encounter:', error);
-            ToastSystem.show('Failed to save encounter: ' + error.message, 'error', 4000);
-        }
+        await EncounterEvents.handleSaveEncounter();
     }
 
     static async handleLoadEncounter() {
-        // Create file input element
-        const fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.accept = '.json';
-
-        fileInput.onchange = async (event) => {
-            const file = event.target.files[0];
-            if (!file) {
-                ToastSystem.show('No file selected', 'info', 2000);
-                return;
-            }
-
-            try {
-                // Read the file
-                const fileContent = await file.text();
-                const encounterData = JSON.parse(fileContent);
-
-                // Validate encounter data structure
-                if (!encounterData.name || !encounterData.combatants || !Array.isArray(encounterData.combatants)) {
-                    ToastSystem.show('Invalid encounter file format', 'error', 3000);
-                    return;
-                }
-
-                // Confirm if there are existing combatants
-                const currentCombatants = DataServices.combatantManager.getAllCombatants();
-                if (currentCombatants.length > 0) {
-                    const confirmReplace = confirm(`This will replace the current encounter with ${currentCombatants.length} combatants. Continue?`);
-                    if (!confirmReplace) {
-                        ToastSystem.show('Load cancelled', 'info', 2000);
-                        return;
-                    }
-                }
-
-                // Get all available creatures from compendium
-                const allCreatures = DataServices.combatantManager?.creatureDatabase || [];
-                const creatureIds = new Set(allCreatures.map(c => c.id));
-
-                // Validate which combatants can be loaded
-                const validCombatants = [];
-                const missingCreatures = [];
-
-                encounterData.combatants.forEach(combatantData => {
-                    const creatureId = combatantData.creatureId;
-                    if (creatureIds.has(creatureId)) {
-                        validCombatants.push(combatantData);
-                    } else {
-                        // Find creature name from saved data if available
-                        const creatureName = combatantData.instanceData?.name || creatureId;
-                        missingCreatures.push(creatureName);
-                    }
-                });
-
-                // Clear current encounter
-                DataServices.combatantManager.clearAll();
-
-                // Load valid combatants
-                validCombatants.forEach(combatantData => {
-                    DataServices.combatantManager.addCombatant(combatantData.creatureId, combatantData.instanceData);
-                });
-
-                // Show results
-                const loadedCount = validCombatants.length;
-                const missingCount = missingCreatures.length;
-
-                if (missingCount > 0) {
-                    // Alert about missing creatures
-                    const missingList = missingCreatures.join('\n- ');
-                    alert(`⚠️ Encounter loaded with ${loadedCount} combatant(s).\n\nThe following ${missingCount} creature(s) could not be loaded because they are not in the Compendium:\n\n- ${missingList}`);
-
-                    console.warn('❌ Missing creatures:', missingCreatures);
-                }
-
-                ToastSystem.show(`Loaded encounter: ${encounterData.name} (${loadedCount} combatants)`, 'success', 3000);
-                console.log(`✅ Loaded encounter: ${encounterData.name} with ${loadedCount} combatants`);
-
-            } catch (error) {
-                console.error('❌ Error loading encounter:', error);
-                if (error instanceof SyntaxError) {
-                    ToastSystem.show('Invalid JSON file', 'error', 3000);
-                } else {
-                    ToastSystem.show('Failed to load encounter: ' + error.message, 'error', 4000);
-                }
-            }
-        };
-
-        // Trigger file picker
-        fileInput.click();
+        await EncounterEvents.handleLoadEncounter();
     }
 
     static handleQuickViewCreature() {
@@ -852,51 +688,7 @@ export class EventCoordinator {
      * @param {HTMLElement} target - The export button
      */
     static handleExportCreature(target) {
-        const modal = target.closest('[data-modal="creature-database"]');
-        if (!modal) return;
-
-        const creatureId = modal.getAttribute('data-selected-creature-id');
-        if (!creatureId) {
-            ToastSystem.show('Please select a creature first', 'warning', 2000);
-            return;
-        }
-
-        // Get creature from database
-        const allCreatures = DataServices.combatantManager?.creatureDatabase || [];
-        const creature = allCreatures.find(c => c.id === creatureId);
-
-        if (!creature) {
-            ToastSystem.show('Creature not found', 'error', 2000);
-            return;
-        }
-
-        try {
-            // Convert creature to JSON
-            const jsonString = JSON.stringify(creature, null, 2);
-
-            // Create blob and download
-            const blob = new Blob([jsonString], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-
-            // Create download link
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${creature.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}.json`;
-
-            // Trigger download
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-
-            // Clean up
-            URL.revokeObjectURL(url);
-
-            ToastSystem.show(`Exported ${creature.name}`, 'success', 2000);
-            console.log(`✅ Exported creature: ${creature.name}`);
-        } catch (error) {
-            console.error('❌ Error exporting creature:', error);
-            ToastSystem.show('Failed to export creature: ' + error.message, 'error', 3000);
-        }
+        ImportExportEvents.handleExportCreature(target);
     }
 
     /**
