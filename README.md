@@ -12,12 +12,15 @@ A browser-based D&D 5e Encounter Manager for tracking combat initiative, HP, con
 - **Initiative Tracking**: Automatic turn order with visual indicators
 - **Round Counter**: Track combat rounds and turn progression
 - **Active Combatant**: Clear highlighting of whose turn it is
+- **Dice Roller**: Integrated dice rolling window with history and advantage/disadvantage
+- **Clickable Dice Notation**: Click any dice notation in stat blocks to auto-roll
 
 ### ⚔️ Combatant Management
 - **Add Combatants**: Players, enemies, and NPCs with custom stats
 - **HP Tracking**: Current HP, max HP, temporary HP with damage calculations
 - **Health States**: Bloodied, unconscious, and death indicators
-- **Status Effects**: Concentration, hiding, cover, surprised states
+- **Status Effects**: Concentration, hiding, cover, surprised, and flying states
+- **Initiative Editing**: Inline editing of initiative and AC values
 
 ### 🩹 Health & Damage System
 - **Damage Application**: Smart damage calculation (temp HP first, then current HP)
@@ -33,12 +36,27 @@ A browser-based D&D 5e Encounter Manager for tracking combat initiative, HP, con
 - **Batch Application**: Apply conditions/effects to multiple targets
 - **Visual Indicators**: Clear badges with duration counters
 
+### 📚 Creature Compendium
+- **Unified Database**: Single working database with localStorage persistence
+- **Import/Export**: Save and load creature databases as JSON files
+- **Stat Block Parser**: Paste D&D stat blocks to auto-import creatures
+- **Quick View**: View active combatant's stat block instantly
+- **Search & Filter**: Search by name, type, or CR; filter by creature type
+- **Custom Creatures**: Create and edit creatures with full stat blocks
+- **Database Management**: Export, import, and reset to base database
+
+### 💾 Data Management
+- **Encounter Save/Load**: Save encounters to files and load them later
+- **Creature Database**: Import/export entire creature databases
+- **Auto-save**: Persistent storage across browser sessions
+- **File System Integration**: Native OS file dialogs for save/load (modern browsers)
+
 ### 🎯 Advanced Features
 - **Batch Selection**: Multi-select combatants for group operations
 - **Keyboard Shortcuts**: Quick combat controls
 - **Tooltips**: Hover for D&D 5e rule details
-- **Auto-save**: Persistent storage across browser sessions
 - **Responsive Design**: Works on desktop and tablet
+- **Modular Architecture**: Clean, maintainable codebase
 
 ## 🚀 Quick Start
 
@@ -107,7 +125,7 @@ npm run preview
 ## 🏗️ Architecture
 
 ### Modular Design
-The application follows a modular architecture for maintainability. A comprehensive refactoring in 2024 successfully extracted a 6,873-line monolithic event handler into 7 focused modules, reducing complexity while maintaining full functionality:
+The application follows a modular architecture for maintainability. A comprehensive refactoring in 2024 successfully extracted a 6,873-line monolithic event handler into focused modules, reducing complexity while maintaining full functionality:
 
 ```
 src/
@@ -116,31 +134,91 @@ src/
 │   ├── events/            # Modular event handling system
 │   │   ├── index.js       # EventCoordinator (central dispatch)
 │   │   ├── tooltip-events.js    # D&D tooltips & batch hints
-│   │   ├── hp-events.js   # HP modification & health tracking
+│   │   ├── hp-events.js         # HP modification & health tracking
 │   │   ├── combatant-events.js  # Batch selection & status
 │   │   ├── modal-events.js      # Modal handling & forms
 │   │   ├── combat-events.js     # Turn progression & initiative
-│   │   └── keyboard-events.js   # Shortcuts & input utilities
+│   │   ├── keyboard-events.js   # Shortcuts & input utilities
+│   │   ├── creature-modal-events.js  # Compendium modal handling
+│   │   ├── creature-handlers.js      # Creature operations
+│   │   ├── form-handlers.js          # Form submission processing
+│   │   ├── import-export-handlers.js # Import/export operations
+│   │   ├── import-export-events.js   # Encounter save/load
+│   │   ├── initiative-events.js      # Initiative editing
+│   │   ├── inline-edit-events.js     # Inline value editing
+│   │   └── dice-roller-events.js     # Dice roller integration
+│   ├── services/          # Business logic services
+│   │   ├── creature-service.js      # Creature database management
+│   │   ├── calculation-service.js   # HP/damage calculations
+│   │   └── storage-service.js       # localStorage utilities
+│   ├── parsers/           # Data parsing
+│   │   └── stat-block-parser.js     # D&D stat block parsing
+│   ├── renderers/         # UI rendering
+│   │   ├── stat-block-renderer.js   # Stat block HTML generation
+│   │   └── html-utils.js            # HTML utilities
+│   ├── utils/             # Utility functions
+│   │   ├── dice-link-converter.js   # Clickable dice notation
+│   │   ├── dice-parser.js           # Dice notation parsing
+│   │   ├── modal-utils.js           # Modal helpers
+│   │   ├── validation.js            # Input validation
+│   │   └── errors.js                # Error handling
+│   ├── state/             # State management
+│   │   ├── combat-state.js          # Combat state tracking
+│   │   ├── ui-state.js              # UI state management
+│   │   └── dice-roller-state.js     # Dice roller state
 │   ├── app-core.js        # Core application logic
 │   ├── state-manager.js   # Reactive state management
-│   └── data-services.js   # Data layer and persistence
+│   ├── data-services.js   # Data layer and persistence
+│   └── constants.js       # App-wide constants
 ├── components/            # Reusable UI components
 │   ├── combatant-card/    # Combatant display logic
+│   │   ├── CombatantCard.js
+│   │   └── CombatantManager.js
 │   ├── modals/           # Modal dialog system
-│   └── toast/            # Notification system
+│   │   └── ModalSystem.js
+│   ├── toast/            # Notification system
+│   │   └── ToastSystem.js
+│   ├── dice-roller/      # Dice rolling module
+│   │   ├── DiceRoller.js
+│   │   ├── DiceRollerUI.js
+│   │   └── DiceRollerEvents.js
+│   └── stat-block/       # Stat block display
 └── styles/               # CSS organization
+    └── utilities.css     # CSS utility classes
 ```
 
 ### Key Classes
+
+**Event Coordination:**
 - **EventCoordinator**: Central event routing and delegation
-- **StateManager**: Reactive state with localStorage persistence
-- **CombatantCard**: Individual combatant rendering and logic
-- **HPEvents**: Health point calculations and modifications
-- **TooltipEvents**: D&D 5e rule tooltips and batch operation hints
 - **ModalEvents**: Modal handling and form submission processing
 - **CombatEvents**: Turn progression, initiative, and combat control
 - **CombatantEvents**: Batch operations and combatant status management
+- **CreatureModalEvents**: Compendium modal and creature list management
+- **FormHandlers**: Form submission processing for all modals
 - **KeyboardEvents**: Global shortcuts and input validation utilities
+
+**Services:**
+- **CreatureService**: Creature database with save/load functionality
+- **CalculationService**: HP, damage, and game mechanic calculations
+- **StorageService**: localStorage abstraction and utilities
+
+**UI Components:**
+- **CombatantCard**: Individual combatant rendering and logic
+- **CombatantManager**: Combatant collection and database management
+- **ModalSystem**: Modal display and lifecycle management
+- **ToastSystem**: User notifications and feedback
+- **DiceRoller**: Integrated dice rolling with history
+
+**Data Processing:**
+- **StatBlockParser**: Parse D&D stat block text into structured data
+- **DiceParser**: Parse dice notation (e.g., "2d8+3") with damage types
+- **StatBlockRenderer**: Generate HTML from creature stat blocks
+
+**State Management:**
+- **StateManager**: Reactive state with localStorage persistence
+- **CombatState**: Combat-specific state (rounds, active combatant)
+- **UIState**: UI state (modals, selections, filters)
 
 ## 🛠️ Development
 
@@ -224,9 +302,13 @@ try {
 None required - application runs entirely in browser.
 
 ### Browser Storage
-- **localStorage**: Combatant data, combat state
-- **sessionStorage**: Temporary UI state
-- **Automatic Cleanup**: Old data removed after 30 days
+- **localStorage**:
+  - `dnd-creature-database`: Working creature database
+  - `dnd-combatant-instances`: Combatant data and combat state
+  - `dnd-hidden-creatures`: Hidden creature IDs
+  - State persistence for UI
+- **sessionStorage**: Temporary UI state and modal context
+- **File System**: Encounter and database exports (JSON files)
 
 ### Keyboard Shortcuts
 - **Space**: Next turn
@@ -300,24 +382,29 @@ location.reload();
 
 ## 📚 Documentation
 
-Complete documentation is available in the `docs/` folder:
+### Root Documentation
+- **[README.md](README.md)** - This file (project overview)
+- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Developer guide and common tasks
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history and notable changes
+- **[BACKUP_INSTRUCTIONS.md](BACKUP_INSTRUCTIONS.md)** - Git workflow and backup strategies
 
-- **[Architecture Guide](docs/ARCHITECTURE.md)** - System design and module structure
-- **[API Reference](docs/API.md)** - Complete API documentation for all services
-- **[Development Guide](docs/DEVELOPMENT.md)** - Setup, patterns, and contribution guidelines
-- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment and hosting options
-- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
+### Detailed Documentation (`docs/` folder)
+- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System design and module structure
+- **[API.md](docs/API.md)** - API reference for services
+- **[CODE_EXAMPLES.md](docs/CODE_EXAMPLES.md)** - Practical code examples
+- **[TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common issues and solutions
+- **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Production deployment guide
+- **[CHALLENGE-CALCULATOR-SPEC.md](docs/CHALLENGE-CALCULATOR-SPEC.md)** - Future feature specification
 
 ## 🤝 Contributing
 
 ### For New Developers
 
-1. **Start Here**: Read [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) for detailed setup
-2. **Architecture**: Review [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for system design
-3. **API Reference**: Check [`docs/API.md`](docs/API.md) for service documentation
-4. **Code Style**: Follow existing patterns and JSDoc standards
-5. **Small Changes**: Start with tooltip text, condition descriptions
-6. **Test Thoroughly**: Verify all functionality before committing
+1. **Setup**: Follow Quick Start instructions above
+2. **Explore**: Browse the codebase structure and run the app
+3. **Code Style**: Follow existing patterns and JSDoc standards
+4. **Small Changes**: Start with tooltip text, condition descriptions
+5. **Test Thoroughly**: Verify all functionality before committing
 
 ### Making Changes
 
@@ -326,6 +413,7 @@ Complete documentation is available in the `docs/` folder:
 3. **Document Changes**: Update JSDoc and inline comments
 4. **Test Everything**: Verify no existing functionality breaks
 5. **Commit Frequently**: Small, logical commits with clear messages
+6. **Update CHANGELOG.md**: Document your changes
 
 ## 📄 License
 
@@ -339,12 +427,10 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 📞 Support
 
-- **Documentation**: Check [`docs/`](docs/) folder for detailed guides
-- **Issues**: Review [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) for solutions
-- **Code Questions**: See [`docs/API.md`](docs/API.md) for complete API reference
-- **Architecture**: See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for system overview
-- **Development**: See [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) for setup and patterns
-- **Deployment**: See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for hosting options
+- **Troubleshooting**: Check the Troubleshooting section above
+- **Code Questions**: Review the Architecture section and explore the codebase
+- **Version History**: See [CHANGELOG.md](CHANGELOG.md) for recent changes
+- **Bug Reports**: Open an issue with detailed reproduction steps
 
 ---
 

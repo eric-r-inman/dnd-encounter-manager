@@ -251,6 +251,22 @@
     transition: color var(--transition-fast);
 }
 
+/* Creature expand window button */
+.creature-expand-window-btn {
+    opacity: 0.7;
+    transform-origin: center;
+}
+
+.creature-expand-window-btn:hover {
+    opacity: 1;
+    transform: scale(1.2);
+    text-shadow: 0 0 8px rgba(240, 136, 62, 0.6);
+}
+
+.creature-expand-window-btn:active {
+    transform: scale(1.1);
+}
+
 /* Smooth scroll indicator */
 .compendium-section {
     scroll-behavior: smooth;
@@ -436,6 +452,11 @@
     color: var(--color-text-secondary);
 }
 
+/* Extra spacing between paragraphs in custom sections for better readability */
+.stat-block-section p + p {
+    margin-top: var(--spacing-md);
+}
+
 .stat-block-section p strong {
     color: var(--color-text-primary);
     font-weight: var(--font-weight-semibold);
@@ -580,4 +601,33 @@
     .creature-details-header h3 {
         font-size: var(--font-size-lg);
     }
+}
+
+/* =============================================================================
+   CLICKABLE DICE ROLLS
+   ============================================================================= */
+
+/**
+ * Styling for dice notation converted to clickable links
+ * Used in stat blocks to allow quick damage rolls
+ */
+.dice-roll-link {
+    font-weight: var(--font-weight-bold);
+    text-decoration: underline;
+    color: #D4A017; /* Bright rusty yellow */
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    padding: 1px 2px;
+    border-radius: 2px;
+}
+
+.dice-roll-link:hover {
+    background-color: rgba(212, 160, 23, 0.15);
+    color: #E5B730; /* Brighter on hover */
+    text-decoration: underline;
+}
+
+.dice-roll-link:active {
+    background-color: rgba(212, 160, 23, 0.25);
+    transform: translateY(1px);
 }

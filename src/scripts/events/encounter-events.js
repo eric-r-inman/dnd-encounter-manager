@@ -6,12 +6,20 @@
  * - File-based encounter loading with validation
  * - Missing creature detection and alerts
  * - Encounter data validation
+ * - Encounter filename tracking in combat state
+ * - Automatic combat header updates on save/load
  *
- * @version 1.0.0
+ * Integration:
+ * - Updates StateManager.state.combat.encounterFileName on save/load
+ * - Calls CombatEvents.updateCombatHeader() to refresh UI display
+ *
+ * @version 1.1.0
  */
 
 import { ToastSystem } from '../../components/toast/ToastSystem.js';
 import { DataServices } from '../data-services.js';
+import { StateManager } from '../state-manager.js';
+import { CombatEvents } from './combat-events.js';
 
 // Toast duration constants
 export const TOAST_DURATION = {
@@ -94,8 +102,16 @@ export class EncounterEvents {
                     return;
                 }
 
+                // Store loaded filename in combat state for info icon display
+                // Note: This will be overwritten if the encounter is later saved with a new name
+                const loadedFileName = file.name.replace('.json', '');
+                StateManager.state.combat.encounterFileName = loadedFileName;
+
                 // Validate and load combatants
                 const result = this._loadCombatants(encounterData);
+
+                // Update combat header to immediately reflect loaded filename in UI
+                CombatEvents.updateCombatHeader();
 
                 // Show results with missing creature alerts if any
                 this._showLoadResults(encounterData.name, result);
@@ -143,6 +159,10 @@ export class EncounterEvents {
             const savedFileName = fileHandle.name.replace('.json', '');
             encounterData.name = savedFileName;
 
+            // Store filename in combat state for info icon display
+            // This takes precedence over any previously loaded filename
+            StateManager.state.combat.encounterFileName = savedFileName;
+
             // Convert to JSON (only once, after name is set)
             const jsonString = JSON.stringify(encounterData, null, 2);
 
@@ -150,6 +170,9 @@ export class EncounterEvents {
             const writable = await fileHandle.createWritable();
             await writable.write(jsonString);
             await writable.close();
+
+            // Update combat header to immediately reflect new filename in UI
+            CombatEvents.updateCombatHeader();
 
             ToastSystem.show(`Encounter saved successfully!`, 'success', TOAST_DURATION.LONG);
             console.log(`✅ Saved encounter: ${savedFileName}`);
@@ -169,7 +192,12 @@ export class EncounterEvents {
      */
     static async _saveWithFallback(encounterData, defaultFileName) {
         // Set encounter name from filename
-        encounterData.name = defaultFileName.replace('.json', '');
+        const savedFileName = defaultFileName.replace('.json', '');
+        encounterData.name = savedFileName;
+
+        // Store filename in combat state for info icon display
+        // This takes precedence over any previously loaded filename
+        StateManager.state.combat.encounterFileName = savedFileName;
 
         // Convert to JSON
         const jsonString = JSON.stringify(encounterData, null, 2);
@@ -184,6 +212,9 @@ export class EncounterEvents {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+
+        // Update combat header to immediately reflect new filename in UI
+        CombatEvents.updateCombatHeader();
 
         ToastSystem.show(`Encounter saved successfully!`, 'success', TOAST_DURATION.LONG);
         console.log(`✅ Saved encounter: ${defaultFileName}`);

@@ -138,7 +138,7 @@
 /* Main combatant content area */
 .combatant-main {
     flex: 1;
-    padding: 4px var(--spacing-xs);
+    padding: 4px 28px 4px var(--spacing-xs); /* Extra right padding for remove button */
     position: relative;
 }
 
@@ -172,8 +172,8 @@
 
 .combatant-set-active-button {
     position: absolute;
-    top: 2px;
-    right: 28px; /* Position to the left of the remove button */
+    top: 28px; /* Position below the remove button (24px height + 2px spacing + 2px top) */
+    right: 2px; /* Align with the remove button */
     width: 24px;
     height: 24px;
     background-color: transparent;
@@ -505,7 +505,7 @@ input[type="number"] {
 .health-points-display {
     display: flex;
     align-items: baseline;
-    gap: var(--spacing-xs);
+    gap: 4px; /* Reduced from var(--spacing-xs) for more compact layout */
     font-size: var(--font-size-lg);
     font-weight: var(--font-weight-semibold);
     flex-wrap: wrap;
@@ -551,16 +551,17 @@ input[type="number"] {
 
 /* Status indicators */
 .cover-status-indicator {
-    margin-left: var(--spacing-lg);
+    margin-left: 8px; /* Reduced from var(--spacing-lg) for more compact layout */
     color: var(--color-text-primary);
     font-size: var(--font-size-sm);
     font-weight: var(--font-weight-medium);
     cursor: pointer;
     user-select: none;
-    padding: 2px 6px;
+    padding: 2px 4px; /* Reduced from 6px to 4px for consistency with other indicators */
     border-radius: var(--border-radius);
     transition: all var(--transition-fast);
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .cover-status-indicator:hover {
@@ -585,21 +586,25 @@ input[type="number"] {
     content: "● ";
 }
 
-/* Concentration and stealth indicators */
+/* Concentration, stealth, and flying indicators */
 .concentration-indicator,
-.stealth-indicator {
+.stealth-indicator,
+.flying-indicator {
     color: var(--color-text-secondary);
     font-size: var(--font-size-sm);
     font-weight: var(--font-weight-medium);
     cursor: pointer;
-    padding: 2px 6px;
+    padding: 2px 4px; /* Reduced from 6px to 4px for more compact layout */
     border-radius: var(--border-radius);
     transition: all var(--transition-fast);
     user-select: none;
+    white-space: nowrap; /* Prevent text from wrapping within indicator */
+    flex-shrink: 0; /* Prevent indicators from shrinking */
 }
 
 .concentration-indicator:hover,
-.stealth-indicator:hover {
+.stealth-indicator:hover,
+.flying-indicator:hover {
     background-color: var(--color-bg-hover);
     color: var(--color-text-primary);
 }
@@ -622,6 +627,15 @@ input[type="number"] {
     content: "👤 ";
 }
 
+.flying-indicator[data-is-flying="true"] {
+    color: var(--color-text-primary);
+    background-color: rgba(135, 206, 235, 0.1);
+}
+
+.flying-indicator[data-is-flying="true"]::before {
+    content: "🪽 ";
+}
+
 /* Condition/Effect badges */
 .combatant-condition-badge,
 .combatant-effect-badge {
@@ -638,6 +652,20 @@ input[type="number"] {
     margin-right: var(--spacing-xs);
     margin-bottom: var(--spacing-xs);
     transition: all var(--transition-fast);
+}
+
+/* Condition/Effect name text - clickable for editing */
+.condition-name-text,
+.effect-name-text {
+    cursor: pointer;
+    text-decoration: underline dotted transparent;
+    transition: all var(--transition-fast);
+}
+
+.condition-name-text:hover,
+.effect-name-text:hover {
+    text-decoration: underline dotted var(--color-purple);
+    opacity: 0.8;
 }
 
 /* Condition note styling - same as effect notes */
@@ -683,7 +711,8 @@ input[type="number"] {
 
 /* Clear buttons */
 .condition-clear,
-.effect-clear {
+.effect-clear,
+.timer-clear {
     background: none;
     border: none;
     color: var(--color-text-muted);
@@ -698,10 +727,97 @@ input[type="number"] {
 }
 
 .condition-clear:hover,
-.effect-clear:hover {
+.effect-clear:hover,
+.timer-clear:hover {
     color: var(--color-text-primary);
     transform: scale(1.1);
     opacity: 1;
+}
+
+/* Placeholder timer badge - dark yellow theme */
+.placeholder-timer-badge {
+    color: #ffbf1e; /* dark yellow */
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background-color: rgba(255, 215, 0, 0.1); /* light yellow background */
+    padding: 2px 6px;
+    border-radius: var(--border-radius);
+    border: 1px solid #b8860b; /* dark yellow border */
+    margin-right: var(--spacing-xs);
+    margin-bottom: var(--spacing-xs);
+    transition: all var(--transition-fast);
+}
+
+.placeholder-timer-badge:hover {
+    background-color: rgba(255, 217, 0, 0.07);
+    border-color: #daa520; /* goldenrod */
+}
+
+/* Timer name text - clickable for editing */
+.timer-name-text {
+    cursor: pointer;
+    text-decoration: underline dotted transparent;
+    transition: all var(--transition-fast);
+}
+
+.timer-name-text:hover {
+    text-decoration: underline dotted #b8860b;
+    opacity: 0.8;
+}
+
+/* Timer note styling */
+.timer-note {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    font-style: italic;
+    margin: 0 2px;
+}
+
+/* Timer duration counter */
+.placeholder-timer-badge .timer-duration-counter {
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--font-size-sm);
+    padding: 0 4px;
+    margin-left: 2px;
+    color: #ffea4c;
+}
+
+.placeholder-timer-badge .timer-duration-counter.duration-permanent {
+    font-weight: var(--font-weight-bold);
+    font-size: var(--font-size-base);
+}
+
+/* Placeholder timer container */
+.placeholder-timer-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+    margin-top: var(--spacing-xs);
+}
+
+/* Timer button - light yellow */
+.btn-timer {
+    color: #d1b201; /* dark yellow text */
+    /* border: 1px solid #daa520; /* goldenrod border */
+    font-weight: var(--font-weight-medium);
+    font-size: var(--font-size-xs);
+    transition: all var(--transition-fast);
+}
+
+.btn-timer:hover {
+    background-color: #f4d301; /* slightly darker yellow on hover */
+    border-color: #b8860b;
+    color: #463a00;
+}
+
+/* Placeholder actions container */
+.placeholder-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
 }
 
 /* Actions container */
@@ -890,4 +1006,72 @@ input[type="number"] {
 
 .stat-block-view-btn:active {
     transform: scale(0.95);
+}
+
+/* =============================================================================
+ * PLACEHOLDER CARD STYLES
+ * ============================================================================= */
+
+.placeholder-card {
+    opacity: 0.85;
+}
+
+.placeholder-name {
+    color: var(--color-text-primary);
+    font-style: normal;
+    font-weight: var(--font-weight-normal);
+}
+
+.placeholder-text-fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs) var(--spacing-sm); /* Reduced vertical padding */
+}
+
+.placeholder-line {
+    width: 100%;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background-color: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-muted);
+    border-radius: var(--border-radius);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-sm);
+    font-family: inherit;
+    transition: all var(--transition-fast);
+}
+
+.placeholder-line:focus {
+    outline: none;
+    border-color: var(--color-border-primary);
+    background-color: var(--color-bg-hover);
+}
+
+.placeholder-line::placeholder {
+    color: var(--color-text-muted);
+    opacity: 0.6;
+}
+
+/* Add placeholder button */
+.add-placeholder-btn {
+    width: 100%;
+    padding: var(--spacing-sm);
+    background-color: transparent;
+    border: 2px dashed var(--color-border-muted);
+    border-radius: var(--border-radius);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-base);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    margin-top: var(--spacing-xs);
+}
+
+.add-placeholder-btn:hover {
+    border-color: var(--color-border-primary);
+    color: var(--color-text-secondary);
+    background-color: var(--color-bg-hover);
+}
+
+.add-placeholder-btn:active {
+    transform: scale(0.98);
 }

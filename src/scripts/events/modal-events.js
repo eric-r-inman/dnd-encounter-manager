@@ -104,6 +104,9 @@ export class ModalEvents {
             case 'creature-form':
                 CreatureModalEvents.setupCreatureFormForAdd();
                 break;
+            case 'player-form':
+                CreatureModalEvents.setupPlayerFormForAdd();
+                break;
             case 'combatant-note':
                 this.setupNoteModal(modal, targetCombatant, trigger);
                 break;
@@ -112,6 +115,12 @@ export class ModalEvents {
                 break;
             case 'condition':
                 this.setupConditionModal(modal);
+                break;
+            case 'stat-block-parser':
+                this.setupStatBlockParserModal(modal);
+                break;
+            case 'placeholder-timer':
+                this.setupTimerModal(modal);
                 break;
         }
     }
@@ -381,7 +390,7 @@ export class ModalEvents {
 
         // Build sticky action buttons at the top
         let html = `
-            <div class="creature-actions-sticky" style="position: sticky; top: 0; z-index: 10; background-color: var(--color-bg-secondary); padding: var(--spacing-md); border-bottom: var(--border-width) solid var(--color-border-primary); display: flex; gap: var(--spacing-xs); flex-wrap: wrap;">
+            <div class="creature-actions-sticky">
                 <button class="btn btn-primary"
                         data-action="add-creature-to-encounter"
                         data-creature-id="${creature.id}">
@@ -397,14 +406,14 @@ export class ModalEvents {
                         data-creature-id="${creature.id}">
                     📋 Duplicate
                 </button>
-                <button class="btn btn-danger"
+                <button class="btn btn-secondary"
                         data-action="delete-creature"
                         data-creature-id="${creature.id}">
-                    🗑️ Delete
+                    🗑️
                 </button>
             </div>
-            <div class="creature-details-scrollable" style="overflow-y: auto; padding: var(--spacing-md) var(--spacing-lg);">
-                <div class="creature-details-header" style="padding: 0; background: transparent; border: none; margin-bottom: var(--spacing-md);">
+            <div class="creature-details-scrollable">
+                <div class="creature-details-header creature-details-header-minimal">
                     <h3>${creature.name}</h3>
                     <span class="creature-type-badge badge-${creature.type}">${creature.type.toUpperCase()}</span>
                 </div>
@@ -703,7 +712,7 @@ export class ModalEvents {
         const creature = allCreatures.find(c => c.id === creatureId);
 
         if (!creature) {
-            statBlockDisplay.innerHTML = `<div class="empty-state" style="text-align: center; color: var(--color-text-muted); padding: var(--spacing-xl);">
+            statBlockDisplay.innerHTML = `<div class="empty-state empty-state-centered">
                 <p>Creature not found</p>
             </div>`;
             return;
@@ -718,8 +727,8 @@ export class ModalEvents {
 
         // Build the stat block HTML (similar to updateCreatureDetails but without action buttons)
         let html = `
-            <div class="creature-stat-block" style="max-height: calc(100vh - 300px); overflow-y: auto; padding: var(--spacing-md);">
-                <div class="creature-details-header" style="padding: 0; background: transparent; border: none; margin-bottom: var(--spacing-md);">
+            <div class="creature-stat-block creature-stat-block-scrollable">
+                <div class="creature-details-header creature-details-header-minimal">
                     <h3>${creature.name}</h3>
                     <span class="creature-type-badge badge-${creature.type}">${creature.type.toUpperCase()}</span>
                 </div>
@@ -1143,6 +1152,185 @@ export class ModalEvents {
     static handleFormSubmission(formType, form) {
         // Delegate to FormHandlers module
         FormHandlers.handleFormSubmission(formType, form);
+    }
+
+    /**
+     * Pre-populate condition modal with existing condition data for editing
+     * @param {HTMLElement} modal - Modal element
+     * @param {Object} conditionData - Existing condition data
+     */
+    static prePopulateConditionModal(modal, conditionData) {
+        // Set duration
+        const turnsInput = modal.querySelector('#condition-turns');
+        const infinityBtn = modal.querySelector('[data-toggle-target="condition-turns"]');
+
+        if (conditionData.duration === 'infinite') {
+            if (turnsInput) turnsInput.value = '';
+            if (infinityBtn) {
+                infinityBtn.classList.add('active');
+                infinityBtn.setAttribute('data-infinity-state', 'true');
+            }
+            if (turnsInput) turnsInput.disabled = true;
+        } else {
+            if (turnsInput) turnsInput.value = conditionData.duration;
+            if (infinityBtn) {
+                infinityBtn.classList.remove('active');
+                infinityBtn.setAttribute('data-infinity-state', 'false');
+            }
+            if (turnsInput) turnsInput.disabled = false;
+        }
+
+        // Set note
+        const noteInput = modal.querySelector('#condition-note');
+        if (noteInput) {
+            noteInput.value = conditionData.note || '';
+        }
+
+        // Set expires at radio
+        const expiresAtRadios = modal.querySelectorAll('input[name="expiresAt"]');
+        expiresAtRadios.forEach(radio => {
+            radio.checked = radio.value === (conditionData.expiresAt || 'start');
+        });
+
+        // Select the condition
+        const conditionInput = modal.querySelector(`input[name="condition"][value="${conditionData.name}"]`);
+        if (conditionInput) {
+            conditionInput.checked = true;
+            // Also highlight the label
+            const label = conditionInput.closest('.condition-option');
+            if (label) {
+                label.classList.add('selected');
+            }
+        }
+
+        console.log(`✏️ Pre-populated condition modal with: ${conditionData.name}`);
+    }
+
+    /**
+     * Pre-populate effect modal with existing effect data for editing
+     * @param {HTMLElement} modal - Modal element
+     * @param {Object} effectData - Existing effect data
+     */
+    static prePopulateEffectModal(modal, effectData) {
+        // Set duration
+        const turnsInput = modal.querySelector('#effect-turns');
+        const infinityBtn = modal.querySelector('[data-toggle-target="effect-turns"]');
+
+        if (effectData.duration === 'infinite') {
+            if (turnsInput) turnsInput.value = '';
+            if (infinityBtn) {
+                infinityBtn.classList.add('active');
+                infinityBtn.setAttribute('data-infinity-state', 'true');
+            }
+            if (turnsInput) turnsInput.disabled = true;
+        } else {
+            if (turnsInput) turnsInput.value = effectData.duration;
+            if (infinityBtn) {
+                infinityBtn.classList.remove('active');
+                infinityBtn.setAttribute('data-infinity-state', 'false');
+            }
+            if (turnsInput) turnsInput.disabled = false;
+        }
+
+        // Set effect name
+        const effectInput = modal.querySelector('#custom-effect');
+        if (effectInput) {
+            effectInput.value = effectData.name || '';
+        }
+
+        // Set effect note
+        const noteInput = modal.querySelector('#effect-note');
+        if (noteInput) {
+            noteInput.value = effectData.note || '';
+        }
+
+        // Set expires at radio
+        const expiresAtRadios = modal.querySelectorAll('input[name="expiresAt"]');
+        expiresAtRadios.forEach(radio => {
+            radio.checked = radio.value === (effectData.expiresAt || 'start');
+        });
+
+        console.log(`✏️ Pre-populated effect modal with: ${effectData.name}`);
+    }
+
+    /**
+     * Set up stat block parser modal - clear all fields for a fresh start
+     * @param {HTMLElement} modal - Modal element
+     */
+    static setupStatBlockParserModal(modal) {
+        // Clear the text area
+        const textArea = modal.querySelector('#stat-block-text');
+        if (textArea) {
+            textArea.value = '';
+        }
+
+        // Reset source format dropdown to auto-detect
+        const sourceSelect = modal.querySelector('#stat-block-source');
+        if (sourceSelect) {
+            sourceSelect.value = 'auto';
+        }
+
+        // Reset creature type dropdown to enemy
+        const typeSelect = modal.querySelector('#stat-block-creature-type');
+        if (typeSelect) {
+            typeSelect.value = 'enemy';
+        }
+
+        // Clear the preview area
+        const previewDiv = modal.querySelector('#stat-block-preview');
+        if (previewDiv) {
+            previewDiv.innerHTML = `
+                <div class="empty-state empty-state-centered">
+                    <p>Paste a stat block and click "Parse Stat Block" to see a preview</p>
+                </div>
+            `;
+        }
+
+        // Hide the import button and clear any parsed data
+        const importButton = modal.querySelector('#import-parsed-creature');
+        if (importButton) {
+            importButton.style.display = 'none';
+            if (importButton.dataset.parsedCreature) {
+                delete importButton.dataset.parsedCreature;
+            }
+        }
+
+        // Clear any error messages
+        const errorDiv = modal.querySelector('#stat-block-errors');
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+            errorDiv.innerHTML = '';
+        }
+
+        console.log('📝 Reset stat block parser modal to blank state');
+    }
+
+    /**
+     * Set up timer modal for placeholders
+     * @param {HTMLElement} modal - Modal element
+     */
+    static setupTimerModal(modal) {
+        // Clear the turns input
+        const turnsInput = modal.querySelector('#timer-turns');
+        if (turnsInput) {
+            turnsInput.value = '1';
+            turnsInput.disabled = false;
+        }
+
+        // Reset infinity button
+        const infinityBtn = modal.querySelector('[data-toggle-target="timer-turns"]');
+        if (infinityBtn) {
+            infinityBtn.classList.remove('active');
+            infinityBtn.setAttribute('data-infinity-state', 'false');
+        }
+
+        // Clear the note input
+        const noteInput = modal.querySelector('#timer-note');
+        if (noteInput) {
+            noteInput.value = '';
+        }
+
+        console.log('📝 Setup timer modal for placeholder');
     }
 
 }

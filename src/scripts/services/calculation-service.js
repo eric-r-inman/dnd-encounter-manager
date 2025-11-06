@@ -35,21 +35,26 @@ export class CalculationService {
             effectiveDamage = this.applyDamageResistances(effectiveDamage, damageType, combatant);
         }
 
-        // D&D 5e Rule: Temporary HP is lost first, then current HP
-        // Temp HP acts as a buffer and doesn't stack with new temp HP
+        // WHY: D&D 5e Rule - Temporary HP is always lost BEFORE regular HP
+        // Think of temp HP like a shield or buffer that absorbs damage first.
+        // Temp HP doesn't stack (can only have one source at a time) and doesn't
+        // contribute to healing - it's purely a damage absorber.
         let newTempHP = combatant.tempHP;
         let newCurrentHP = combatant.currentHP;
         let damageToTempHP = 0;
         let damageToCurrentHP = 0;
 
-        // First, apply damage to temporary HP (if any exists)
+        // WHY: First, apply damage to temporary HP (if any exists)
+        // Example: Creature has 10 temp HP, takes 15 damage → temp HP absorbs 10,
+        // leaving 5 damage to apply to regular HP
         if (newTempHP > 0) {
             damageToTempHP = Math.min(effectiveDamage, newTempHP);
             newTempHP -= damageToTempHP;
             effectiveDamage -= damageToTempHP; // Reduce remaining damage
         }
 
-        // Then apply any remaining damage to current HP
+        // WHY: Then apply any remaining damage to current HP
+        // HP can't go below 0 in this system (death happens at 0 HP)
         if (effectiveDamage > 0) {
             damageToCurrentHP = Math.min(effectiveDamage, newCurrentHP);
             newCurrentHP -= damageToCurrentHP;
@@ -104,6 +109,9 @@ export class CalculationService {
      * @returns {Object} Temp HP calculation result
      */
     static calculateTempHP(combatant, tempHP) {
+        // D&D 5e Rule: Temporary HP does NOT stack
+        // When gaining new temp HP, you choose which to keep (usually the higher amount)
+        // This implementation always keeps the higher value
         const newTempHP = Math.max(combatant.tempHP, tempHP);
         const actualGain = newTempHP - combatant.tempHP;
 
@@ -111,8 +119,8 @@ export class CalculationService {
             originalTempHP: tempHP,
             newTempHP,
             actualGain,
-            wasReplaced: combatant.tempHP > 0 && tempHP > combatant.tempHP,
-            wasIgnored: tempHP <= combatant.tempHP
+            wasReplaced: combatant.tempHP > 0 && tempHP > combatant.tempHP,  // Had temp HP and new is better
+            wasIgnored: tempHP <= combatant.tempHP  // New temp HP is worse, keep current
         };
     }
 
@@ -124,25 +132,34 @@ export class CalculationService {
      * @returns {number} Modified damage amount
      */
     static applyDamageResistances(damage, damageType, combatant) {
+        // Quick exit if creature has no special damage modifiers
         if (!combatant.resistances && !combatant.immunities && !combatant.vulnerabilities) {
             return damage;
         }
 
-        // Check immunity first
+        // D&D 5e damage modification priority:
+        // 1. Immunity (damage = 0) - checked first
+        // 2. Resistance (damage / 2, rounded down)
+        // 3. Vulnerability (damage × 2)
+
+        // Immunity completely negates damage of that type
         if (combatant.immunities && combatant.immunities.includes(damageType)) {
             return 0;
         }
 
-        // Check resistance
+        // Resistance halves damage (round down per D&D 5e rules)
+        // Example: 7 fire damage with fire resistance = 3 damage
         if (combatant.resistances && combatant.resistances.includes(damageType)) {
             return Math.floor(damage / 2);
         }
 
-        // Check vulnerability
+        // Vulnerability doubles damage (relatively rare in 5e)
+        // Example: 5 cold damage to creature vulnerable to cold = 10 damage
         if (combatant.vulnerabilities && combatant.vulnerabilities.includes(damageType)) {
             return damage * 2;
         }
 
+        // No modifications apply
         return damage;
     }
 
@@ -158,34 +175,45 @@ export class CalculationService {
             playerAdvantage = false // Players win ties
         } = options;
 
+        // Create new array to avoid mutating original
         return [...combatants].sort((a, b) => {
-            // Primary sort: initiative (descending)
+            // Primary sort: initiative rolls (highest first)
+            // In D&D 5e, higher initiative goes first
             if (b.initiative !== a.initiative) {
                 return b.initiative - a.initiative;
             }
 
-            // Tie breaking
+            // Initiative tie - apply tiebreaker rules
+            // Optional house rule: players automatically win ties
             if (playerAdvantage) {
-                if (a.type === 'player' && b.type !== 'player') return -1;
-                if (b.type === 'player' && a.type !== 'player') return 1;
+                if (a.type === 'player' && b.type !== 'player') return -1;  // Player goes first
+                if (b.type === 'player' && a.type !== 'player') return 1;   // Player goes first
             }
 
+            // Apply selected tiebreaker method
             switch (tieBreaker) {
                 case 'dexterity':
+                    // D&D 5e official tiebreaker: higher DEX wins
+                    // Check both full score and modifier for flexibility
                     const aDex = a.dexterity || a.dexterityModifier || 0;
                     const bDex = b.dexterity || b.dexterityModifier || 0;
                     if (bDex !== aDex) return bDex - aDex;
                     break;
 
                 case 'random':
+                    // House rule: random resolution (like rolling d20)
+                    // Math.random() - 0.5 gives random negative/positive
                     return Math.random() - 0.5;
 
                 case 'alphabetical':
                 default:
+                    // Default: alphabetical by name (predictable, fair)
+                    // Uses localeCompare for proper string sorting
                     return a.name.localeCompare(b.name);
             }
 
-            return a.name.localeCompare(b.name); // Fallback
+            // Final fallback if all else is equal
+            return a.name.localeCompare(b.name);
         });
     }
 
@@ -198,28 +226,41 @@ export class CalculationService {
         const currentHP = combatant.currentHP;
         const maxHP = combatant.maxHP;
         const tempHP = combatant.tempHP;
+
+        // Effective HP includes temp HP for display purposes
+        // But health state is based on actual HP only (per D&D 5e)
         const effectiveHP = currentHP + tempHP;
         const healthPercentage = maxHP > 0 ? (currentHP / maxHP) * 100 : 0;
 
         let state, description, severity;
 
+        // D&D 5e states: 0 HP = unconscious (death saves begin)
         if (currentHP <= 0) {
             state = 'unconscious';
             description = 'Unconscious';
             severity = 'critical';
-        } else if (healthPercentage <= 25) {
+        }
+        // Critically wounded: <= 25% HP (near death)
+        else if (healthPercentage <= 25) {
             state = 'critical';
             description = 'Critically wounded';
             severity = 'high';
-        } else if (healthPercentage <= 50) {
+        }
+        // Bloodied: <= 50% HP (D&D 4e concept, popular house rule)
+        // Visual indicator to players that enemy is weakened
+        else if (healthPercentage <= 50) {
             state = 'bloodied';
             description = 'Bloodied';
             severity = 'medium';
-        } else if (healthPercentage <= 75) {
+        }
+        // Wounded: <= 75% HP (noticeable damage)
+        else if (healthPercentage <= 75) {
             state = 'wounded';
             description = 'Wounded';
             severity = 'low';
-        } else {
+        }
+        // Healthy: > 75% HP
+        else {
             state = 'healthy';
             description = 'Healthy';
             severity = 'none';
@@ -244,39 +285,58 @@ export class CalculationService {
         const players = combatants.filter(c => c.type === 'player');
         const enemies = combatants.filter(c => c.type === 'enemy');
 
+        // Can't calculate difficulty without players
         if (players.length === 0) {
             return { difficulty: 'unknown', reason: 'No players in encounter' };
         }
 
+        // Calculate total HP pools for each side
+        // Higher total HP generally means stronger side
         const playerHP = players.reduce((sum, p) => sum + p.maxHP, 0);
         const enemyHP = enemies.reduce((sum, e) => sum + e.maxHP, 0);
         const playerCount = players.length;
         const enemyCount = enemies.length;
 
+        // Calculate ratios for difficulty assessment
+        // HP Ratio: enemy HP / player HP (higher = harder encounter)
+        // Number Ratio: enemies / players (higher = action economy disadvantage)
         const hpRatio = enemyHP / playerHP;
         const numberRatio = enemyCount / playerCount;
 
         let difficulty, color, description;
 
+        // NOTE: This is a ROUGH estimate, not CR-accurate
+        // True D&D 5e difficulty requires CR calculations (see DMG p. 82)
+        // This gives a quick visual indicator based on HP and numbers
+
+        // Trivial: Enemy HP < 50% of player HP AND outnumbered
         if (hpRatio < 0.5 && numberRatio < 1) {
             difficulty = 'trivial';
-            color = '#28a745';
+            color = '#28a745';  // Green
             description = 'Very easy encounter';
-        } else if (hpRatio < 1 && numberRatio < 1.5) {
+        }
+        // Easy: Enemy HP roughly equal, slightly outnumbered
+        else if (hpRatio < 1 && numberRatio < 1.5) {
             difficulty = 'easy';
-            color = '#17a2b8';
+            color = '#17a2b8';  // Light blue
             description = 'Easy encounter';
-        } else if (hpRatio < 1.5 && numberRatio < 2) {
+        }
+        // Medium: Balanced HP, balanced numbers
+        else if (hpRatio < 1.5 && numberRatio < 2) {
             difficulty = 'medium';
-            color = '#ffc107';
+            color = '#ffc107';  // Yellow/orange
             description = 'Balanced encounter';
-        } else if (hpRatio < 2.5 && numberRatio < 3) {
+        }
+        // Hard: Enemy HP 1.5-2.5x player HP
+        else if (hpRatio < 2.5 && numberRatio < 3) {
             difficulty = 'hard';
-            color = '#fd7e14';
+            color = '#fd7e14';  // Orange
             description = 'Challenging encounter';
-        } else {
+        }
+        // Deadly: Overwhelming enemy forces
+        else {
             difficulty = 'deadly';
-            color = '#dc3545';
+            color = '#dc3545';  // Red
             description = 'Very dangerous encounter';
         }
 

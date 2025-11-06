@@ -235,6 +235,38 @@ export class CombatantEvents {
     }
 
     /**
+     * Handle flying toggle for combatant
+     * @param {HTMLElement} target - The flying indicator that was clicked
+     */
+    static handleToggleFlying(target) {
+        const combatantCard = target.closest('[data-combatant-id]');
+        const combatantId = combatantCard?.getAttribute('data-combatant-id');
+
+        if (!combatantId) return;
+
+        const combatant = DataServices.combatantManager.getCombatant(combatantId);
+        if (!combatant) {
+            console.error('Combatant not found:', combatantId);
+            return;
+        }
+
+        // Toggle flying status
+        const newFlyingState = !combatant.status.flying;
+        DataServices.combatantManager.updateCombatant(combatantId, 'status.flying', newFlyingState);
+
+        const message = newFlyingState ?
+            `${combatant.name} is now flying` :
+            `${combatant.name} is no longer flying`;
+
+        ToastSystem.show(message, 'info', 2000);
+
+        // Update combat header if this is the active combatant
+        if (combatant.status.isActive) {
+            CombatEvents.updateCombatHeader();
+        }
+    }
+
+    /**
      * Handle cover states cycling for combatant
      * @param {HTMLElement} target - The cover indicator that was clicked
      */

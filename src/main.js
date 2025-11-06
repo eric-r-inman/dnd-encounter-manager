@@ -17,6 +17,7 @@ import './components/combatant-card/combatant-card.css';
 import './components/modals/modal-system.css';
 import './components/stat-block/stat-block.css';
 import './components/toast/toast.css';
+// Note: dice-roller.css not needed - dice roller uses standalone HTML with inline styles
 
 // Import core application systems
 import { AppCore } from './scripts/app-core.js';

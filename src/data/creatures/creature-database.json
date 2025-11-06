@@ -1,7 +1,5 @@
 {
   "creatures": [
-    
-    
     {
       "id": "ancient-red-dragon",
       "name": "Ancient Red Dragon",
@@ -479,8 +477,8 @@
   ],
   "metadata": {
     "version": "2.0.0",
-    "lastUpdated": "2025-10-31",
-    "totalCreatures": 7,
+    "lastUpdated": "2025-11-05",
+    "totalCreatures": 3,
     "schema": {
       "version": "2.0",
       "description": "D&D 5e creature database with lazy-loadable stat blocks"

@@ -16,24 +16,26 @@ export class UIState {
      * Initialize UI state with default values
      */
     static init() {
+        // Initialize UI state with sensible defaults
+        // This state is ephemeral (not saved to localStorage)
         return {
-            selectedCombatants: [],
-            activeModal: null,
-            modalData: {},
-            notifications: [],
-            formStates: {},
+            selectedCombatants: [],    // IDs of combatants selected for batch operations
+            activeModal: null,          // Currently displayed modal type (null = none)
+            modalData: {},             // Data passed to the active modal
+            notifications: [],          // Queue of toast notifications to display
+            formStates: {},            // Temporary form data (before submission)
             preferences: {
-                showHealthBars: true,
-                showInitiativeOrder: true,
-                autoSaveEnabled: true,
-                tooltipsEnabled: true
+                showHealthBars: true,          // Visual HP bars on combatant cards
+                showInitiativeOrder: true,     // Display initiative in header
+                autoSaveEnabled: true,         // Auto-save encounter changes
+                tooltipsEnabled: true          // Show help tooltips on hover
             },
             filters: {
-                showPlayers: true,
-                showEnemies: true,
-                showNPCs: true,
-                hideUnconscious: false,
-                hideDead: false
+                showPlayers: true,      // Display player characters
+                showEnemies: true,      // Display enemy creatures
+                showNPCs: true,         // Display NPCs
+                hideUnconscious: false, // Hide combatants at 0 HP
+                hideDead: false         // Hide permanently dead combatants
             }
         };
     }
@@ -45,8 +47,11 @@ export class UIState {
      * @returns {Object} Updated UI state
      */
     static selectCombatant(currentState, combatantId) {
+        // Clone array to maintain immutability
         const selectedCombatants = [...currentState.selectedCombatants];
 
+        // Only add if not already selected (prevent duplicates)
+        // Selection is used for batch damage/healing/effects
         if (!selectedCombatants.includes(combatantId)) {
             selectedCombatants.push(combatantId);
         }
@@ -64,6 +69,8 @@ export class UIState {
      * @returns {Object} Updated UI state
      */
     static deselectCombatant(currentState, combatantId) {
+        // Remove combatant from selection using filter
+        // Filter creates new array (immutable pattern)
         const selectedCombatants = currentState.selectedCombatants.filter(id => id !== combatantId);
 
         return {
@@ -79,6 +86,8 @@ export class UIState {
      * @returns {Object} Updated UI state
      */
     static toggleCombatantSelection(currentState, combatantId) {
+        // Convenience method for checkbox-style selection
+        // If selected: deselect. If not selected: select.
         if (currentState.selectedCombatants.includes(combatantId)) {
             return this.deselectCombatant(currentState, combatantId);
         } else {
@@ -119,10 +128,13 @@ export class UIState {
      * @returns {Object} Updated UI state
      */
     static showModal(currentState, modalType, modalData = {}) {
+        // Track which modal is open and its associated data
+        // modalType: 'damage', 'heal', 'add-creature', etc.
+        // modalData: context data like combatantId, preset values, etc.
         return {
             ...currentState,
             activeModal: modalType,
-            modalData: { ...modalData }
+            modalData: { ...modalData }  // Clone data object
         };
     }
 
@@ -132,6 +144,9 @@ export class UIState {
      * @returns {Object} Updated UI state
      */
     static hideModal(currentState) {
+        // Clear modal state when closing
+        // Important: reset both activeModal and modalData
+        // to prevent stale data on next modal open
         return {
             ...currentState,
             activeModal: null,
@@ -146,15 +161,18 @@ export class UIState {
      * @returns {Object} Updated UI state
      */
     static addNotification(currentState, notification) {
+        // Add notification to queue for toast system
+        // Notifications auto-expire based on duration
         const notificationData = {
-            id: this.generateNotificationId(),
-            type: notification.type || 'info',
-            message: notification.message,
-            duration: notification.duration || 3000,
-            timestamp: Date.now(),
-            ...notification
+            id: this.generateNotificationId(),           // Unique ID for removal
+            type: notification.type || 'info',           // info, success, warning, error
+            message: notification.message,               // Text to display
+            duration: notification.duration || 3000,     // How long to show (ms)
+            timestamp: Date.now(),                       // When created (for expiry calc)
+            ...notification                              // Allow additional properties
         };
 
+        // Append to end of notifications array
         return {
             ...currentState,
             notifications: [...currentState.notifications, notificationData]
@@ -194,11 +212,14 @@ export class UIState {
      * @returns {Object} Updated UI state
      */
     static updateFormState(currentState, formId, formData) {
+        // Store temporary form data before submission
+        // Useful for: draft saves, form validation, autofill
+        // Example: Save half-filled creature form if user closes modal
         return {
             ...currentState,
             formStates: {
                 ...currentState.formStates,
-                [formId]: { ...formData }
+                [formId]: { ...formData }  // Store form data by form ID
             }
         };
     }
@@ -210,6 +231,8 @@ export class UIState {
      * @returns {Object} Updated UI state
      */
     static clearFormState(currentState, formId) {
+        // Remove form data after successful submission
+        // Use delete operator to remove key entirely (not just set to null)
         const formStates = { ...currentState.formStates };
         delete formStates[formId];
 
@@ -291,10 +314,13 @@ export class UIState {
      * @returns {Array} Active notifications
      */
     static getActiveNotifications(uiState) {
+        // Filter out expired notifications based on duration
+        // Example: notification created at 1000ms with 3000ms duration
+        //          expires at 4000ms (1000 + 3000)
         const now = Date.now();
         return uiState.notifications.filter(notification => {
             const isExpired = (now - notification.timestamp) > notification.duration;
-            return !isExpired;
+            return !isExpired;  // Keep only non-expired
         });
     }
 

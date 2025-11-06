@@ -12,6 +12,7 @@
 import { ToastSystem } from '../../components/toast/ToastSystem.js';
 import { DataServices } from '../data-services.js';
 import { CombatEvents } from './combat-events.js';
+import { InitiativeEvents } from './initiative-events.js';
 
 export class InlineEditEvents {
     /**
@@ -109,7 +110,46 @@ export class InlineEditEvents {
         // Replace the text with input
         const originalText = valueElement.textContent;
         valueElement.innerHTML = '';
-        valueElement.appendChild(input);
+
+        // For initiative, create a container with input and Quick button
+        if (type === 'initiative') {
+            const container = document.createElement('div');
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column';
+            container.style.alignItems = 'center';
+            container.style.gap = '2px';
+
+            container.appendChild(input);
+
+            // Add Quick button for initiative
+            const quickButton = document.createElement('button');
+            quickButton.textContent = 'Quick';
+            quickButton.className = 'btn btn-secondary initiative-quick-btn';
+            quickButton.type = 'button';
+
+            // Use mousedown instead of click to fire before blur event
+            quickButton.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Remove the blur listener from input to prevent save
+                input.removeEventListener('blur', saveValue);
+
+                // Close the inline editor without saving
+                valueElement.textContent = originalText;
+
+                // Open Quick Initiative modal
+                const initiativeDisplay = valueElement.closest('.editable-initiative');
+                if (initiativeDisplay) {
+                    InitiativeEvents.openQuickInitiativeModal(initiativeDisplay);
+                }
+            });
+
+            container.appendChild(quickButton);
+            valueElement.appendChild(container);
+        } else {
+            valueElement.appendChild(input);
+        }
 
         // Focus and select the input
         input.focus();

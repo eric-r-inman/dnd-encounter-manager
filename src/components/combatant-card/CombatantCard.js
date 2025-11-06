@@ -25,7 +25,7 @@ export class CombatantCard {
         this.maxHP = creatureData.maxHP;
         
         // Instance-specific data with defaults
-        this.initiative = instanceData.initiative || 1;
+        this.initiative = instanceData.initiative ?? 1;
         this.currentHP = instanceData.currentHP ?? creatureData.maxHP;
         this.tempHP = instanceData.tempHP || 0;
         this.orderIndex = orderIndex;
@@ -39,6 +39,7 @@ export class CombatantCard {
             concentration: instanceData.status?.concentration || instanceData.concentration || false,
             concentrationSpell: instanceData.status?.concentrationSpell || instanceData.concentrationSpell || '',
             hiding: instanceData.status?.hiding || instanceData.hiding || false,
+            flying: instanceData.status?.flying || instanceData.flying || false,
             cover: instanceData.status?.cover || instanceData.cover || 'none', // none, half, three-quarters, full
             surprised: instanceData.status?.surprised || instanceData.surprised || false
         };
@@ -122,13 +123,82 @@ export class CombatantCard {
     }
     
     /**
+     * Generate simplified HTML for placeholder cards
+     * @returns {string} HTML string for placeholder card content
+     */
+    getPlaceholderHTML() {
+        // Build timer badge HTML if timer exists
+        const timerHTML = this.timer ? `
+            <span class="placeholder-timer-badge">
+                <span class="timer-name-text"
+                      data-action="edit-timer"
+                      title="Click to edit timer">
+                    Timer
+                </span>
+                <span class="timer-duration-counter ${this.timer.duration === 'infinite' ? 'duration-permanent' : 'duration-remaining'}">
+                    ${this.timer.duration === 'infinite' ? '∞' : this.timer.duration}
+                </span>
+                ${this.timer.note ? `<span class="timer-note">(${this.timer.note})</span>` : ''}
+                <button class="timer-clear" title="Clear timer" data-action="clear-timer">×</button>
+            </span>
+        ` : '';
+
+        return `
+            <div class="combatant-content placeholder-card">
+                <div class="combatant-order-controls">
+                    <div class="batch-select-checkbox" style="visibility: hidden;">
+                        <input type="checkbox" disabled>
+                    </div>
+                    <button class="order-btn order-up" data-action="move-combatant-up-initiative">↑</button>
+                    <button class="order-btn order-down" data-action="move-combatant-down-initiative">↓</button>
+                </div>
+                <div class="combatant-main">
+                    <button class="combatant-set-active-button" title="Set as active" data-action="set-active-combatant">←</button>
+                    <button class="combatant-remove-button" title="Remove placeholder" data-action="remove-combatant-from-encounter">×</button>
+                    <div class="combatant-header">
+                        <div class="initiative-circle editable-initiative" data-action="edit-combatant-initiative">
+                            <span class="initiative-value">${this.initiative}</span>
+                        </div>
+                        <h3 class="combatant-name placeholder-name">Placeholder</h3>
+                        <div class="placeholder-timer-container">
+                            ${timerHTML}
+                        </div>
+                    </div>
+                    <div class="combatant-body">
+                        <div class="placeholder-text-fields">
+                            <input type="text"
+                                   class="placeholder-line"
+                                   data-action="edit-placeholder-line"
+                                   placeholder="Add text..."
+                                   value="${this.notes || ''}">
+                        </div>
+                        <div class="placeholder-actions">
+                            <button class="btn btn-sm btn-timer"
+                                    data-modal-show="placeholder-timer"
+                                    data-modal-target="${this.id}"
+                                    title="Set timer">
+                                ⏱️ Set Timer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
      * Generate the inner HTML for the card
      * @returns {string} HTML string for card content
      */
     getCardHTML() {
+        // Special rendering for placeholder cards
+        if (this.isPlaceholder) {
+            return this.getPlaceholderHTML();
+        }
+
         const healthState = this.getHealthState();
         const nameColorClass = `combatant-name-${this.type}`;
-        
+
         // Determine status emoji
         let statusEmoji = '😠'; // Default combat ready
         if (healthState === 'unconscious' || healthState === 'dead') {
@@ -142,7 +212,15 @@ export class CombatantCard {
         // Build conditions HTML
         const conditionsHTML = this.conditions.map(condition => `
             <span class="combatant-condition-badge">
-                ${condition.name}
+                <span class="condition-name-text"
+                      data-action="edit-condition"
+                      data-condition-name="${condition.name}"
+                      data-condition-duration="${condition.duration}"
+                      data-condition-note="${condition.note || ''}"
+                      data-condition-expires-at="${condition.expiresAt || 'start'}"
+                      title="Click to edit condition">
+                    ${condition.name}
+                </span>
                 <span class="condition-duration-counter ${condition.duration === 'infinite' ? 'duration-permanent' : 'duration-remaining'}">
                     ${condition.duration === 'infinite' ? '∞' : condition.duration}
                 </span>
@@ -154,7 +232,15 @@ export class CombatantCard {
         // Build effects HTML
         const effectsHTML = this.effects.map(effect => `
             <span class="combatant-effect-badge">
-                ${effect.name}
+                <span class="effect-name-text"
+                      data-action="edit-effect"
+                      data-effect-name="${effect.name}"
+                      data-effect-duration="${effect.duration}"
+                      data-effect-note="${effect.note || ''}"
+                      data-effect-expires-at="${effect.expiresAt || 'start'}"
+                      title="Click to edit effect">
+                    ${effect.name}
+                </span>
                 <span class="effect-duration-counter ${effect.duration === 'infinite' ? 'duration-permanent' : 'duration-remaining'}">
                     ${effect.duration === 'infinite' ? '∞' : effect.duration}
                 </span>
@@ -224,6 +310,8 @@ export class CombatantCard {
                                     <span class="concentration-indicator" data-is-concentrating="${this.status.concentration}" title="Click to toggle concentration" data-action="toggle-concentration-status">${this.status.concentration ? 'Concentrating' : 'Not concentrating'}</span>
                                     <span class="status-separator">|</span>
                                     <span class="stealth-indicator" data-is-hiding="${this.status.hiding}" title="Click to toggle hiding" data-action="toggle-stealth-status">${this.status.hiding ? 'Hiding' : 'Not hiding'}</span>
+                                    <span class="status-separator">|</span>
+                                    <span class="flying-indicator" data-is-flying="${this.status.flying}" title="Click to toggle flying" data-action="toggle-flying-status">${this.status.flying ? 'Flying' : 'Not flying'}</span>
                                 </div>
                             </div>
                         </div>
@@ -356,7 +444,8 @@ export class CombatantCard {
             damageHistory: this.damageHistory,
             healHistory: this.healHistory,
             tempHPHistory: this.tempHPHistory,
-            deathSaves: this.deathSaves
+            deathSaves: this.deathSaves,
+            isPlaceholder: this.isPlaceholder || false
         };
     }
     

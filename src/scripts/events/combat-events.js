@@ -33,6 +33,15 @@ export class CombatEvents {
 
     /**
      * Handle next turn advancement
+     *
+     * WHY: This method manages the D&D 5e turn order system. In D&D, turns progress
+     * in initiative order (highest to lowest), with ties broken alphabetically.
+     * When combat reaches the last combatant, it loops back to the first and
+     * increments the round counter.
+     *
+     * WHY: We use the same sorting logic as renderAll() to ensure the turn order
+     * matches what the user sees visually. This prevents confusion where clicking
+     * "Next Turn" jumps to an unexpected combatant.
      */
     static handleNextTurn() {
         const allCombatants = DataServices.combatantManager.getAllCombatants();
@@ -41,44 +50,63 @@ export class CombatEvents {
             return;
         }
 
-        // Sort combatants by initiative (descending) and name (ascending for ties)
+        // Sort combatants using the same logic as CombatantManager.renderAll()
+        // This ensures turn order matches visual order
         const sortedCombatants = allCombatants.sort((a, b) => {
+            // WHY: Manual order takes highest priority - allows DMs to override initiative
+            // for special situations (legendary actions, lair actions, etc.)
+            if (a.manualOrder !== null && b.manualOrder !== null) {
+                return a.manualOrder - b.manualOrder;
+            }
+
+            // WHY: Manually ordered combatants always come first, regardless of initiative
+            if (a.manualOrder !== null) return -1;
+            if (b.manualOrder !== null) return 1;
+
+            // WHY: Standard D&D 5e rule - higher initiative goes first
             if (b.initiative !== a.initiative) {
                 return b.initiative - a.initiative;
             }
+
+            // WHY: D&D 5e rule - when initiative is tied, use alphabetical order
+            // (some DMs prefer DEX tiebreaker, but alphabetical is simpler and avoids edge cases)
             return a.name.localeCompare(b.name);
         });
 
         // Find current active combatant index
         let currentIndex = sortedCombatants.findIndex(c => c.status.isActive);
 
-        // If no active combatant, start with first
+        // WHY: If no combatant is active yet (combat just started or was reset),
+        // we need to start with the first combatant in initiative order
         if (currentIndex === -1) {
             currentIndex = 0;
         } else {
-            // Move to next combatant
+            // Move to next combatant in initiative order
             currentIndex++;
 
-            // If we've reached the end, go to first and increment round
+            // WHY: In D&D 5e, when everyone has taken their turn, a new round begins
+            // and we loop back to the top of the initiative order
             if (currentIndex >= sortedCombatants.length) {
                 currentIndex = 0;
                 this.incrementRound();
             }
         }
 
-        // Process end-of-turn effects for the current active combatant (their turn is ending)
+        // WHY: Process end-of-turn effects BEFORE switching to the next combatant
+        // Some D&D effects expire "at the end of your turn" (e.g., Shield spell)
         const currentActiveCombatant = allCombatants.find(c => c.status.isActive);
         if (currentActiveCombatant) {
             this.processEndOfTurnEffects(currentActiveCombatant);
 
-            // Clear surprised status
+            // WHY: D&D 5e rule - Surprised condition lasts until the end of the creature's first turn
             if (currentActiveCombatant.status.surprised) {
                 DataServices.combatantManager.updateCombatant(currentActiveCombatant.id, 'status.surprised', false);
                 ToastSystem.show(`${currentActiveCombatant.name} is no longer surprised`, 'info', 2000);
             }
         }
 
-        // Clear all active states
+        // WHY: Clear all active states before setting the new one to ensure
+        // only one combatant is marked as active at a time
         allCombatants.forEach(combatant => {
             DataServices.combatantManager.updateCombatant(combatant.id, 'status.isActive', false);
         });
@@ -87,7 +115,8 @@ export class CombatEvents {
         const newActiveCombatant = sortedCombatants[currentIndex];
         DataServices.combatantManager.updateCombatant(newActiveCombatant.id, 'status.isActive', true);
 
-        // Process turn-based effects
+        // WHY: Process turn-based effects AFTER setting the new active combatant
+        // Some D&D effects expire "at the start of your turn" (e.g., Hunter's Mark concentration check)
         this.processTurnEffects(newActiveCombatant);
 
         // Update combat header
@@ -97,27 +126,47 @@ export class CombatEvents {
     }
 
     /**
-     * Handle combat reset
+     * Handle combat reset - restore all combatants to default stats
      */
     static handleResetCombat() {
-        if (!confirm('Reset combat? This will clear initiative order and reset all combatants.')) {
+        if (!confirm('Reset combat? This will restore all combatants to full HP and clear all conditions, effects, and status flags.')) {
             return;
         }
 
-        // Reset all combatants
+        // Reset all combatants to default stats
         const allCombatants = DataServices.combatantManager.getAllCombatants();
         allCombatants.forEach(combatant => {
-            // Clear active status
+            // Restore HP to maximum
+            DataServices.combatantManager.updateCombatant(combatant.id, 'currentHP', combatant.maxHP);
+
+            // Clear temporary HP
+            DataServices.combatantManager.updateCombatant(combatant.id, 'tempHP', 0);
+
+            // Clear all status flags
             DataServices.combatantManager.updateCombatant(combatant.id, 'status.isActive', false);
-
-            // Clear hold action
             DataServices.combatantManager.updateCombatant(combatant.id, 'status.holdAction', false);
-
-            // Clear surprised status
             DataServices.combatantManager.updateCombatant(combatant.id, 'status.surprised', false);
+            DataServices.combatantManager.updateCombatant(combatant.id, 'status.concentration', false);
+            DataServices.combatantManager.updateCombatant(combatant.id, 'status.concentrationSpell', '');
+            DataServices.combatantManager.updateCombatant(combatant.id, 'status.hiding', false);
+            DataServices.combatantManager.updateCombatant(combatant.id, 'status.cover', 'none');
+
+            // Clear all conditions
+            DataServices.combatantManager.updateCombatant(combatant.id, 'conditions', []);
+
+            // Clear all effects
+            DataServices.combatantManager.updateCombatant(combatant.id, 'effects', []);
+
+            // Clear HP history
+            DataServices.combatantManager.updateCombatant(combatant.id, 'damageHistory', []);
+            DataServices.combatantManager.updateCombatant(combatant.id, 'healHistory', []);
+            DataServices.combatantManager.updateCombatant(combatant.id, 'tempHPHistory', []);
+
+            // Clear death saves
+            DataServices.combatantManager.updateCombatant(combatant.id, 'deathSaves', [false, false, false]);
         });
 
-        // Reset combat state
+        // Reset combat state to inactive
         StateManager.state.combat.isActive = false;
         StateManager.state.combat.round = 1;
         StateManager.state.combat.currentTurnIndex = 0;
@@ -125,7 +174,10 @@ export class CombatEvents {
         // Update combat header
         this.updateCombatHeader();
 
-        ToastSystem.show('Combat reset', 'success', 2000);
+        // Re-render all combatants to show updated stats
+        DataServices.combatantManager.renderAll();
+
+        ToastSystem.show('Combat reset - all combatants restored to default stats', 'success', 3000);
     }
 
     /**
@@ -151,6 +203,7 @@ export class CombatEvents {
         StateManager.state.combat.isActive = false;
         StateManager.state.combat.round = 1;
         StateManager.state.combat.currentTurnIndex = 0;
+        StateManager.state.combat.encounterFileName = null;
 
         // Update combat header
         this.updateCombatHeader();
@@ -172,6 +225,12 @@ export class CombatEvents {
 
     /**
      * Update combat header display
+     *
+     * Displays combat information including:
+     * - Encounter file info icon with filename tooltip
+     * - Current round number
+     * - Active combatant info (name, HP, conditions)
+     * - XP tracker with filter options
      */
     static updateCombatHeader() {
         const headerElement = document.getElementById('initiative-header-display');
@@ -180,36 +239,270 @@ export class CombatEvents {
         const allCombatants = DataServices.combatantManager.getAllCombatants();
         const activeCombatant = allCombatants.find(c => c.status.isActive);
         const round = StateManager.state.combat.round;
+        // Get encounter filename from state (shows 'none' if not saved/loaded)
+        const fileName = StateManager.state.combat.encounterFileName || 'none';
+
+        // Calculate XP total (works regardless of active combatant)
+        const xpDisplay = this.calculateXPDisplay();
 
         if (!activeCombatant || allCombatants.length === 0) {
+            const xpText = xpDisplay.hasLairXP
+                ? `${xpDisplay.regularTotal.toLocaleString()} XP (${xpDisplay.lairTotal.toLocaleString()} w/ Lair)`
+                : `${xpDisplay.regularTotal.toLocaleString()} XP`;
+
             headerElement.innerHTML = `
+                <span class="encounter-file-info">
+                    ⓘ
+                    <span class="encounter-file-tooltip">from file: ${fileName}</span>
+                </span>
                 <span class="combat-round">Round ${round}</span>
                 <span class="combat-status">No active combatant</span>
+                <div class="xp-tracker" data-action="toggle-xp-filter">
+                    <span class="xp-value">${xpText}</span>
+                    <span class="xp-filter-indicator">▼</span>
+                    <div class="xp-filter-dropdown" style="display: none;">
+                        <div class="xp-filter-option ${xpDisplay.filter === 'enemies-npcs' ? 'selected' : ''}" data-filter="enemies-npcs">
+                            <span>Enemies & NPCs</span>
+                        </div>
+                        <div class="xp-filter-option ${xpDisplay.filter === 'enemies' ? 'selected' : ''}" data-filter="enemies">
+                            <span>Enemies Only</span>
+                        </div>
+                        <div class="xp-filter-option ${xpDisplay.filter === 'npcs' ? 'selected' : ''}" data-filter="npcs">
+                            <span>NPCs Only</span>
+                        </div>
+                    </div>
+                </div>
             `;
             return;
         }
 
-        // Build conditions list for active combatant
-        const conditionsList = activeCombatant.conditions.map(c => {
+        // Build conditions/effects list and status icons
+        const statusList = this.buildConditionsEffectsList(activeCombatant);
+        const statusIcons = this.buildStatusIcons(activeCombatant);
+
+        const xpText = xpDisplay.hasLairXP
+            ? `${xpDisplay.regularTotal.toLocaleString()} XP (${xpDisplay.lairTotal.toLocaleString()} w/ Lair)`
+            : `${xpDisplay.regularTotal.toLocaleString()} XP`;
+
+        // HP text style - red if at 0
+        const hpStyle = activeCombatant.currentHP === 0 ? 'color: var(--color-danger);' : '';
+
+        headerElement.innerHTML = `
+            <span class="encounter-file-info">
+                ⓘ
+                <span class="encounter-file-tooltip">from file: ${fileName}</span>
+            </span>
+            <span class="combat-round">Round ${round}</span>
+            <span class="status-separator">|</span>
+            <span class="current-turn-name clickable-name" data-combatant-id="${activeCombatant.id}">${activeCombatant.name}</span>
+            <span class="current-turn-hp" style="${hpStyle}">${activeCombatant.currentHP}/${activeCombatant.maxHP} HP</span>
+            ${statusIcons.length > 0 ? `<span class="status-icons">${statusIcons.join(' ')}</span>` : ''}
+            ${statusList ? `<span class="conditions-list">${statusList}</span>` : ''}
+            <div class="xp-tracker" data-action="toggle-xp-filter">
+                <span class="xp-value">${xpText}</span>
+                <span class="xp-filter-indicator">▼</span>
+                <div class="xp-filter-dropdown" style="display: none;">
+                    <div class="xp-filter-option ${xpDisplay.filter === 'enemies-npcs' ? 'selected' : ''}" data-filter="enemies-npcs">
+                        <span>Enemies & NPCs</span>
+                    </div>
+                    <div class="xp-filter-option ${xpDisplay.filter === 'enemies' ? 'selected' : ''}" data-filter="enemies">
+                        <span>Enemies Only</span>
+                    </div>
+                    <div class="xp-filter-option ${xpDisplay.filter === 'npcs' ? 'selected' : ''}" data-filter="npcs">
+                        <span>NPCs Only</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Build conditions and effects list for display
+     * @param {Object} combatant - The combatant to build list for
+     * @returns {string} Formatted conditions/effects string
+     */
+    static buildConditionsEffectsList(combatant) {
+        const conditionsList = combatant.conditions.map(c => {
             const duration = c.duration === 'infinite' ? '∞' : c.duration;
             return `${c.name} (${duration})`;
         }).join(', ');
 
-        // Build effects list for active combatant
-        const effectsList = activeCombatant.effects.map(e => {
+        const effectsList = combatant.effects.map(e => {
             const duration = e.duration === 'infinite' ? '∞' : e.duration;
             return `${e.name} (${duration})`;
         }).join(', ');
 
-        // Combine conditions and effects
-        const statusList = [conditionsList, effectsList].filter(s => s).join(', ');
+        // Add timer for placeholders
+        let timerText = '';
+        if (combatant.isPlaceholder && combatant.timer) {
+            const duration = combatant.timer.duration === 'infinite' ? '∞' : combatant.timer.duration;
+            const note = combatant.timer.note ? ` - ${combatant.timer.note}` : '';
+            timerText = `<span class="timer-display">Timer (${duration}${note})</span>`;
+        }
 
-        headerElement.innerHTML = `
-            <span class="combat-round">Round ${round}</span>
-            <span class="current-turn-name clickable-name" data-combatant-id="${activeCombatant.id}">${activeCombatant.name}</span>
-            <span class="current-turn-hp">${activeCombatant.currentHP}/${activeCombatant.maxHP} HP</span>
-            ${statusList ? `<span class="conditions-list">${statusList}</span>` : ''}
-        `;
+        return [conditionsList, effectsList, timerText].filter(s => s).join(', ');
+    }
+
+    /**
+     * Build status icons array for combat header
+     * @param {Object} combatant - The combatant to build icons for
+     * @returns {Array<string>} Array of status icon emojis
+     */
+    static buildStatusIcons(combatant) {
+        const icons = [];
+
+        // Dead icon (skull) if HP = 0
+        if (combatant.currentHP === 0) {
+            icons.push('💀');
+        }
+
+        // Bloodied icon if bloodied (HP > 0 and HP <= maxHP / 2)
+        if (combatant.currentHP > 0 && combatant.currentHP <= combatant.maxHP / 2) {
+            icons.push('🩸');
+        }
+
+        // Surprised icon
+        if (combatant.status.surprised) {
+            icons.push('😲');
+        }
+
+        // Holding icon
+        if (combatant.status.holdAction) {
+            icons.push('✊');
+        }
+
+        // Cover icon (only show if not 'none')
+        if (combatant.status.cover && combatant.status.cover !== 'none') {
+            const coverIcon = this.COVER_ICONS[combatant.status.cover];
+            if (coverIcon) {
+                icons.push(coverIcon);
+            }
+        }
+
+        // Concentrating icon
+        if (combatant.status.concentration) {
+            icons.push('🧠');
+        }
+
+        // Hiding icon
+        if (combatant.status.hiding) {
+            icons.push('👤');
+        }
+
+        // Flying icon
+        if (combatant.status.flying) {
+            icons.push('🪽');
+        }
+
+        return icons;
+    }
+
+    /**
+     * Cover level to icon mapping
+     */
+    static COVER_ICONS = {
+        'half': '◐',
+        'three-quarters': '◕',
+        'full': '●'
+    };
+
+    /**
+     * CR to XP mapping based on D&D 5e rules
+     */
+    static CR_TO_XP = {
+        '0': 0,
+        '1/8': 25,
+        '0.125': 25,
+        '1/4': 50,
+        '0.25': 50,
+        '1/2': 100,
+        '0.5': 100,
+        '1': 200,
+        '2': 450,
+        '3': 700,
+        '4': 1100,
+        '5': 1800,
+        '6': 2300,
+        '7': 2900,
+        '8': 3900,
+        '9': 5000,
+        '10': 5900,
+        '11': 7200,
+        '12': 8400,
+        '13': 10000,
+        '14': 11500,
+        '15': 13000,
+        '16': 15000,
+        '17': 18000,
+        '18': 20000,
+        '19': 22000,
+        '20': 25000,
+        '21': 33000,
+        '22': 41000,
+        '23': 50000,
+        '24': 62000,
+        '25': 75000,
+        '26': 90000,
+        '27': 105000,
+        '28': 120000,
+        '29': 135000,
+        '30': 155000
+    };
+
+    /**
+     * Calculate XP display based on current filter
+     * @returns {Object} { regularTotal: number, lairTotal: number, hasLairXP: boolean, filter: string }
+     */
+    static calculateXPDisplay() {
+        // Get filter from localStorage (default to 'enemies-npcs')
+        const filter = localStorage.getItem('xp-filter') || 'enemies-npcs';
+
+        // Get all combatants
+        const allCombatants = DataServices.combatantManager?.getAllCombatants() || [];
+        const creatureDatabase = DataServices.combatantManager?.creatureDatabase || [];
+
+        // Filter combatants based on type
+        let filteredCombatants = allCombatants;
+        if (filter === 'enemies') {
+            filteredCombatants = allCombatants.filter(c => c.type === 'enemy');
+        } else if (filter === 'npcs') {
+            filteredCombatants = allCombatants.filter(c => c.type === 'npc');
+        } else {
+            // enemies-npcs
+            filteredCombatants = allCombatants.filter(c => c.type === 'enemy' || c.type === 'npc');
+        }
+
+        // Calculate both regular and lair XP totals
+        let regularTotal = 0;
+        let lairTotal = 0;
+        let hasLairXP = false;
+
+        filteredCombatants.forEach(combatant => {
+            // Find the creature in the database to get XP values
+            const creature = creatureDatabase.find(c => c.id === combatant.creatureId);
+
+            if (!creature) {
+                return;
+            }
+
+            // Check if creature has direct XP values in statBlock
+            if (creature.statBlock?.challengeRating?.xp) {
+                regularTotal += creature.statBlock.challengeRating.xp;
+
+                // Add lair XP if available (lair XP only, not regular + lair)
+                if (creature.statBlock.challengeRating.xpInLair) {
+                    lairTotal += creature.statBlock.challengeRating.xpInLair;
+                    hasLairXP = true;
+                }
+            } else {
+                // Fall back to CR-to-XP conversion
+                const cr = creature.cr || '0';
+                const xpValue = this.CR_TO_XP[String(cr)] || 0;
+                regularTotal += xpValue;
+            }
+        });
+
+        return { regularTotal, lairTotal, hasLairXP, filter };
     }
 
     /**
@@ -255,10 +548,27 @@ export class CombatEvents {
             return true;
         });
 
+        // Process timer for placeholders (decrement on turn start)
+        if (combatant.isPlaceholder && combatant.timer) {
+            if (combatant.timer.duration !== 'infinite' && combatant.timer.duration > 0) {
+                combatant.timer.duration--;
+                hasChanges = true;
+
+                // Remove timer if duration reaches 0
+                if (combatant.timer.duration === 0) {
+                    ToastSystem.show(`Timer ended on ${combatant.name}`, 'info', 2000);
+                    combatant.timer = null;
+                }
+            }
+        }
+
         // Update combatant if there were changes
         if (hasChanges) {
             DataServices.combatantManager.updateCombatant(combatant.id, 'conditions', combatant.conditions);
             DataServices.combatantManager.updateCombatant(combatant.id, 'effects', combatant.effects);
+            if (combatant.isPlaceholder) {
+                DataServices.combatantManager.updateCombatant(combatant.id, 'timer', combatant.timer);
+            }
         }
     }
 
@@ -467,11 +777,24 @@ export class CombatEvents {
             return;
         }
 
-        // Sort by initiative
+        // Sort using the same logic as CombatantManager.renderAll()
+        // This ensures turn order matches visual order
         const sortedCombatants = allCombatants.sort((a, b) => {
+            // If both have manual order, sort by that
+            if (a.manualOrder !== null && b.manualOrder !== null) {
+                return a.manualOrder - b.manualOrder;
+            }
+
+            // If only one has manual order, it comes first
+            if (a.manualOrder !== null) return -1;
+            if (b.manualOrder !== null) return 1;
+
+            // Otherwise sort by initiative (higher first)
             if (b.initiative !== a.initiative) {
                 return b.initiative - a.initiative;
             }
+
+            // If initiative is tied, sort alphabetically by name
             return a.name.localeCompare(b.name);
         });
 

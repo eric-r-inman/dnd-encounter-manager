@@ -13,11 +13,12 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
     sourcemap: true,
-    
+
     // Rollup options for optimization
     rollupOptions: {
       input: {
-        main: 'index.html'
+        main: 'index.html',
+        diceRoller: 'dice-roller.html'
       }
     }
   },

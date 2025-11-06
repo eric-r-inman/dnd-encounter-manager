@@ -637,6 +637,58 @@
     font-size: var(--font-size-sm);
 }
 
+/* Filter panels */
+.filter-panel {
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-md);
+    background-color: var(--color-bg-secondary);
+    border: var(--border-width) solid var(--color-border-primary);
+    border-radius: var(--border-radius);
+}
+
+.filter-panel-content {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+.filter-panel-content label {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-primary);
+}
+
+.filter-panel-content input[type="number"] {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    border: var(--border-width) solid var(--color-border-primary);
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-sm);
+}
+
+.filter-panel-content .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background-color: var(--color-bg-primary);
+    border: var(--border-width) solid var(--color-border-muted);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.filter-panel-content .checkbox-label:hover {
+    background-color: var(--color-bg-hover);
+    border-color: var(--color-border-primary);
+}
+
+.filter-panel-content .checkbox-label input[type="checkbox"] {
+    margin: 0;
+    cursor: pointer;
+}
+
 /* Two-column layout */
 .database-content {
     display: grid;
@@ -778,12 +830,57 @@
     top: 0;
     z-index: 10;
     background-color: var(--color-bg-secondary);
+    padding: var(--spacing-md);
+    border-bottom: var(--border-width) solid var(--color-border-primary);
+    display: flex;
+    gap: var(--spacing-xs);
+    flex-wrap: nowrap;
 }
 
 .creature-details-scrollable {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
+    padding: var(--spacing-md) var(--spacing-lg);
+}
+
+/* Minimal variant for creature details header (transparent background, no padding) */
+.creature-details-header-minimal {
+    padding: 0;
+    background: transparent;
+    border: none;
+    margin-bottom: var(--spacing-md);
+}
+
+/* Scrollable creature stat block with max height */
+.creature-stat-block-scrollable {
+    max-height: calc(100vh - 300px);
+    overflow-y: auto;
+    padding: var(--spacing-md);
+}
+
+/* Centered empty state with muted text */
+.empty-state-centered {
+    text-align: center;
+    color: var(--color-text-muted);
+    padding: var(--spacing-xl);
+}
+
+/* Expand window icon button */
+.expand-window-icon {
+    background: none;
+    border: none;
+    padding: 0 0 0 8px;
+    cursor: pointer;
+    color: var(--color-warning);
+    font-size: var(--font-size-base);
+    vertical-align: middle;
+    transition: all var(--transition-fast);
+}
+
+/* Error message text */
+.error-message {
+    color: var(--color-danger);
 }
 
 .creature-details-content {
@@ -1568,4 +1665,167 @@ select[name="actionType[]"] {
     flex: 1;
     min-height: 400px;
     max-height: calc(70vh - 200px);
+}
+
+/* Creature Type Selection Modal Styles */
+.creature-type-option:hover {
+    border-color: var(--color-primary) !important;
+    background: var(--color-bg-hover) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.creature-type-option:has(input:checked) {
+    border-color: var(--color-primary) !important;
+    background: var(--color-primary-bg) !important;
+}
+
+.creature-type-option input[type="radio"] {
+    accent-color: var(--color-primary);
+}
+
+.creature-type-option:active {
+    transform: translateY(0);
+}
+
+/* Player Form Modal Improvements */
+#player-form .form-section-title {
+    margin-top: var(--spacing-xl);
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 2px solid var(--color-border-muted);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-bold);
+}
+
+#player-form .form-section-title:first-of-type {
+    margin-top: 0;
+}
+
+#player-form .form-row {
+    margin-bottom: var(--spacing-lg);
+}
+
+#player-form .form-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+#player-form .form-group label {
+    margin-bottom: var(--spacing-xs);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-base);
+}
+
+#player-form input[type="text"],
+#player-form input[type="number"],
+#player-form select,
+#player-form textarea {
+    width: 100%;
+    padding: var(--spacing-sm);
+    background-color: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-muted);
+    border-radius: var(--border-radius);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-base);
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+#player-form input[type="text"]:focus,
+#player-form input[type="number"]:focus,
+#player-form select:focus,
+#player-form textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    background-color: var(--color-bg-primary);
+}
+
+#player-form .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    cursor: pointer;
+    padding: var(--spacing-xs) 0;
+    font-size: var(--font-size-base);
+}
+
+#player-form .checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--color-primary);
+    flex-shrink: 0;
+}
+
+#player-form .checkbox-label span {
+    user-select: none;
+}
+
+#player-form .skill-proficiency-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-sm);
+    background: var(--color-bg-secondary);
+    border-radius: var(--border-radius);
+    margin-bottom: var(--spacing-xs);
+}
+
+#player-form small {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    margin-top: var(--spacing-xs);
+}
+
+#player-form .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-xl);
+    padding-top: var(--spacing-lg);
+    border-top: 2px solid var(--color-border-muted);
+}
+
+#player-form-type-display {
+    display: flex;
+    align-items: center;
+    height: 42px;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--color-bg-hover);
+    border: 1px solid var(--color-border-muted);
+    border-radius: var(--border-radius);
+    color: var(--color-text-primary);
+    font-weight: var(--font-weight-semibold);
+    text-transform: capitalize;
+}
+
+/* Grid layouts for player form sections */
+#player-form .ability-scores-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-md);
+}
+
+#player-form .saving-throws-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: var(--color-bg-secondary);
+    border-radius: var(--border-radius);
+}
+
+#player-form .skills-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-sm);
+}
+
+#player-form .expertise-checkbox {
+    margin-left: calc(var(--spacing-md) + var(--spacing-sm));
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
 }

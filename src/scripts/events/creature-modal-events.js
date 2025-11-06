@@ -12,6 +12,11 @@
 
 import { ToastSystem } from '../../components/toast/ToastSystem.js';
 import { DataServices } from '../data-services.js';
+import { buildStatBlockHTML } from '../renderers/stat-block-renderer.js';
+import { escapeHtml } from '../renderers/html-utils.js';
+import { standaloneCreatureCSS } from '../../templates/standalone-templates.js';
+import { CreatureHandlers } from './creature-handlers.js';
+import { CreatureService } from '../services/creature-service.js';
 
 export class CreatureModalEvents {
     /**
@@ -52,6 +57,14 @@ export class CreatureModalEvents {
                     const creatureItem = document.createElement('div');
                     creatureItem.className = 'creature-list-item';
                     creatureItem.setAttribute('data-creature-id', creature.id);
+
+                    // Add timestamp for "newest first" sorting
+                    if (creature.createdAt) {
+                        creatureItem.setAttribute('data-created', creature.createdAt);
+                    } else {
+                        // Fallback for creatures without timestamp (older creatures get timestamp 0)
+                        creatureItem.setAttribute('data-created', '0');
+                    }
 
                     creatureItem.innerHTML = `
                         <div class="creature-item-header">
@@ -121,6 +134,16 @@ export class CreatureModalEvents {
             }
 
             console.log(`📝 Populated creature database with ${creatures.length} creatures`);
+
+            // Apply default alphabetical sorting
+            const sortSelect = modal.querySelector('#creature-sort-filter');
+            if (sortSelect) {
+                sortSelect.value = 'alphabetical';
+                CreatureHandlers.applySortAndFilter(modal, 'alphabetical');
+            }
+
+            // Update file status indicator
+            this.updateCreatureDatabaseFileStatus(modal);
         } catch (error) {
             console.error('Failed to populate creature database:', error);
             ToastSystem.show('Failed to load creature database', 'error');
@@ -148,7 +171,7 @@ export class CreatureModalEvents {
 
         // Build sticky action buttons at the top
         let html = `
-            <div class="creature-actions-sticky" style="position: sticky; top: 0; z-index: 10; background-color: var(--color-bg-secondary); padding: var(--spacing-md); border-bottom: var(--border-width) solid var(--color-border-primary); display: flex; gap: var(--spacing-xs); flex-wrap: wrap;">
+            <div class="creature-actions-sticky">
                 <button class="btn btn-primary"
                         data-action="add-creature-to-encounter"
                         data-creature-id="${creature.id}">
@@ -169,20 +192,28 @@ export class CreatureModalEvents {
                         data-creature-id="${creature.id}">
                     📤 Export
                 </button>
-                <button class="btn btn-danger"
+                <button class="btn btn-secondary"
                         data-action="delete-creature"
                         data-creature-id="${creature.id}">
-                    🗑️ Delete
+                    🗑️
                 </button>
             </div>
-            <div class="creature-details-scrollable" style="overflow-y: auto; padding: var(--spacing-md) var(--spacing-lg);">
-                <div class="creature-details-header" style="padding: 0; background: transparent; border: none; margin-bottom: var(--spacing-md);">
-                    <h3>${creature.name}</h3>
+            <div class="creature-details-scrollable">
+                <div class="creature-details-header creature-details-header-minimal">
+                    <h3>
+                        ${creature.name}
+                        <button class="creature-expand-window-btn expand-window-icon"
+                                data-creature-id="${creature.id}"
+                                data-action="open-creature-window"
+                                title="Open in new window">
+                            ⧉
+                        </button>
+                    </h3>
                     <span class="creature-type-badge badge-${creature.type}">${creature.type.toUpperCase()}</span>
                 </div>
         `;
 
-        html += this.buildStatBlockHTML(creature, statBlock, hasFullStatBlock);
+        html += buildStatBlockHTML(creature, statBlock, hasFullStatBlock);
 
         // Close the scrollable container
         html += `</div>`;
@@ -206,7 +237,7 @@ export class CreatureModalEvents {
         const creature = allCreatures.find(c => c.id === creatureId);
 
         if (!creature) {
-            statBlockDisplay.innerHTML = `<div class="empty-state" style="text-align: center; color: var(--color-text-muted); padding: var(--spacing-xl);">
+            statBlockDisplay.innerHTML = `<div class="empty-state empty-state-centered">
                 <p>Creature not found</p>
             </div>`;
             return;
@@ -221,14 +252,22 @@ export class CreatureModalEvents {
 
         // Build the stat block HTML (similar to updateCreatureDetails but without action buttons)
         let html = `
-            <div class="creature-stat-block" style="max-height: calc(100vh - 300px); overflow-y: auto; padding: var(--spacing-md);">
-                <div class="creature-details-header" style="padding: 0; background: transparent; border: none; margin-bottom: var(--spacing-md);">
-                    <h3>${creature.name}</h3>
+            <div class="creature-stat-block creature-stat-block-scrollable">
+                <div class="creature-details-header creature-details-header-minimal">
+                    <h3>
+                        ${creature.name}
+                        <button class="creature-expand-window-btn expand-window-icon"
+                                data-creature-id="${creature.id}"
+                                data-action="open-creature-window"
+                                title="Open in new window">
+                            ⧉
+                        </button>
+                    </h3>
                     <span class="creature-type-badge badge-${creature.type}">${creature.type.toUpperCase()}</span>
                 </div>
         `;
 
-        html += this.buildStatBlockHTML(creature, statBlock, hasFullStatBlock);
+        html += buildStatBlockHTML(creature, statBlock, hasFullStatBlock);
 
         // Close the stat block container
         html += `</div>`;
@@ -243,8 +282,15 @@ export class CreatureModalEvents {
      * @param {Object} statBlock - Stat block data
      * @param {boolean} hasFullStatBlock - Whether creature has full stat block
      * @returns {string} HTML string
+     * @deprecated Use buildStatBlockHTML from renderers module directly
      */
     static buildStatBlockHTML(creature, statBlock, hasFullStatBlock) {
+        // Delegate to centralized renderer
+        return buildStatBlockHTML(creature, statBlock, hasFullStatBlock);
+    }
+
+    // Legacy implementation retained temporarily for reference
+    static _buildStatBlockHTMLLegacy(creature, statBlock, hasFullStatBlock) {
         let html = '';
 
         // Full type description
@@ -516,15 +562,35 @@ export class CreatureModalEvents {
         // Custom Sections
         if (creature.customSections && creature.customSections.length > 0) {
             creature.customSections.forEach(section => {
-                if (section.name && section.text) {
-                    html += `<div class="stat-block-section">
-                        <h4 class="stat-block-heading">${this.escapeHtml(section.name)}</h4>`;
+                if (!section.name) return;
 
-                    // If there's a title, make text inline with it (like Actions)
+                html += `<div class="stat-block-section">
+                    <h4 class="stat-block-heading">${this.escapeHtml(section.name)}</h4>`;
+
+                // Support both old and new data structures
+                if (section.entries && Array.isArray(section.entries)) {
+                    // New structure with multiple entries
+                    section.entries.forEach(entry => {
+                        if (!entry.text) return;
+
+                        // If there's a title, make text inline with it (like Actions)
+                        if (entry.title && entry.title.trim()) {
+                            html += `<p><strong><em>${this.escapeHtml(entry.title)}.</em></strong> ${this.escapeHtml(entry.text)}</p>`;
+                        } else {
+                            // No title, just display the text as paragraphs
+                            const textParagraphs = entry.text
+                                .split('\n')
+                                .filter(line => line.trim())
+                                .map(line => `<p>${this.escapeHtml(line)}</p>`)
+                                .join('');
+                            html += textParagraphs;
+                        }
+                    });
+                } else if (section.text) {
+                    // Old structure with single title/text - maintain backward compatibility
                     if (section.title && section.title.trim()) {
                         html += `<p><strong><em>${this.escapeHtml(section.title)}.</em></strong> ${this.escapeHtml(section.text)}</p>`;
                     } else {
-                        // No title, just display the text as paragraphs
                         const textParagraphs = section.text
                             .split('\n')
                             .filter(line => line.trim())
@@ -532,9 +598,9 @@ export class CreatureModalEvents {
                             .join('');
                         html += textParagraphs;
                     }
-
-                    html += `</div>`;
                 }
+
+                html += `</div>`;
             });
         }
 
@@ -571,23 +637,59 @@ export class CreatureModalEvents {
         // Reset the form
         const form = document.getElementById('creature-form');
         if (form) {
-            form.reset();
-
-            // Explicitly clear all input, textarea, and select fields
+            // Don't use form.reset() as it resets to default HTML values, not empty
+            // Instead, explicitly clear all fields
             const inputs = form.querySelectorAll('input, textarea, select');
             inputs.forEach(input => {
                 if (input.type === 'checkbox' || input.type === 'radio') {
                     input.checked = false;
+                } else if (input.type === 'hidden') {
+                    // Clear hidden fields but we'll set some specifically later
+                    input.value = '';
                 } else if (input.tagName === 'SELECT') {
+                    // Reset select to first option
                     input.selectedIndex = 0;
                 } else {
+                    // Clear all other inputs
                     input.value = '';
                 }
             });
 
             // Set default values for specific fields
+            // Read creature type from sessionStorage (set by creature type selection modal)
+            const pendingType = sessionStorage.getItem('pending-creature-type') || 'enemy';
+            sessionStorage.removeItem('pending-creature-type'); // Clear after reading
+
             const typeField = document.getElementById('creature-form-type');
-            if (typeField) typeField.value = 'enemy';
+            const typeReadonly = document.getElementById('creature-form-type-readonly');
+            const typeHidden = document.getElementById('creature-form-type-hidden');
+
+            // Show select for enemy/npc, readonly for player (though player should not be selectable yet)
+            if (pendingType === 'player') {
+                if (typeField) {
+                    typeField.style.display = 'none';
+                    typeField.removeAttribute('name'); // Don't submit select for player
+                }
+                if (typeReadonly) {
+                    typeReadonly.style.display = 'block';
+                    typeReadonly.textContent = 'Player';
+                }
+                if (typeHidden) {
+                    typeHidden.setAttribute('name', 'type'); // Submit via hidden input
+                    typeHidden.value = 'player';
+                }
+            } else {
+                if (typeField) {
+                    typeField.style.display = 'block';
+                    typeField.setAttribute('name', 'type'); // Submit via select
+                    typeField.value = pendingType;
+                }
+                if (typeReadonly) typeReadonly.style.display = 'none';
+                if (typeHidden) {
+                    typeHidden.removeAttribute('name'); // Don't submit hidden input
+                    typeHidden.value = '';
+                }
+            }
 
             const sizeField = document.getElementById('creature-form-size');
             if (sizeField) sizeField.value = 'Medium';
@@ -599,12 +701,13 @@ export class CreatureModalEvents {
             if (hpField) hpField.value = '';
         }
 
-        // Clear dynamic containers (skills, traits, actions, legendary actions)
+        // Clear dynamic containers (skills, traits, actions, legendary actions, custom sections)
         const containersToReset = [
             'skills-container',
             'traits-container',
             'actions-container',
-            'legendary-actions-container'
+            'legendary-actions-container',
+            'custom-sections-container'
         ];
 
         containersToReset.forEach(containerId => {
@@ -621,6 +724,221 @@ export class CreatureModalEvents {
         });
 
         console.log('📝 Creature form set up for adding new creature');
+    }
+
+    /**
+     * Setup player form for adding a new player character
+     */
+    static setupPlayerFormForAdd() {
+        // Reset modal title
+        const titleElement = document.getElementById('player-form-title');
+        if (titleElement) {
+            titleElement.textContent = 'Add Player Character';
+        }
+
+        // Reset the form
+        const form = document.getElementById('player-form');
+        if (form) {
+            form.reset();
+
+            // Explicitly clear all input, textarea, and select fields
+            const inputs = form.querySelectorAll('input, textarea, select');
+            inputs.forEach(input => {
+                if (input.type === 'checkbox' || input.type === 'radio') {
+                    input.checked = false;
+                } else if (input.tagName === 'SELECT') {
+                    input.selectedIndex = 0;
+                } else {
+                    input.value = '';
+                }
+            });
+
+            // Set default values for ability scores
+            ['str', 'dex', 'con', 'int', 'wis', 'cha'].forEach(ability => {
+                const field = document.getElementById(`player-form-${ability}`);
+                if (field) field.value = '10';
+            });
+
+            // Set default level, speed, and proficiency bonus
+            const levelField = document.getElementById('player-form-level');
+            if (levelField) levelField.value = '1';
+
+            const speedField = document.getElementById('player-form-speed');
+            if (speedField) speedField.value = '30';
+
+            const profBonusField = document.getElementById('player-form-proficiency-bonus');
+            if (profBonusField) profBonusField.value = '2';
+
+            const initBonusField = document.getElementById('player-form-initiative-bonus');
+            if (initBonusField) initBonusField.value = '0';
+        }
+
+        console.log('📝 Player form set up for adding new character');
+    }
+
+    /**
+     * Setup player form for editing an existing player character
+     * @param {Object} player - The player character to edit
+     */
+    static setupPlayerFormForEdit(player) {
+        try {
+            console.log('📝 Setting up player form for edit:', player.name);
+
+            // Update modal title
+            const titleElement = document.getElementById('player-form-title');
+            if (titleElement) {
+                titleElement.textContent = 'Edit Player Character';
+            }
+
+            // Store player ID for update
+            const idField = document.getElementById('player-form-id');
+            if (idField) {
+                idField.value = player.id;
+            }
+
+            // Populate basic fields
+            const nameField = document.getElementById('player-form-name');
+            if (nameField) nameField.value = player.name || '';
+
+            const classField = document.getElementById('player-form-class');
+            if (classField) classField.value = player.playerClass || '';
+
+            const levelField = document.getElementById('player-form-level');
+            if (levelField) levelField.value = player.playerLevel || 1;
+
+            const raceField = document.getElementById('player-form-race');
+            if (raceField) raceField.value = player.race || '';
+
+            const backgroundField = document.getElementById('player-form-background');
+            if (backgroundField) backgroundField.value = player.playerBackground || player.subrace || '';
+
+            // Populate combat stats
+            const acField = document.getElementById('player-form-ac');
+            if (acField) acField.value = player.ac || 10;
+
+            const maxHPField = document.getElementById('player-form-max-hp');
+            if (maxHPField) maxHPField.value = player.maxHP || 1;
+
+            const currentHPField = document.getElementById('player-form-current-hp');
+            if (currentHPField) currentHPField.value = '';
+
+            const speedField = document.getElementById('player-form-speed');
+            if (speedField) speedField.value = player.statBlock?.speed?.walk || 30;
+
+            const profBonusField = document.getElementById('player-form-proficiency-bonus');
+            if (profBonusField) profBonusField.value = player.statBlock?.proficiencyBonus || 2;
+
+            const initBonusField = document.getElementById('player-form-initiative-bonus');
+            if (initBonusField) initBonusField.value = player.statBlock?.initiative?.modifier || 0;
+
+            // Populate ability scores
+            if (player.statBlock && player.statBlock.abilities) {
+                ['str', 'dex', 'con', 'int', 'wis', 'cha'].forEach(ability => {
+                    const field = document.getElementById(`player-form-${ability}`);
+                    if (field && player.statBlock.abilities[ability]) {
+                        field.value = player.statBlock.abilities[ability].score || 10;
+                    }
+                });
+            }
+
+            // Populate saving throw proficiencies
+            if (player.statBlock && player.statBlock.savingThrows) {
+                const savingThrowCheckboxes = document.querySelectorAll('input[name="savingThrows"]');
+                savingThrowCheckboxes.forEach(checkbox => {
+                    const ability = checkbox.value;
+                    checkbox.checked = player.statBlock.savingThrows.hasOwnProperty(ability);
+                });
+            }
+
+            // Populate skill proficiencies
+            if (player.statBlock && player.statBlock.skills) {
+                const skillCheckboxes = document.querySelectorAll('input[name="skills"]');
+                const expertiseCheckboxes = document.querySelectorAll('input[name="skillsExpertise"]');
+
+                // First, uncheck all
+                skillCheckboxes.forEach(cb => cb.checked = false);
+                expertiseCheckboxes.forEach(cb => cb.checked = false);
+
+                // Build a map of skills with their bonuses
+                const profBonus = player.statBlock.proficiencyBonus || 2;
+                const abilities = player.statBlock.abilities;
+
+                // Map skill names to ability modifiers
+                const skillAbilities = {
+                    'acrobatics': 'dex',
+                    'animal-handling': 'wis',
+                    'arcana': 'int',
+                    'athletics': 'str',
+                    'deception': 'cha',
+                    'history': 'int',
+                    'insight': 'wis',
+                    'intimidation': 'cha',
+                    'investigation': 'int',
+                    'medicine': 'wis',
+                    'nature': 'int',
+                    'perception': 'wis',
+                    'performance': 'cha',
+                    'persuasion': 'cha',
+                    'religion': 'int',
+                    'sleight-of-hand': 'dex',
+                    'stealth': 'dex',
+                    'survival': 'wis'
+                };
+
+                // Check which skills are proficient or expert
+                for (const [skillKey, bonus] of Object.entries(player.statBlock.skills)) {
+                    // Find the matching checkbox value
+                    let matchingSkill = null;
+                    for (const [formSkill, abilityKey] of Object.entries(skillAbilities)) {
+                        const normalizedSkill = formSkill.replace(/-/g, '').toLowerCase();
+                        if (skillKey.toLowerCase() === normalizedSkill) {
+                            matchingSkill = formSkill;
+                            break;
+                        }
+                    }
+
+                    if (matchingSkill) {
+                        const abilityKey = skillAbilities[matchingSkill];
+                        const abilityMod = abilities[abilityKey]?.modifier || 0;
+
+                        // Check proficiency
+                        const skillCheckbox = document.querySelector(`input[name="skills"][value="${matchingSkill}"]`);
+                        if (skillCheckbox) {
+                            skillCheckbox.checked = true;
+                        }
+
+                        // Check expertise (bonus = abilityMod + profBonus * 2)
+                        const expectedExpertiseBonus = abilityMod + (profBonus * 2);
+                        if (bonus === expectedExpertiseBonus) {
+                            const expertiseCheckbox = document.querySelector(`input[name="skillsExpertise"][value="${matchingSkill}"]`);
+                            if (expertiseCheckbox) {
+                                expertiseCheckbox.checked = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Populate notes
+            const notesField = document.getElementById('player-form-notes');
+            if (notesField) {
+                // Extract notes from traits if present
+                let notes = '';
+                if (player.statBlock && player.statBlock.traits) {
+                    const notesTrait = player.statBlock.traits.find(t => t.name === 'Character Notes');
+                    if (notesTrait) {
+                        notes = notesTrait.description || '';
+                    }
+                }
+                notesField.value = notes;
+            }
+
+            console.log('✅ Player form populated for edit');
+
+        } catch (error) {
+            console.error('❌ Error in setupPlayerFormForEdit:', error);
+            ToastSystem.show('Failed to load player data: ' + error.message, 'error', 3000);
+        }
     }
 
     /**
@@ -655,8 +973,39 @@ export class CreatureModalEvents {
         const nameField = document.getElementById('creature-form-name');
         if (nameField) nameField.value = creature.name || '';
 
+        // Handle creature type field - show select for enemy/npc, readonly for player
         const typeField = document.getElementById('creature-form-type');
-        if (typeField) typeField.value = creature.type || 'enemy';
+        const typeReadonly = document.getElementById('creature-form-type-readonly');
+        const typeHidden = document.getElementById('creature-form-type-hidden');
+        const creatureType = creature.type || 'enemy';
+
+        if (creatureType === 'player') {
+            // Player type - show readonly, hide select, use hidden input for form submission
+            if (typeField) {
+                typeField.style.display = 'none';
+                typeField.removeAttribute('name'); // Don't submit select for player
+            }
+            if (typeReadonly) {
+                typeReadonly.style.display = 'block';
+                typeReadonly.textContent = 'Player';
+            }
+            if (typeHidden) {
+                typeHidden.setAttribute('name', 'type'); // Submit via hidden input
+                typeHidden.value = 'player';
+            }
+        } else {
+            // Enemy/NPC type - show select, hide readonly
+            if (typeField) {
+                typeField.style.display = 'block';
+                typeField.setAttribute('name', 'type'); // Submit via select
+                typeField.value = creatureType;
+            }
+            if (typeReadonly) typeReadonly.style.display = 'none';
+            if (typeHidden) {
+                typeHidden.removeAttribute('name'); // Don't submit hidden input
+                typeHidden.value = '';
+            }
+        }
 
         const acField = document.getElementById('creature-form-ac');
         if (acField) acField.value = creature.ac || 10;
@@ -921,7 +1270,15 @@ export class CreatureModalEvents {
 
                 // Add each custom section
                 creature.customSections.forEach(section => {
-                    this.addCustomSectionRowWithData(section.name, section.title, section.text);
+                    // Support both old and new data structures
+                    if (section.entries && Array.isArray(section.entries)) {
+                        // New structure with multiple entries
+                        this.addCustomSectionRowWithData(section.name, section.entries);
+                    } else {
+                        // Old structure with single title/text - convert to new structure
+                        const entries = [{ title: section.title || '', text: section.text || '' }];
+                        this.addCustomSectionRowWithData(section.name, entries);
+                    }
                 });
             }
         }
@@ -939,6 +1296,7 @@ export class CreatureModalEvents {
      * Format modifier with + or - sign
      * @param {number} modifier - Modifier value
      * @returns {string} Formatted modifier
+     * @deprecated Use formatModifier from html-utils module
      */
     static formatModifier(modifier) {
         return modifier >= 0 ? `+${modifier}` : `${modifier}`;
@@ -948,6 +1306,7 @@ export class CreatureModalEvents {
      * Get ordinal suffix for a number (1st, 2nd, 3rd, etc.)
      * @param {number|string} num - Number to get suffix for
      * @returns {string} Ordinal suffix
+     * @deprecated Use getOrdinalSuffix from html-utils module
      */
     static getOrdinalSuffix(num) {
         const n = parseInt(num);
@@ -960,11 +1319,10 @@ export class CreatureModalEvents {
      * Escape HTML to prevent injection
      * @param {string} text - Text to escape
      * @returns {string} Escaped HTML
+     * @deprecated Use escapeHtml from html-utils module
      */
     static escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+        return escapeHtml(text);
     }
 
     /**
@@ -1193,57 +1551,73 @@ export class CreatureModalEvents {
     /**
      * Add a custom section row with data to the creature form
      * @param {string} sectionName - Section heading (e.g., "Habitat", "Lair Actions")
-     * @param {string} title - Optional title (bold italic)
-     * @param {string} text - Section content
+     * @param {Array} entries - Array of {title, text} objects for this section
      */
-    static addCustomSectionRowWithData(sectionName = '', title = '', text = '') {
+    static addCustomSectionRowWithData(sectionName = '', entries = []) {
         const container = document.getElementById('custom-sections-container');
         if (!container) return;
 
+        // Create the main section container
         const sectionRow = document.createElement('div');
-        sectionRow.className = 'form-group';
+        sectionRow.className = 'form-group custom-section-group';
         sectionRow.style.borderLeft = '3px solid var(--color-border-primary)';
         sectionRow.style.paddingLeft = 'var(--spacing-md)';
+        sectionRow.style.marginBottom = 'var(--spacing-md)';
+        sectionRow.style.position = 'relative';
 
+        // Section Name (Heading)
         const label1 = document.createElement('label');
         label1.textContent = 'Section Name (Heading)';
+        label1.style.fontWeight = 'var(--font-weight-bold)';
 
         const sectionNameInput = document.createElement('input');
         sectionNameInput.type = 'text';
-        sectionNameInput.name = 'customSectionName[]';
+        sectionNameInput.className = 'custom-section-name';
         sectionNameInput.value = sectionName;
         sectionNameInput.placeholder = 'e.g., Habitat, Lair Actions, Treasure';
+        sectionNameInput.style.marginBottom = 'var(--spacing-sm)';
 
-        const label2 = document.createElement('label');
-        label2.textContent = 'Title (Optional - appears in bold italic)';
+        sectionRow.appendChild(label1);
+        sectionRow.appendChild(sectionNameInput);
 
-        const titleInput = document.createElement('input');
-        titleInput.type = 'text';
-        titleInput.name = 'customSectionTitle[]';
-        titleInput.value = title;
-        titleInput.placeholder = 'e.g., The dragon\'s lair...';
+        // Container for entries (title/text pairs)
+        const entriesContainer = document.createElement('div');
+        entriesContainer.className = 'custom-section-entries';
+        entriesContainer.style.marginLeft = 'var(--spacing-sm)';
+        entriesContainer.style.paddingLeft = 'var(--spacing-sm)';
+        entriesContainer.style.borderLeft = '2px solid var(--color-border-muted)';
 
-        const label3 = document.createElement('label');
-        label3.textContent = 'Text';
+        // Add existing entries or add one empty entry if none provided
+        if (entries.length === 0) {
+            entries = [{ title: '', text: '' }];
+        }
 
-        const textTextarea = document.createElement('textarea');
-        textTextarea.name = 'customSectionText[]';
-        textTextarea.value = text;
-        textTextarea.placeholder = 'Enter the content for this section...';
-        textTextarea.rows = 3;
+        entries.forEach(entry => {
+            this.addCustomSectionEntry(entriesContainer, entry.title || '', entry.text || '');
+        });
 
+        sectionRow.appendChild(entriesContainer);
+
+        // Add Entry button
+        const addEntryBtn = document.createElement('button');
+        addEntryBtn.type = 'button';
+        addEntryBtn.className = 'btn btn-sm btn-secondary';
+        addEntryBtn.textContent = '+ Add Title/Text Entry';
+        addEntryBtn.style.marginTop = 'var(--spacing-xs)';
+        addEntryBtn.style.marginRight = 'var(--spacing-xs)';
+        addEntryBtn.onclick = () => {
+            this.addCustomSectionEntry(entriesContainer, '', '');
+        };
+
+        // Remove Section button
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
         removeBtn.className = 'btn btn-sm btn-danger';
         removeBtn.textContent = 'Remove Section';
-        removeBtn.onclick = function() { this.parentElement.remove(); };
+        removeBtn.style.marginTop = 'var(--spacing-xs)';
+        removeBtn.onclick = function() { sectionRow.remove(); };
 
-        sectionRow.appendChild(label1);
-        sectionRow.appendChild(sectionNameInput);
-        sectionRow.appendChild(label2);
-        sectionRow.appendChild(titleInput);
-        sectionRow.appendChild(label3);
-        sectionRow.appendChild(textTextarea);
+        sectionRow.appendChild(addEntryBtn);
         sectionRow.appendChild(removeBtn);
 
         // Find the add button that's a direct child of container
@@ -1255,6 +1629,160 @@ export class CreatureModalEvents {
             container.insertBefore(sectionRow, addButton);
         } else {
             container.appendChild(sectionRow);
+        }
+    }
+
+    /**
+     * Add a single title/text entry to a custom section
+     * @param {HTMLElement} entriesContainer - Container for entries
+     * @param {string} title - Entry title
+     * @param {string} text - Entry text
+     */
+    static addCustomSectionEntry(entriesContainer, title = '', text = '') {
+        const entryDiv = document.createElement('div');
+        entryDiv.className = 'custom-section-entry';
+        entryDiv.style.marginBottom = 'var(--spacing-sm)';
+        entryDiv.style.paddingBottom = 'var(--spacing-sm)';
+        entryDiv.style.borderBottom = '1px solid var(--color-border-muted)';
+
+        const titleLabel = document.createElement('label');
+        titleLabel.textContent = 'Title (Optional - appears in bold italic)';
+        titleLabel.style.fontSize = 'var(--font-size-sm)';
+
+        const titleInput = document.createElement('input');
+        titleInput.type = 'text';
+        titleInput.className = 'custom-entry-title';
+        titleInput.value = title;
+        titleInput.placeholder = 'e.g., The dragon\'s lair...';
+
+        const textLabel = document.createElement('label');
+        textLabel.textContent = 'Text';
+        textLabel.style.fontSize = 'var(--font-size-sm)';
+
+        const textTextarea = document.createElement('textarea');
+        textTextarea.className = 'custom-entry-text';
+        textTextarea.value = text;
+        textTextarea.placeholder = 'Enter the content...';
+        textTextarea.rows = 3;
+
+        const removeEntryBtn = document.createElement('button');
+        removeEntryBtn.type = 'button';
+        removeEntryBtn.className = 'btn btn-sm btn-danger';
+        removeEntryBtn.textContent = 'Remove Entry';
+        removeEntryBtn.style.marginTop = 'var(--spacing-xs)';
+        removeEntryBtn.onclick = function() {
+            // Only remove if there's more than one entry
+            if (entriesContainer.querySelectorAll('.custom-section-entry').length > 1) {
+                entryDiv.remove();
+            } else {
+                alert('A custom section must have at least one entry. Remove the entire section instead.');
+            }
+        };
+
+        entryDiv.appendChild(titleLabel);
+        entryDiv.appendChild(titleInput);
+        entryDiv.appendChild(textLabel);
+        entryDiv.appendChild(textTextarea);
+        entryDiv.appendChild(removeEntryBtn);
+
+        entriesContainer.appendChild(entryDiv);
+    }
+
+    /**
+     * Open creature details in a new browser window/tab
+     * @param {string} creatureId - ID of the creature to display
+     */
+    static openCreatureInNewWindow(creatureId) {
+        // Find the creature in the consolidated database
+        const allCreatures = DataServices.combatantManager?.creatureDatabase || [];
+        const creature = allCreatures.find(c => c.id === creatureId);
+
+        if (!creature) {
+            console.error('Creature not found:', creatureId);
+            ToastSystem.show('Creature not found', 'error', 2000);
+            return;
+        }
+
+        // Get stat block if available
+        const statBlock = creature.statBlock || {};
+        const hasFullStatBlock = creature.hasFullStatBlock && statBlock;
+
+        // Build the complete HTML page
+        const htmlContent = this.generateStandaloneCreaturePage(creature, statBlock, hasFullStatBlock);
+
+        // Open in new window
+        const newWindow = window.open('', '_blank');
+        if (newWindow) {
+            newWindow.document.write(htmlContent);
+            newWindow.document.close();
+            console.log(`🗖 Opened ${creature.name} in new window`);
+        } else {
+            ToastSystem.show('Please allow pop-ups to open creature details in a new window', 'warning', 4000);
+        }
+    }
+
+    /**
+     * Generate a complete standalone HTML page for a creature
+     * @param {Object} creature - Creature data
+     * @param {Object} statBlock - Stat block data
+     * @param {boolean} hasFullStatBlock - Whether creature has full stat block
+     * @returns {string} Complete HTML page
+     */
+    static generateStandaloneCreaturePage(creature, statBlock, hasFullStatBlock) {
+        const statBlockHTML = buildStatBlockHTML(creature, statBlock, hasFullStatBlock);
+
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${this.escapeHtml(creature.name)} - D&D Creature Details</title>
+    <style>
+        ${standaloneCreatureCSS}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="creature-details-header">
+            <h1>${this.escapeHtml(creature.name)}</h1>
+            <span class="creature-type-badge badge-${creature.type}">${creature.type.toUpperCase()}</span>
+        </div>
+        ${statBlockHTML}
+    </div>
+</body>
+</html>`;
+    }
+
+    /**
+     * Update the creature database file status indicator in the modal
+     * Shows unsaved changes indicator if the working database differs from base
+     * @param {HTMLElement} modal - Modal element
+     */
+    static updateCreatureDatabaseFileStatus(modal) {
+        const filenameElement = modal.querySelector('#creature-database-filename');
+        const unsavedIndicator = modal.querySelector('#creature-database-unsaved-indicator');
+
+        if (CreatureService.workingDatabase) {
+            // WHY: Check if there are unexported changes to the database
+            // Changes auto-save to localStorage (so no data loss), but user may want
+            // to export for backup or sharing. Red exclamation warns them.
+            const hasUnexportedChanges = CreatureService.hasUnexportedChanges();
+
+            if (unsavedIndicator) {
+                if (hasUnexportedChanges) {
+                    unsavedIndicator.style.display = 'inline';
+                } else {
+                    unsavedIndicator.style.display = 'none';
+                }
+            }
+
+            // Update filename if it has lastUpdated metadata
+            if (filenameElement && CreatureService.workingDatabase.metadata) {
+                const lastUpdated = CreatureService.workingDatabase.metadata.lastUpdated;
+                if (lastUpdated) {
+                    filenameElement.textContent = `creature-database-${lastUpdated}.json`;
+                }
+            }
         }
     }
 }

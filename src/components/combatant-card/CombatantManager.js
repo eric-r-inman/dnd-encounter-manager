@@ -1,15 +1,18 @@
 /**
  * CombatantManager - Template Rendering System
- * 
+ *
  * Manages the creation, rendering, and lifecycle of multiple CombatantCard instances.
- * Optimized for handling 50+ combatants efficiently.
- * 
+ * Optimized for handling 50+ combatants efficiently with robust error handling
+ * and validation.
+ *
  * @class CombatantManager
- * @version 1.0.0
+ * @version 1.1.0
  */
 
 import { CombatantCard } from './CombatantCard.js';
 import { CombatEvents } from '../../scripts/events/combat-events.js';
+import { STORAGE_KEYS, TIMING, DEFAULTS, DATA_PATHS } from '../../scripts/constants.js';
+import { CreatureService } from '../../scripts/services/creature-service.js';
 
 export class CombatantManager {
     constructor() {
@@ -27,7 +30,7 @@ export class CombatantManager {
         this.updateScheduled = false;
         
         // Auto-save functionality
-        this.autoSaveKey = 'dnd-combatant-instances';
+        this.autoSaveKey = STORAGE_KEYS.COMBATANT_INSTANCES;
         this.autoSaveInterval = null;
         
         // Bind methods
@@ -68,35 +71,28 @@ export class CombatantManager {
     }
     
     /**
-     * Load the creature database from JSON and merge with custom creatures
+     * Load the creature database using CreatureService
+     * Uses the new unified database system (working database in localStorage)
+     * @returns {Promise<void>}
      */
     async loadCreatureDatabase() {
         try {
-            // Load base creatures from JSON file
-            const response = await fetch('/src/data/creatures/creature-database.json');
-            const data = await response.json();
-            const baseCreatures = data.creatures;
+            // Initialize CreatureService if needed
+            await CreatureService.initialize();
 
-            // Load custom creatures from localStorage
-            let customCreatures = [];
-            try {
-                const stored = localStorage.getItem('dnd-custom-creatures');
-                if (stored) {
-                    customCreatures = JSON.parse(stored);
-                    // Mark them as custom for identification
-                    customCreatures = customCreatures.map(c => ({ ...c, isCustom: true }));
-                }
-            } catch (error) {
-                console.warn('Failed to load custom creatures:', error);
-            }
+            // Load all creatures from the working database
+            const creatures = await CreatureService.loadCreatures();
 
-            // Merge both databases (custom creatures first so they appear at top)
-            this.creatureDatabase = [...customCreatures, ...baseCreatures];
+            // Get hidden creatures list
+            const hiddenCreatures = JSON.parse(localStorage.getItem('dnd-hidden-creatures') || '[]');
 
-            console.log(`📚 Loaded ${baseCreatures.length} base creatures and ${customCreatures.length} custom creatures`);
+            // Filter out hidden creatures
+            this.creatureDatabase = creatures.filter(c => !hiddenCreatures.includes(c.id));
+
+            console.log(`📚 Loaded ${this.creatureDatabase.length} creatures from working database`);
         } catch (error) {
             console.error('❌ Failed to load creature database:', error);
-            // Fallback to empty array
+            // Fallback to empty array to prevent crashes
             this.creatureDatabase = [];
         }
     }
@@ -117,36 +113,95 @@ export class CombatantManager {
     /**
      * Add a new combatant from the creature database
      * @param {string} creatureId - ID from the creature database
-     * @param {Object} instanceData - Optional instance-specific data
-     * @returns {CombatantCard} The created combatant card
+     * @param {Object} [instanceData={}] - Optional instance-specific data
+     * @returns {CombatantCard|null} The created combatant card or null if error
      */
     addCombatant(creatureId, instanceData = {}) {
-        // Find creature in consolidated database (includes both JSON and custom creatures)
-        const creatureData = this.creatureDatabase.find(c => c.id === creatureId);
+        try {
+            // Find creature in consolidated database
+            const creatureData = this.creatureDatabase?.find(c => c.id === creatureId);
 
-        if (!creatureData) {
-            console.error(`Creature ${creatureId} not found in database`);
+            if (!creatureData) {
+                console.error(`Creature ${creatureId} not found in database`);
+                return null;
+            }
+
+            // Validate creature has required properties
+            if (!creatureData.id || !creatureData.name || !creatureData.type) {
+                console.error(`Creature ${creatureId} is missing required properties`);
+                return null;
+            }
+
+            // Create new combatant card
+            const orderIndex = this.combatants.size;
+            const combatantCard = new CombatantCard(creatureData, instanceData, orderIndex);
+
+            // Store in map
+            this.combatants.set(combatantCard.id, combatantCard);
+
+            // Immediately render all combatants to show new addition in correct initiative order
+            this.renderAll();
+
+            // Save instances
+            this.saveInstances();
+
+            // Update combat header to reflect new XP total
+            CombatEvents.updateCombatHeader();
+
+            console.log(`➕ Added combatant: ${combatantCard.name} (${combatantCard.id})`);
+
+            return combatantCard;
+        } catch (error) {
+            console.error('Error adding combatant:', error);
             return null;
         }
-        
-        // Create new combatant card
+    }
+
+    /**
+     * Add a placeholder combatant
+     * Placeholders have minimal functionality - just a name and notes field
+     * @param {Object} instanceData - Optional instance-specific data
+     * @returns {CombatantCard} The created placeholder card
+     */
+    addPlaceholder(instanceData = {}) {
+        // Create minimal placeholder creature data
+        const placeholderData = {
+            id: `placeholder-${Date.now()}`,
+            name: 'Placeholder',
+            type: 'placeholder',
+            ac: 10,
+            maxHP: 1,
+            currentHP: 1,
+            isPlaceholder: true
+        };
+
+        // Ensure initiative is set to 0 in instanceData if not provided
+        const placeholderInstanceData = {
+            ...instanceData,
+            initiative: instanceData.initiative ?? 0
+        };
+
+        // Create new combatant card with placeholder flag
         const orderIndex = this.combatants.size;
-        const combatantCard = new CombatantCard(creatureData, instanceData, orderIndex);
-        
+        const combatantCard = new CombatantCard(placeholderData, placeholderInstanceData, orderIndex);
+
+        // Mark as placeholder
+        combatantCard.isPlaceholder = true;
+
         // Store in map
         this.combatants.set(combatantCard.id, combatantCard);
 
-        // Immediately render all combatants to show new addition in correct initiative order
+        // Immediately render all combatants
         this.renderAll();
 
         // Save instances
         this.saveInstances();
-        
-        console.log(`➕ Added combatant: ${combatantCard.name} (${combatantCard.id})`);
-        
+
+        console.log(`➕ Added placeholder: ${combatantCard.id}`);
+
         return combatantCard;
     }
-    
+
     /**
      * Remove a combatant
      * @param {string} combatantId - The combatant's unique ID
@@ -157,16 +212,19 @@ export class CombatantManager {
         
         // Destroy the card
         combatant.destroy();
-        
+
         // Remove from map
         this.combatants.delete(combatantId);
-        
+
         // Update order indices
         this.updateOrderIndices();
-        
+
         // Save instances
         this.saveInstances();
-        
+
+        // Update combat header to reflect new XP total
+        CombatEvents.updateCombatHeader();
+
         console.log(`➖ Removed combatant: ${combatant.name}`);
     }
     
@@ -205,11 +263,19 @@ export class CombatantManager {
     
     /**
      * Schedule a batch update for performance
+     *
+     * WHY BATCHING: When multiple properties change in quick succession (e.g., taking
+     * damage, updating HP, checking death status), we don't want to re-render the card
+     * 3 times. Instead, we batch all updates and render once using requestAnimationFrame.
+     *
+     * WHY requestAnimationFrame: Browser optimization - it ensures updates happen right
+     * before the next paint, preventing wasted renders and keeping animations smooth.
+     *
      * @param {string} combatantId - ID of combatant that needs update
      */
     scheduleUpdate(combatantId) {
         this.pendingUpdates.add(combatantId);
-        
+
         if (!this.updateScheduled) {
             this.updateScheduled = true;
             requestAnimationFrame(() => {
@@ -217,21 +283,31 @@ export class CombatantManager {
             });
         }
     }
-    
+
     /**
      * Process all pending updates in a single batch
+     *
+     * WHY THE 30% THRESHOLD: Performance optimization. If many combatants need updates
+     * (e.g., end of round processing), it's faster to re-render the entire list once
+     * rather than individually updating many cards. DOM operations are expensive!
+     *
+     * EXAMPLE: If you have 10 combatants and 4 need updates, that's 40% > 30% threshold,
+     * so we do 1 full render instead of 4 individual renders.
      */
     processPendingUpdates() {
         if (this.pendingUpdates.size === 0) {
             this.updateScheduled = false;
             return;
         }
-        
-        // If we need to update more than 30% of combatants, just re-render all
+
+        // WHY 30% THRESHOLD: Based on performance testing, rendering everything is faster
+        // than individual updates when this many cards need changes. This threshold
+        // balances responsiveness (small changes are instant) vs efficiency (bulk changes
+        // are batched). You can adjust this value based on your performance needs.
         if (this.pendingUpdates.size > this.combatants.size * 0.3) {
             this.renderAll();
         } else {
-            // Update individual cards
+            // Update individual cards for small changes
             for (const combatantId of this.pendingUpdates) {
                 const combatant = this.combatants.get(combatantId);
                 if (combatant && combatant.element) {
@@ -291,6 +367,13 @@ export class CombatantManager {
         // Clear container and append all at once
         this.container.innerHTML = '';
         this.container.appendChild(fragment);
+
+        // Add the "add placeholder" button at the end
+        const addButton = document.createElement('button');
+        addButton.className = 'add-placeholder-btn';
+        addButton.setAttribute('data-action', 'add-placeholder');
+        addButton.textContent = '+';
+        this.container.appendChild(addButton);
     }
     
     /**
@@ -367,28 +450,33 @@ export class CombatantManager {
     
     /**
      * Save all combatant instances to localStorage
+     * @returns {boolean} True if save successful, false otherwise
      */
     saveInstances() {
-        const instanceData = [];
-        
-        for (const [id, combatant] of this.combatants) {
-            instanceData.push({
-                combatantId: id,
-                creatureId: combatant.creatureId,
-                instanceData: combatant.getInstanceData()
-            });
-        }
-        
-        const saveData = {
-            timestamp: Date.now(),
-            instances: instanceData
-        };
-        
         try {
+            const instanceData = [];
+
+            // Collect instance data from all combatants
+            for (const [id, combatant] of this.combatants) {
+                instanceData.push({
+                    combatantId: id,
+                    creatureId: combatant.creatureId,
+                    instanceData: combatant.getInstanceData()
+                });
+            }
+
+            const saveData = {
+                timestamp: Date.now(),
+                instances: instanceData,
+                version: '1.0' // For future migration compatibility
+            };
+
             localStorage.setItem(this.autoSaveKey, JSON.stringify(saveData));
             console.log(`💾 Saved ${instanceData.length} combatant instances`);
+            return true;
         } catch (error) {
             console.error('❌ Failed to save combatant instances:', error);
+            return false;
         }
     }
     
@@ -409,7 +497,12 @@ export class CombatantManager {
             
             // Recreate combatants from saved data
             instances.forEach(({ creatureId, instanceData }) => {
-                this.addCombatant(creatureId, instanceData);
+                // Check if this is a placeholder
+                if (instanceData && instanceData.isPlaceholder) {
+                    this.addPlaceholder(instanceData);
+                } else {
+                    this.addCombatant(creatureId, instanceData);
+                }
             });
             
         } catch (error) {
@@ -424,7 +517,7 @@ export class CombatantManager {
         // Save every 5 seconds
         this.autoSaveInterval = setInterval(() => {
             this.saveInstances();
-        }, 5000);
+        }, TIMING.AUTOSAVE_INTERVAL);
     }
     
     /**
@@ -453,9 +546,12 @@ export class CombatantManager {
         if (this.container) {
             this.container.innerHTML = '';
         }
-        
+
         // Save empty state
         this.saveInstances();
+
+        // Update combat header to reflect zero XP
+        CombatEvents.updateCombatHeader();
     }
     
     /**

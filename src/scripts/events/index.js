@@ -16,12 +16,25 @@ import { CreatureModalEvents } from './creature-modal-events.js';
 import { CombatEvents } from './combat-events.js';
 import { KeyboardEvents } from './keyboard-events.js';
 import { InlineEditEvents } from './inline-edit-events.js';
+import { InitiativeEvents } from './initiative-events.js';
 import { EncounterEvents } from './encounter-events.js';
 import { ImportExportEvents } from './import-export-events.js';
+import { CreatureHandlers } from './creature-handlers.js';
+import { ImportExportHandlers } from './import-export-handlers.js';
+import { RecentItems } from './recent-items.js';
+import { DiceRollerEvents } from './dice-roller-events.js';
+import { DiceRoller } from '../../components/dice-roller/DiceRoller.js';
+import { DiceLinkConverter } from '../utils/dice-link-converter.js';
 import { StateManager } from '../state-manager.js';
 import { ToastSystem } from '../../components/toast/ToastSystem.js';
 import { ModalSystem } from '../../components/modals/ModalSystem.js';
 import { DataServices } from '../data-services.js';
+import { buildStatBlockHTML } from '../renderers/stat-block-renderer.js';
+import { escapeHtml } from '../renderers/html-utils.js';
+import { STORAGE_KEYS, MODAL_NAMES, TIMING } from '../constants.js';
+import { returnToCompendiumAfterCancel } from '../utils/modal-utils.js';
+import { StatBlockParser } from '../parsers/stat-block-parser.js';
+import { CreatureService } from '../services/creature-service.js';
 
 export class EventCoordinator {
     /**
@@ -38,6 +51,7 @@ export class EventCoordinator {
         ModalEvents.init();
         CombatEvents.init();
         KeyboardEvents.init();
+        DiceRollerEvents.init();
 
         // Initialize other systems that have setup methods
         this.setupCombatControls();
@@ -49,9 +63,20 @@ export class EventCoordinator {
     /**
      * Set up event delegation for the entire application
      * This is the main event dispatcher that routes events to appropriate handlers
+     *
+     * WHY EVENT DELEGATION: Instead of adding individual event listeners to every
+     * button/element (which is slow and memory-intensive), we use event delegation -
+     * a single listener on the document that captures all clicks. We then check
+     * what was clicked and route to the appropriate handler.
+     *
+     * WHY THIS PATTERN: Benefits include:
+     * 1. Better performance (one listener vs. hundreds)
+     * 2. Dynamic content support (works with elements added after page load)
+     * 3. Easier maintenance (all routing logic in one place)
+     * 4. Memory efficiency (fewer event listeners = less memory)
      */
     static setupEventDelegation() {
-        // Main click event delegation
+        // WHY: Single click listener for entire app (event delegation pattern)
         document.addEventListener('click', (event) => {
             const target = event.target;
 
@@ -64,7 +89,7 @@ export class EventCoordinator {
 
             if (target.classList.contains('stat-block-window-btn')) {
                 event.preventDefault();
-                this.handleAddNewCreature();
+                CreatureHandlers.handleAddNewCreature();
                 return;
             }
 
@@ -96,10 +121,15 @@ export class EventCoordinator {
                 return;
             }
 
-            // Handle data-action elements
+            // WHY: Handle data-action elements (main routing mechanism)
+            // This is the core of our action-based routing system. Any HTML element with
+            // a `data-action="something"` attribute will be routed through handleAction().
+            // We also check parent elements with `.closest()` to support nested structures
+            // (e.g., clicking an icon inside a button)
             const action = target.getAttribute('data-action') || target.closest('[data-action]')?.getAttribute('data-action');
             if (action) {
-                // Don't prevent default for checkbox inputs (they need to change state naturally)
+                // WHY: Don't prevent default for checkboxes - they need to update their
+                // visual state naturally. preventDefault() would break the checkbox UI.
                 if (target.tagName !== 'INPUT' || target.type !== 'checkbox') {
                     event.preventDefault();
                 }
@@ -122,7 +152,9 @@ export class EventCoordinator {
             const target = event.target;
             const action = target.getAttribute('data-action');
             if (action === 'search-creatures') {
-                this.handleSearchCreatures(target, event);
+                CreatureHandlers.handleSearchCreatures(target, event);
+            } else if (action === 'edit-placeholder-line') {
+                this.handleEditPlaceholderLine(target);
             }
         });
 
@@ -131,7 +163,21 @@ export class EventCoordinator {
             const target = event.target;
             const action = target.getAttribute('data-action');
             if (action === 'filter-creature-type') {
-                this.handleFilterCreatureType(target);
+                CreatureHandlers.handleFilterCreatureType(target);
+            } else if (action === 'change-sort-filter') {
+                CreatureHandlers.handleSortFilterChange(target);
+            }
+
+            // Handle type filter checkbox changes
+            if (target.name === 'type-filter') {
+                const modal = target.closest('[data-modal="creature-database"]');
+                if (modal) {
+                    const sortSelect = modal.querySelector('#creature-sort-filter');
+                    if (sortSelect) {
+                        // Re-apply current sort with the new type filter selection
+                        CreatureHandlers.applySortAndFilter(modal, sortSelect.value);
+                    }
+                }
             }
         });
     }
@@ -152,6 +198,15 @@ export class EventCoordinator {
                 break;
             case 'clear-encounter':
                 CombatEvents.handleClearEncounter();
+                break;
+            case 'open-dice-roller':
+                DiceRollerEvents.handleOpenDiceRoller();
+                break;
+            case 'roll-dice-from-stat-block':
+                this.handleRollDiceFromStatBlock(target);
+                break;
+            case 'toggle-xp-filter':
+                this.handleToggleXPFilter(target);
                 break;
             case 'start-combat':
                 CombatEvents.startCombat();
@@ -189,6 +244,9 @@ export class EventCoordinator {
             case 'batch-condition':
                 this.handleBatchCondition(target);
                 break;
+            case 'batch-effect':
+                this.handleBatchEffect(target);
+                break;
             case 'clear-note':
                 this.handleClearNote(target);
                 break;
@@ -197,6 +255,9 @@ export class EventCoordinator {
                 break;
             case 'toggle-stealth-status':
                 this.handleToggleStealth(target);
+                break;
+            case 'toggle-flying-status':
+                this.handleToggleFlying(target);
                 break;
             case 'toggle-death-save':
                 this.handleToggleDeathSave(target);
@@ -216,11 +277,23 @@ export class EventCoordinator {
             case 'clear-effect':
                 this.handleClearEffect(target);
                 break;
+            case 'clear-timer':
+                this.handleClearTimer(target);
+                break;
             case 'toggle-infinity':
                 KeyboardEvents.handleInfinityToggle(target);
                 break;
             case 'add-combatant':
                 this.handleAddCombatant();
+                break;
+            case 'add-placeholder':
+                this.handleAddPlaceholder();
+                break;
+            case 'edit-placeholder-line':
+                this.handleEditPlaceholderLine(target);
+                break;
+            case 'confirm-creature-type':
+                this.handleConfirmCreatureType(target);
                 break;
             case 'save-encounter':
                 this.handleSaveEncounter();
@@ -229,28 +302,28 @@ export class EventCoordinator {
                 this.handleLoadEncounter();
                 break;
             case 'quick-view-creature':
-                this.handleQuickViewCreature();
+                CreatureHandlers.handleQuickViewCreature();
                 break;
             case 'open-creature-database':
-                this.handleOpenCreatureDatabase();
+                CreatureHandlers.handleOpenCreatureDatabase();
                 break;
             case 'import-stat-block':
-                this.handleImportStatBlock();
+                ImportExportHandlers.handleImportStatBlock();
                 break;
             case 'add-new-creature':
-                this.handleAddNewCreature();
+                CreatureHandlers.handleAddNewCreature();
                 break;
             case 'add-creature-to-encounter':
-                this.handleAddCreatureToEncounter(target);
+                CreatureHandlers.handleAddCreatureToEncounter(target);
                 break;
             case 'search-creatures':
-                this.handleSearchCreatures(target, event);
+                CreatureHandlers.handleSearchCreatures(target, event);
                 break;
             case 'filter-creature-type':
-                this.handleFilterCreatureType(target);
+                CreatureHandlers.handleFilterCreatureType(target);
                 break;
             case 'edit-creature':
-                this.handleEditCreature(target);
+                CreatureHandlers.handleEditCreature(target);
                 break;
             case 'delete-creature':
                 this.handleDeleteCreature(target);
@@ -259,22 +332,70 @@ export class EventCoordinator {
                 this.handleDuplicateCreature(target);
                 break;
             case 'export-creature':
-                this.handleExportCreature(target);
+                CreatureHandlers.handleExportCreature(target);
+                break;
+            case 'cancel-creature-form':
+                this.handleCancelCreatureForm();
+                break;
+            case 'cancel-player-form':
+                this.handleCancelPlayerForm();
+                break;
+            case 'cancel-creature-type-selection':
+                this.handleCancelCreatureTypeSelection();
+                break;
+            case 'cancel-stat-block-parser':
+                this.handleCancelStatBlockParser();
                 break;
             case 'import-creature':
-                this.handleImportCreature();
+                ImportExportHandlers.handleImportCreature();
+                break;
+            case 'import-creature-database':
+                this.handleImportCreatureDatabase();
+                break;
+            case 'export-creature-database':
+                this.handleExportCreatureDatabase();
+                break;
+            case 'reset-creature-database':
+                this.handleResetCreatureDatabase();
                 break;
             case 'parse-stat-block':
                 this.handleParseStatBlock(target);
                 break;
             case 'import-parsed-creature':
-                this.handleImportParsedCreature(target);
+                ImportExportHandlers.handleImportParsedCreature(target);
                 break;
             case 'view-creature-stat-block':
-                this.handleViewCreatureStatBlock(target);
+                CreatureHandlers.handleViewCreatureStatBlock(target);
                 break;
             case 'add-custom-section':
                 CreatureModalEvents.addCustomSectionRowWithData();
+                break;
+            case 'open-creature-window':
+                const creatureId = target.getAttribute('data-creature-id');
+                if (creatureId) {
+                    CreatureModalEvents.openCreatureInNewWindow(creatureId);
+                }
+                break;
+            case 'edit-condition':
+                this.handleEditCondition(target);
+                break;
+            case 'edit-effect':
+                this.handleEditEffect(target);
+                break;
+            case 'edit-timer':
+                this.handleEditTimer(target);
+                break;
+            case 'apply-cr-filter':
+                CreatureHandlers.handleApplyCRFilter(target);
+                break;
+            case 'clear-cr-filter':
+                CreatureHandlers.handleClearCRFilter(target);
+                break;
+            case 'clear-type-filter':
+                CreatureHandlers.handleClearTypeFilter(target);
+                break;
+            case 'roll-quick-initiative':
+                InitiativeEvents.rollQuickInitiative(target);
                 break;
             default:
                 console.warn('Unhandled action:', action);
@@ -303,222 +424,78 @@ export class EventCoordinator {
         ModalEvents.handleModalShow('add-combatant', trigger);
     }
 
+    /**
+     * Handle adding a placeholder card
+     */
+    static handleAddPlaceholder() {
+        if (DataServices.combatantManager) {
+            DataServices.combatantManager.addPlaceholder();
+            ToastSystem.show('Added placeholder', 'success', 2000);
+        }
+    }
+
+    /**
+     * Handle creature type selection confirmation
+     * Opens the appropriate form based on selected type
+     * @param {HTMLElement} target - The continue button
+     */
+    static handleConfirmCreatureType(target) {
+        const form = document.getElementById('creature-type-selection-form');
+        if (!form) return;
+
+        const selectedType = form.querySelector('input[name="creature-type"]:checked')?.value;
+        if (!selectedType) {
+            ToastSystem.show('Please select a creature type', 'warning', 2000);
+            return;
+        }
+
+        // Close the type selection modal
+        ModalSystem.hide('creature-type-selection');
+
+        // Store the selected type for the form
+        sessionStorage.setItem('pending-creature-type', selectedType);
+
+        // Open the appropriate form
+        if (selectedType === 'player') {
+            // TODO: Open player form modal (to be created)
+            ModalSystem.show('player-form');
+        } else {
+            // Open standard creature form for enemy/npc
+            ModalSystem.show('creature-form');
+        }
+    }
+
+    /**
+     * Handle editing a placeholder text line
+     * @param {HTMLElement} target - The input element
+     */
+    static handleEditPlaceholderLine(target) {
+        const newValue = target.value;
+
+        // Find the combatant card element
+        const cardElement = target.closest('.combatant-card');
+        if (!cardElement) return;
+
+        const combatantId = cardElement.getAttribute('data-combatant-id');
+        if (!combatantId) return;
+
+        // Get the combatant from the manager
+        const combatant = DataServices.combatantManager.combatants.get(combatantId);
+        if (!combatant || !combatant.isPlaceholder) return;
+
+        // Update the notes field
+        combatant.notes = newValue;
+
+        // Save instances
+        DataServices.combatantManager.saveInstances();
+    }
+
     static async handleSaveEncounter() {
         await EncounterEvents.handleSaveEncounter();
     }
 
     static async handleLoadEncounter() {
         await EncounterEvents.handleLoadEncounter();
-    }
-
-    static handleQuickViewCreature() {
-        // Get the active combatant (whose turn it is)
-        const allCombatants = DataServices.combatantManager.getAllCombatants();
-        const activeCombatant = allCombatants.find(c => c.status.isActive);
-
-        if (!activeCombatant) {
-            ToastSystem.show('No active creature in combat', 'info', 2000);
-            // Still open the modal, but without a selected creature
-            const trigger = document.createElement('div');
-            ModalEvents.handleModalShow('creature-database', trigger);
-            return;
-        }
-
-        // Get the creature ID from the active combatant
-        const creatureId = activeCombatant.creatureId;
-
-        if (!creatureId) {
-            ToastSystem.show('Active combatant has no creature ID', 'warning', 2000);
-            const trigger = document.createElement('div');
-            ModalEvents.handleModalShow('creature-database', trigger);
-            return;
-        }
-
-        // Store the creature ID to be selected when modal opens
-        const trigger = document.createElement('div');
-        trigger.setAttribute('data-selected-creature-id', creatureId);
-
-        console.log(`🔍 Quick View: Opening compendium modal for active creature: ${activeCombatant.name} (${creatureId})`);
-
-        ModalEvents.handleModalShow('creature-database', trigger);
-    }
-
-    static handleOpenCreatureDatabase() {
-        // Create a temporary trigger element to properly initialize modal
-        const trigger = document.createElement('div');
-        ModalEvents.handleModalShow('creature-database', trigger);
-    }
-
-    static handleViewCreatureStatBlock(target) {
-        // Get the creature ID from the clicked element
-        const creatureId = target.getAttribute('data-creature-id');
-
-        if (!creatureId) {
-            ToastSystem.show('No creature information available', 'info', 2000);
-            return;
-        }
-
-        // Display the creature stat block in the right pane
-        CreatureModalEvents.displayCreatureInRightPane(creatureId);
-    }
-
-    static handleImportStatBlock() {
-        ModalSystem.show('stat-block-parser');
-    }
-
-    static handleAddNewCreature() {
-        ModalSystem.show('creature-form');
-    }
-
-    /**
-     * Handle adding a creature from the database to the current encounter
-     * @param {HTMLElement} target - The button that was clicked
-     */
-    static handleAddCreatureToEncounter(target) {
-        const creatureId = target.getAttribute('data-creature-id');
-        if (!creatureId) {
-            console.error('No creature ID found on target');
-            return;
-        }
-
-        try {
-            // Add the creature to the encounter
-            const combatantCard = DataServices.combatantManager.addCombatant(creatureId);
-
-            if (combatantCard) {
-                ToastSystem.show(`Added ${combatantCard.name} to encounter`, 'success', 2000);
-
-                // Close the creature database modal
-                ModalSystem.hide('creature-database');
-
-                console.log(`✅ Added creature ${creatureId} to encounter`);
-            } else {
-                ToastSystem.show('Failed to add creature to encounter', 'error', 3000);
-            }
-        } catch (error) {
-            console.error('Error adding creature to encounter:', error);
-            ToastSystem.show('Failed to add creature: ' + error.message, 'error', 3000);
-        }
-    }
-
-    /**
-     * Handle search input in creature database
-     * @param {HTMLElement} target - The search input element
-     * @param {Event} event - The input event
-     */
-    static handleSearchCreatures(target, event) {
-        const searchTerm = target.value.toLowerCase().trim();
-        const modal = target.closest('[data-modal="creature-database"]');
-        if (!modal) return;
-
-        const creatureItems = modal.querySelectorAll('.creature-list-item');
-        const visibleCountElement = modal.querySelector('#visible-count');
-        let visibleCount = 0;
-
-        creatureItems.forEach(item => {
-            const creatureName = item.querySelector('.creature-name')?.textContent.toLowerCase() || '';
-            const creatureType = item.querySelector('.creature-type-badge')?.textContent.toLowerCase() || '';
-            const creatureStats = item.querySelector('.creature-item-stats')?.textContent.toLowerCase() || '';
-
-            // Check if search term matches name, type, or stats (AC, HP, CR)
-            const matches = creatureName.includes(searchTerm) ||
-                          creatureType.includes(searchTerm) ||
-                          creatureStats.includes(searchTerm);
-
-            if (matches || searchTerm === '') {
-                item.style.display = '';
-                visibleCount++;
-            } else {
-                item.style.display = 'none';
-            }
-        });
-
-        // Update visible count
-        if (visibleCountElement) {
-            visibleCountElement.textContent = visibleCount;
-        }
-
-        console.log(`🔍 Search: "${searchTerm}" - ${visibleCount} creatures visible`);
-    }
-
-    /**
-     * Handle type filter dropdown in creature database
-     * @param {HTMLElement} target - The select element
-     */
-    static handleFilterCreatureType(target) {
-        const filterType = target.value.toLowerCase();
-        const modal = target.closest('[data-modal="creature-database"]');
-        if (!modal) return;
-
-        const creatureItems = modal.querySelectorAll('.creature-list-item');
-        const visibleCountElement = modal.querySelector('#visible-count');
-        let visibleCount = 0;
-
-        creatureItems.forEach(item => {
-            const creatureTypeBadge = item.querySelector('.creature-type-badge');
-            const creatureType = creatureTypeBadge?.textContent.toLowerCase() || '';
-
-            // Show all if "all" is selected, otherwise filter by type
-            if (filterType === 'all' || creatureType === filterType) {
-                item.style.display = '';
-                visibleCount++;
-            } else {
-                item.style.display = 'none';
-            }
-        });
-
-        // Update visible count
-        if (visibleCountElement) {
-            visibleCountElement.textContent = visibleCount;
-        }
-
-        console.log(`🎯 Filter: "${filterType}" - ${visibleCount} creatures visible`);
-    }
-
-    /**
-     * Handle editing a creature from the database
-     * @param {HTMLElement} target - The edit button
-     */
-    static handleEditCreature(target) {
-        try {
-            const modal = target.closest('[data-modal="creature-database"]');
-            if (!modal) {
-                console.error('❌ Edit creature: Modal not found');
-                return;
-            }
-
-            const creatureId = modal.getAttribute('data-selected-creature-id');
-            if (!creatureId) {
-                ToastSystem.show('Please select a creature first', 'warning', 2000);
-                return;
-            }
-
-            console.log(`📝 Editing creature: ${creatureId}`);
-
-            // Get creature from consolidated database
-            const allCreatures = DataServices.combatantManager?.creatureDatabase || [];
-            const creature = allCreatures.find(c => c.id === creatureId);
-
-            if (!creature) {
-                console.error('❌ Creature not found:', creatureId);
-                ToastSystem.show('Creature not found', 'error', 2000);
-                return;
-            }
-
-            console.log('📝 Found creature:', creature.name);
-
-            // Populate the creature form with existing data
-            CreatureModalEvents.setupCreatureFormForEdit(creature);
-
-            // Open the creature form modal
-            ModalSystem.show('creature-form');
-
-            console.log('✅ Edit creature form opened successfully');
-        } catch (error) {
-            console.error('❌ Error in handleEditCreature:', error);
-            console.error('Error stack:', error.stack);
-            ToastSystem.show('Failed to open edit form: ' + error.message, 'error', 3000);
-        }
     }
 
     /**
@@ -535,17 +512,13 @@ export class EventCoordinator {
             return;
         }
 
-        // Get creature from consolidated database
-        const allCreatures = DataServices.combatantManager?.creatureDatabase || [];
-        const creature = allCreatures.find(c => c.id === creatureId);
+        // Get creature from CreatureService
+        const creature = await CreatureService.getCreature(creatureId);
 
         if (!creature) {
             ToastSystem.show('Creature not found', 'error', 2000);
             return;
         }
-
-        // Check if it's a custom creature
-        const isCustom = creature.isCustom === true;
 
         // Confirm deletion
         const confirmDelete = confirm(`Are you sure you want to delete "${creature.name}"?`);
@@ -554,28 +527,17 @@ export class EventCoordinator {
         }
 
         try {
-            if (isCustom) {
-                // Remove custom creature from localStorage
-                const customCreatures = JSON.parse(localStorage.getItem('dnd-custom-creatures') || '[]');
-                const updatedCustomCreatures = customCreatures.filter(c => c.id !== creatureId);
-                localStorage.setItem('dnd-custom-creatures', JSON.stringify(updatedCustomCreatures));
+            // Delete creature using CreatureService
+            const success = await CreatureService.deleteCreature(creatureId);
 
-                // Reload the consolidated database
-                if (DataServices.combatantManager) {
-                    await DataServices.combatantManager.loadCreatureDatabase();
-                }
-            } else {
-                // For database creatures, add to hidden list
-                const hiddenCreatures = JSON.parse(localStorage.getItem('dnd-hidden-creatures') || '[]');
-                if (!hiddenCreatures.includes(creatureId)) {
-                    hiddenCreatures.push(creatureId);
-                    localStorage.setItem('dnd-hidden-creatures', JSON.stringify(hiddenCreatures));
-                }
+            if (!success) {
+                ToastSystem.show('Failed to delete creature', 'error', 3000);
+                return;
+            }
 
-                // Reload the consolidated database to apply hidden filter
-                if (DataServices.combatantManager) {
-                    await DataServices.combatantManager.loadCreatureDatabase();
-                }
+            // Reload the database
+            if (DataServices.combatantManager) {
+                await DataServices.combatantManager.loadCreatureDatabase();
             }
 
             ToastSystem.show(`Deleted: ${creature.name}`, 'success', 2000);
@@ -583,6 +545,9 @@ export class EventCoordinator {
 
             // Refresh the compendium to show updated list
             CreatureModalEvents.setupCreatureDatabaseModal(modal);
+
+            // Update the file status indicator
+            CreatureModalEvents.updateCreatureDatabaseFileStatus(modal);
 
             // Clear the details pane
             const detailsPane = modal.querySelector('.creature-details-column');
@@ -649,8 +614,9 @@ export class EventCoordinator {
                 idNumber++;
             }
 
-            // Mark as custom creature
+            // Mark as custom creature and add timestamp
             duplicate.isCustom = true;
+            duplicate.createdAt = Date.now();
 
             // Add to custom creatures in localStorage
             const customCreatures = JSON.parse(localStorage.getItem('dnd-custom-creatures') || '[]');
@@ -684,103 +650,31 @@ export class EventCoordinator {
     }
 
     /**
-     * Handle exporting a creature as JSON
-     * @param {HTMLElement} target - The export button
+     * Handle cancel from creature form - return to compendium
      */
-    static handleExportCreature(target) {
-        ImportExportEvents.handleExportCreature(target);
+    static handleCancelCreatureForm() {
+        returnToCompendiumAfterCancel(MODAL_NAMES.CREATURE_FORM, 'creature form');
     }
 
     /**
-     * Handle importing a creature from JSON file
+     * Handle cancel from player form - return to compendium
      */
-    static async handleImportCreature() {
-        try {
-            // Create file input
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.json,application/json';
+    static handleCancelPlayerForm() {
+        returnToCompendiumAfterCancel(MODAL_NAMES.PLAYER_FORM, 'player form');
+    }
 
-            input.onchange = async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
+    /**
+     * Handle cancel from creature type selection - return to compendium
+     */
+    static handleCancelCreatureTypeSelection() {
+        returnToCompendiumAfterCancel(MODAL_NAMES.CREATURE_TYPE_SELECTION, 'creature type selection');
+    }
 
-                try {
-                    // Read file
-                    const text = await file.text();
-                    const creatureData = JSON.parse(text);
-
-                    // Validate required fields
-                    if (!creatureData.name || !creatureData.type || creatureData.ac === undefined || creatureData.maxHP === undefined) {
-                        ToastSystem.show('Invalid creature file: missing required fields (name, type, AC, HP)', 'error', 4000);
-                        return;
-                    }
-
-                    // Get existing creatures
-                    const customCreatures = JSON.parse(localStorage.getItem('dnd-custom-creatures') || '[]');
-
-                    // Check for name collision and auto-rename if needed
-                    let finalName = creatureData.name;
-                    let finalId = creatureData.id || finalName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-                    let counter = 1;
-
-                    while (customCreatures.some(c => c.id === finalId)) {
-                        counter++;
-                        finalName = `${creatureData.name} (${counter})`;
-                        finalId = finalName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-                    }
-
-                    // Update creature data with final name and ID
-                    creatureData.name = finalName;
-                    creatureData.id = finalId;
-                    creatureData.isCustom = true;
-                    creatureData.source = creatureData.source || 'Imported';
-
-                    // Add to custom creatures
-                    customCreatures.push(creatureData);
-                    localStorage.setItem('dnd-custom-creatures', JSON.stringify(customCreatures));
-
-                    // Reload database
-                    if (DataServices.combatantManager) {
-                        await DataServices.combatantManager.loadCreatureDatabase();
-                    }
-
-                    // Refresh the compendium modal if open
-                    const modal = document.querySelector('[data-modal="creature-database"]');
-                    if (modal) {
-                        CreatureModalEvents.setupCreatureDatabaseModal(modal);
-
-                        // Auto-select the imported creature
-                        setTimeout(() => {
-                            const creatureItem = modal.querySelector(`.creature-list-item[data-creature-id="${finalId}"]`);
-                            if (creatureItem) {
-                                creatureItem.click();
-                                creatureItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                            }
-                        }, 100);
-                    }
-
-                    const wasRenamed = counter > 1;
-                    const message = wasRenamed
-                        ? `Imported as "${finalName}" (renamed to avoid collision)`
-                        : `Imported ${finalName}`;
-
-                    ToastSystem.show(message, 'success', 3000);
-                    console.log(`✅ Imported creature: ${finalName}`);
-
-                } catch (parseError) {
-                    console.error('❌ Error parsing creature file:', parseError);
-                    ToastSystem.show('Failed to import: Invalid JSON file', 'error', 3000);
-                }
-            };
-
-            // Trigger file picker
-            input.click();
-
-        } catch (error) {
-            console.error('❌ Error importing creature:', error);
-            ToastSystem.show('Failed to import creature: ' + error.message, 'error', 3000);
-        }
+    /**
+     * Handle cancel from stat block parser - return to compendium
+     */
+    static handleCancelStatBlockParser() {
+        returnToCompendiumAfterCancel(MODAL_NAMES.STAT_BLOCK_PARSER, 'stat block parser');
     }
 
     static handleEditInitiative(target) {
@@ -816,6 +710,54 @@ export class EventCoordinator {
         // Update combat header if this is the active combatant
         if (combatant.status.isActive) {
             CombatEvents.updateCombatHeader();
+        }
+    }
+
+    /**
+     * Handle toggling XP filter dropdown
+     * @param {HTMLElement} target - The XP tracker element
+     */
+    static handleToggleXPFilter(target) {
+        const xpTracker = target.closest('.xp-tracker');
+        if (!xpTracker) return;
+
+        const dropdown = xpTracker.querySelector('.xp-filter-dropdown');
+        if (!dropdown) return;
+
+        // Toggle dropdown visibility
+        const isVisible = dropdown.style.display === 'block';
+        dropdown.style.display = isVisible ? 'none' : 'block';
+
+        // Add event listeners to filter options if dropdown is now visible
+        if (!isVisible) {
+            const filterOptions = dropdown.querySelectorAll('.xp-filter-option');
+            filterOptions.forEach(option => {
+                option.addEventListener('click', (e) => {
+                    const filterValue = option.getAttribute('data-filter');
+
+                    // Save filter preference
+                    localStorage.setItem('xp-filter', filterValue);
+
+                    // Update combat header to reflect new XP total
+                    CombatEvents.updateCombatHeader();
+
+                    // Close dropdown
+                    dropdown.style.display = 'none';
+
+                    ToastSystem.show('XP filter updated', 'success', 1500);
+                });
+            });
+
+            // Close dropdown when clicking outside
+            setTimeout(() => {
+                const closeDropdown = (e) => {
+                    if (!xpTracker.contains(e.target)) {
+                        dropdown.style.display = 'none';
+                        document.removeEventListener('click', closeDropdown);
+                    }
+                };
+                document.addEventListener('click', closeDropdown);
+            }, 0);
         }
     }
 
@@ -954,6 +896,85 @@ export class EventCoordinator {
         }
     }
 
+    static handleBatchEffect(target) {
+        const modal = target.closest('.modal-overlay');
+        if (!modal) return;
+
+        // Get form data
+        const form = modal.querySelector('form');
+        const formData = new FormData(form);
+
+        // Get form values - check both custom input and dropdown
+        let effectName = formData.get('custom-effect')?.trim();
+        if (!effectName) {
+            effectName = formData.get('effect-dropdown');
+        }
+
+        const turns = formData.get('turns');
+        const note = formData.get('note')?.trim() || '';
+        const expiresAt = formData.get('expiresAt') || 'start'; // 'start' or 'end'
+
+        // Validation
+        if (!effectName) {
+            ToastSystem.show('Please enter or select an effect', 'error', 2000);
+            return;
+        }
+
+        // Get selected combatants
+        const selectedCombatants = this.getSelectedCombatants();
+        if (selectedCombatants.length === 0) {
+            ToastSystem.show('No combatants selected', 'warning', 2000);
+            return;
+        }
+
+        // Apply effect to all selected combatants
+        let successCount = 0;
+        selectedCombatants.forEach(combatant => {
+            // Create a NEW effect object for each combatant (not shared reference)
+            const effectObj = {
+                name: effectName,
+                duration: turns === 'infinite' ? 'infinite' : parseInt(turns) || 1,
+                note: note,
+                expiresAt: expiresAt // 'start' = beginning of turn, 'end' = end of turn
+            };
+
+            // Special case: If this effect expires at "end" and is being applied to the active combatant,
+            // set a flag to skip the first end-of-turn decrement (so it expires at the end of their NEXT turn)
+            if (expiresAt === 'end' && combatant.status.isActive) {
+                effectObj.skipNextEndDecrement = true;
+            }
+
+            // Check if effect already exists
+            const existingIndex = combatant.effects.findIndex(e => e.name === effectName);
+            if (existingIndex !== -1) {
+                // Update existing effect
+                combatant.effects[existingIndex] = effectObj;
+            } else {
+                // Add new effect
+                combatant.effects.push(effectObj);
+            }
+
+            // Update the combatant
+            DataServices.combatantManager.updateCombatant(combatant.id, 'effects', combatant.effects);
+            successCount++;
+        });
+
+        // Add to recent effects for future use
+        RecentItems.addToRecentEffects(effectName);
+
+        // Close modal
+        ModalSystem.hideAll();
+
+        // Show success message
+        ToastSystem.show(`Applied ${effectName} to ${successCount} combatant${successCount !== 1 ? 's' : ''}`, 'success', 3000);
+
+        // Update combat header if any of the selected are active
+        const hasActiveCombatant = selectedCombatants.some(c => c.status.isActive);
+        if (hasActiveCombatant) {
+            CombatEvents.updateCombatHeader();
+        }
+    }
+
     static handleClearNote(target) {
         const combatantCard = target.closest('[data-combatant-id]');
         const combatantId = combatantCard?.getAttribute('data-combatant-id');
@@ -982,6 +1003,10 @@ export class EventCoordinator {
     static handleToggleStealth(target) {
         CombatantEvents.handleToggleStealth(target);
     }
+
+    static handleToggleFlying(target) {
+        CombatantEvents.handleToggleFlying(target);
+    }
     static handleToggleDeathSave(target) {
         CombatantEvents.handleToggleDeathSave(target);
     }
@@ -998,12 +1023,47 @@ export class EventCoordinator {
         CombatantEvents.handleToggleBatchSelect(target, event);
     }
 
+    /**
+     * Open Quick Initiative modal (forwarding to InitiativeEvents)
+     * @param {HTMLElement} initiativeDisplay - The initiative display element
+     */
+    static handleQuickInitiative(initiativeDisplay) {
+        InitiativeEvents.openQuickInitiativeModal(initiativeDisplay);
+    }
+
     static handleClearCondition(target) {
         CombatantEvents.handleClearCondition(target);
     }
 
     static handleClearEffect(target) {
         CombatantEvents.handleClearEffect(target);
+    }
+
+    static handleClearTimer(target) {
+        const combatantCard = target.closest('[data-combatant-id]');
+        const combatantId = combatantCard?.getAttribute('data-combatant-id');
+
+        if (!combatantId) {
+            console.error('No combatant ID found');
+            return;
+        }
+
+        const combatant = DataServices.combatantManager.getCombatant(combatantId);
+        if (!combatant) {
+            console.error('Combatant not found:', combatantId);
+            return;
+        }
+
+        // Clear the timer
+        combatant.timer = null;
+        DataServices.combatantManager.updateCombatant(combatantId, 'timer', null);
+
+        ToastSystem.show(`Timer cleared for ${combatant.name}`, 'success', 2000);
+
+        // Update combat header if this is the active combatant
+        if (combatant.status.isActive) {
+            CombatEvents.updateCombatHeader();
+        }
     }
 
     /**
@@ -1013,6 +1073,7 @@ export class EventCoordinator {
     static handleParseStatBlock(target) {
         const statBlockText = document.getElementById('stat-block-text')?.value;
         const sourceFormat = document.getElementById('stat-block-source')?.value;
+        const creatureType = document.getElementById('stat-block-creature-type')?.value || 'enemy';
 
         if (!statBlockText || statBlockText.trim() === '') {
             ToastSystem.show('Please paste a stat block first', 'warning', 2000);
@@ -1021,10 +1082,13 @@ export class EventCoordinator {
 
         try {
             // Parse the stat block
-            const parsedCreature = this.parseStatBlockText(statBlockText, sourceFormat);
+            const parsedCreature = StatBlockParser.parse(statBlockText, sourceFormat);
+
+            // Add creature type to parsed creature
+            parsedCreature.type = creatureType;
 
             // Display preview
-            this.displayStatBlockPreview(parsedCreature);
+            CreatureHandlers.displayStatBlockPreview(parsedCreature);
 
             // Show import button
             const importButton = document.getElementById('import-parsed-creature');
@@ -1045,7 +1109,7 @@ export class EventCoordinator {
             // Show error
             const errorDiv = document.getElementById('stat-block-errors');
             if (errorDiv) {
-                errorDiv.innerHTML = `<p style="color: var(--color-danger);"><strong>Error:</strong> ${error.message}</p>`;
+                errorDiv.innerHTML = `<p class="error-message"><strong>Error:</strong> ${error.message}</p>`;
                 errorDiv.style.display = 'block';
             }
 
@@ -1053,924 +1117,9 @@ export class EventCoordinator {
         }
     }
 
-    /**
-     * Parse stat block text into a creature object
-     * @param {string} text - The stat block text
-     * @param {string} format - The format (auto, dndbeyond, roll20, book)
-     * @returns {Object} Parsed creature data
-     */
-    static parseStatBlockText(text, format = 'auto') {
-        const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    // Note: Stat block parsing has been moved to StatBlockParser module
+    // See src/scripts/parsers/stat-block-parser.js
 
-        if (lines.length === 0) {
-            throw new Error('Stat block is empty');
-        }
-
-        const creature = {
-            id: '',
-            name: '',
-            type: 'enemy',
-            ac: 10,
-            maxHP: 1,
-            cr: '0',
-            size: null,
-            race: null,
-            subrace: null,
-            alignment: null,
-            description: null,
-            source: 'Custom Import',
-            hasFullStatBlock: true,
-            statBlock: {
-                damageResistances: [],
-                damageImmunities: [],
-                damageVulnerabilities: [],
-                conditionImmunities: [],
-                savingThrows: {},
-                skills: {},
-                traits: [],
-                actions: [],
-                reactions: [],
-                legendaryActions: null,
-                lairActions: null,
-                regionalEffects: null,
-                spellcasting: null
-            }
-        };
-
-        // Extract name (first line)
-        creature.name = lines[0];
-        creature.id = creature.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-
-        // Extract type/size/alignment (usually second line)
-        if (lines.length > 1) {
-            const typeLine = lines[1];
-            const typeMatch = typeLine.match(/(Tiny|Small|Medium|Large|Huge|Gargantuan)?\s*([A-Za-z\s]+?)(?:,\s*(.+))?$/i);
-            if (typeMatch) {
-                creature.size = typeMatch[1] || null;
-                creature.race = typeMatch[2]?.trim() || null;
-                creature.alignment = typeMatch[3]?.trim() || null;
-                creature.statBlock.fullType = typeLine;
-            }
-        }
-
-        // D&D Beyond format uses abbreviated stat names
-        let abilityData = {
-            str: null, dex: null, con: null, int: null, wis: null, cha: null
-        };
-        let abilityMods = {
-            str: null, dex: null, con: null, int: null, wis: null, cha: null
-        };
-        let savingThrows = {
-            str: null, dex: null, con: null, int: null, wis: null, cha: null
-        };
-
-        // Parse remaining lines
-        for (let i = 2; i < lines.length; i++) {
-            const line = lines[i];
-
-            // Skip empty lines and common headers
-            if (!line || line === 'MOD' || line === 'SAVE' || line.match(/^(Actions|Traits|Bonus Actions|Reactions)$/i)) {
-                continue;
-            }
-
-            // AC (D&D Beyond format: "AC 20" or "AC 20    Initiative +12 (22)")
-            const acMatch = line.match(/^AC\s+(\d+)/i);
-            if (acMatch) {
-                creature.ac = parseInt(acMatch[1]);
-                creature.statBlock.armorClass = {
-                    value: creature.ac,
-                    type: null
-                };
-                // Extract initiative if present
-                const initMatch = line.match(/Initiative\s+([+-]?\d+)\s+\((\d+)\)/i);
-                if (initMatch) {
-                    creature.statBlock.initiative = {
-                        modifier: parseInt(initMatch[1]),
-                        total: parseInt(initMatch[2])
-                    };
-                }
-                continue;
-            }
-
-            // HP (D&D Beyond format: "HP 333 (18d20 + 144)")
-            const hpMatch = line.match(/^HP\s+(\d+)(?:\s+\(([^)]+)\))?/i);
-            if (hpMatch) {
-                creature.maxHP = parseInt(hpMatch[1]);
-                creature.statBlock.hitPoints = {
-                    average: creature.maxHP,
-                    formula: hpMatch[2] || null
-                };
-                continue;
-            }
-
-            // Speed - more flexible regex
-            const speedMatch = line.match(/^Speed\s+(.+?)(?:\s*$)/i);
-            if (speedMatch) {
-                const speedStr = speedMatch[1].trim();
-                if (speedStr.length > 0) {
-                    creature.statBlock.speed = this.parseSpeed(speedStr);
-                }
-                continue;
-            }
-
-            // D&D Beyond ability scores format (e.g., "STR    26    +8    +8")
-            const abilityLineMatch = line.match(/^(STR|DEX|CON|INT|WIS|CHA)\s+(\d+)\s+([+-]?\d+)\s+([+-]?\d+)/i);
-            if (abilityLineMatch) {
-                const ability = abilityLineMatch[1].toLowerCase();
-                abilityData[ability] = parseInt(abilityLineMatch[2]);
-                abilityMods[ability] = parseInt(abilityLineMatch[3]);
-                savingThrows[ability] = parseInt(abilityLineMatch[4]);
-                continue;
-            }
-
-            // D&D Beyond multi-line ability format (ability name on one line, values on next lines)
-            const abilityNameMatch = line.match(/^(STR|DEX|CON|INT|WIS|CHA)$/i);
-            if (abilityNameMatch && i + 3 < lines.length) {
-                const ability = abilityNameMatch[1].toLowerCase();
-                const scoreLine = lines[i + 1];
-                const modLine = lines[i + 2];
-                const saveLine = lines[i + 3];
-
-                // Check if next lines are numbers
-                if (scoreLine.match(/^\d+$/) && modLine.match(/^[+-]?\d+$/) && saveLine.match(/^[+-]?\d+$/)) {
-                    abilityData[ability] = parseInt(scoreLine);
-                    abilityMods[ability] = parseInt(modLine);
-                    savingThrows[ability] = parseInt(saveLine);
-                    i += 3; // Skip the next 3 lines since we've processed them
-                    continue;
-                }
-            }
-
-            // Standard format ability scores (all on one line)
-            const abilityMatch = line.match(/STR\s+(\d+)\s+\(([+-]?\d+)\)\s+DEX\s+(\d+)\s+\(([+-]?\d+)\)\s+CON\s+(\d+)\s+\(([+-]?\d+)\)\s+INT\s+(\d+)\s+\(([+-]?\d+)\)\s+WIS\s+(\d+)\s+\(([+-]?\d+)\)\s+CHA\s+(\d+)\s+\(([+-]?\d+)\)/i);
-            if (abilityMatch) {
-                abilityData = {
-                    str: parseInt(abilityMatch[1]),
-                    dex: parseInt(abilityMatch[3]),
-                    con: parseInt(abilityMatch[5]),
-                    int: parseInt(abilityMatch[7]),
-                    wis: parseInt(abilityMatch[9]),
-                    cha: parseInt(abilityMatch[11])
-                };
-                abilityMods = {
-                    str: parseInt(abilityMatch[2]),
-                    dex: parseInt(abilityMatch[4]),
-                    con: parseInt(abilityMatch[6]),
-                    int: parseInt(abilityMatch[8]),
-                    wis: parseInt(abilityMatch[10]),
-                    cha: parseInt(abilityMatch[12])
-                };
-                continue;
-            }
-
-            // Skills
-            const skillsMatch = line.match(/^Skills\s+(.+)/i);
-            if (skillsMatch) {
-                const skillPairs = skillsMatch[1].split(',').map(s => s.trim());
-                skillPairs.forEach(pair => {
-                    const match = pair.match(/([A-Za-z\s]+)\s+([+-]?\d+)/);
-                    if (match) {
-                        const skillName = match[1].trim().replace(/\s+/g, '');
-                        const skillBonus = parseInt(match[2]);
-                        // Convert to camelCase
-                        const camelSkill = skillName.charAt(0).toLowerCase() + skillName.slice(1);
-                        creature.statBlock.skills[camelSkill] = skillBonus;
-                    }
-                });
-                continue;
-            }
-
-            // Damage Immunities/Resistances/Vulnerabilities
-            const immuneMatch = line.match(/^(?:Damage\s+)?Immunities\s+(.+)/i);
-            if (immuneMatch) {
-                creature.statBlock.damageImmunities = immuneMatch[1].split(',').map(s => s.trim());
-                continue;
-            }
-
-            const resistMatch = line.match(/^(?:Damage\s+)?Resistances\s+(.+)/i);
-            if (resistMatch) {
-                creature.statBlock.damageResistances = resistMatch[1].split(',').map(s => s.trim());
-                continue;
-            }
-
-            const vulnMatch = line.match(/^(?:Damage\s+)?Vulnerabilities\s+(.+)/i);
-            if (vulnMatch) {
-                creature.statBlock.damageVulnerabilities = vulnMatch[1].split(',').map(s => s.trim());
-                continue;
-            }
-
-            // Senses
-            const sensesMatch = line.match(/^Senses\s+(.+)/i);
-            if (sensesMatch) {
-                creature.statBlock.senses = this.parseSenses(sensesMatch[1]);
-                continue;
-            }
-
-            // Languages
-            const langMatch = line.match(/^Languages\s+(.+)/i);
-            if (langMatch) {
-                creature.statBlock.languages = langMatch[1].split(',').map(s => s.trim());
-                continue;
-            }
-
-            // CR (D&D Beyond format: "CR 20 (XP 25,000, or 33,000 in lair; PB +6)")
-            const crMatch = line.match(/^(?:Challenge|CR)\s+([\d/]+)(?:\s+\((?:XP\s+)?([0-9,]+))?(?:,\s*or\s+([0-9,]+)\s+in\s+lair)?(?:;\s*PB\s+\+?(\d+))?/i);
-            if (crMatch) {
-                creature.cr = crMatch[1];
-                const xpStr = crMatch[2]?.replace(/,/g, '');
-                const xpLairStr = crMatch[3]?.replace(/,/g, '');
-                creature.statBlock.challengeRating = {
-                    cr: creature.cr,
-                    xp: xpStr ? parseInt(xpStr) : null,
-                    xpInLair: xpLairStr ? parseInt(xpLairStr) : null,
-                    proficiencyBonus: crMatch[4] ? parseInt(crMatch[4]) : null
-                };
-                continue;
-            }
-        }
-
-        // Build abilities object from collected data
-        if (abilityData.str !== null) {
-            creature.statBlock.abilities = {
-                str: { score: abilityData.str, modifier: abilityMods.str },
-                dex: { score: abilityData.dex, modifier: abilityMods.dex },
-                con: { score: abilityData.con, modifier: abilityMods.con },
-                int: { score: abilityData.int, modifier: abilityMods.int },
-                wis: { score: abilityData.wis, modifier: abilityMods.wis },
-                cha: { score: abilityData.cha, modifier: abilityMods.cha }
-            };
-
-            // Add saving throws if we have them
-            if (savingThrows.str !== null) {
-                creature.statBlock.savingThrows = savingThrows;
-            }
-        }
-
-        // Parse sections (Traits, Actions, Reactions, Legendary Actions, etc.)
-        this.parseStatBlockSections(lines, creature);
-
-        return creature;
-    }
-
-    /**
-     * Parse special sections from stat block (Traits, Actions, etc.)
-     * @param {Array} lines - Array of stat block lines
-     * @param {Object} creature - Creature object to populate
-     */
-    static parseStatBlockSections(lines, creature) {
-        let currentSection = null;
-        let currentEntry = null;
-
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-
-            // Detect section headers
-            if (line.match(/^Traits$/i)) {
-                currentSection = 'traits';
-                currentEntry = null;
-                continue;
-            } else if (line.match(/^Actions$/i)) {
-                currentSection = 'actions';
-                currentEntry = null;
-                continue;
-            } else if (line.match(/^Bonus Actions$/i)) {
-                currentSection = 'bonusActions';
-                currentEntry = null;
-                continue;
-            } else if (line.match(/^Reactions$/i)) {
-                currentSection = 'reactions';
-                currentEntry = null;
-                continue;
-            } else if (line.match(/^Legendary Actions$/i)) {
-                currentSection = 'legendaryActions';
-                currentEntry = null;
-                // Initialize legendary actions object
-                creature.statBlock.legendaryActions = {
-                    description: '',
-                    uses: 3,
-                    usesInLair: 4,
-                    options: []
-                };
-                continue;
-            } else if (line.match(/^Lair Actions$/i)) {
-                currentSection = 'lairActions';
-                currentEntry = null;
-                creature.statBlock.lairActions = {
-                    description: '',
-                    options: []
-                };
-                continue;
-            } else if (line.match(/^Regional Effects$/i)) {
-                currentSection = 'regionalEffects';
-                currentEntry = null;
-                creature.statBlock.regionalEffects = {
-                    description: '',
-                    effects: []
-                };
-                continue;
-            }
-
-            // Skip if no current section
-            if (!currentSection) continue;
-
-            // Parse legendary actions description
-            if (currentSection === 'legendaryActions' && line.match(/Legendary Action Uses:/i)) {
-                creature.statBlock.legendaryActions.description = line;
-                const usesMatch = line.match(/(\d+)\s+\((\d+)\s+in\s+Lair\)/i);
-                if (usesMatch) {
-                    creature.statBlock.legendaryActions.uses = parseInt(usesMatch[1]);
-                    creature.statBlock.legendaryActions.usesInLair = parseInt(usesMatch[2]);
-                }
-                continue;
-            }
-
-            // Detect entry start (bold text followed by period, typically "Name. Description")
-            const entryMatch = line.match(/^([^.]+)\.\s*(.*)$/);
-            if (entryMatch) {
-                const entryName = entryMatch[1].trim();
-                const entryDesc = entryMatch[2].trim();
-
-                // Create new entry
-                currentEntry = {
-                    name: entryName,
-                    description: entryDesc
-                };
-
-                // Add to appropriate section
-                if (currentSection === 'traits') {
-                    // Check for usage info in name
-                    const usageMatch = entryName.match(/\(([^)]+)\)/);
-                    if (usageMatch) {
-                        currentEntry.usage = this.parseUsage(usageMatch[1]);
-                    }
-                    creature.statBlock.traits.push(currentEntry);
-                } else if (currentSection === 'actions' || currentSection === 'bonusActions') {
-                    // Parse action type
-                    currentEntry.type = this.detectActionType(entryName, entryDesc);
-
-                    // Parse attack details if present
-                    this.parseAttackDetails(entryDesc, currentEntry);
-
-                    creature.statBlock.actions.push(currentEntry);
-                } else if (currentSection === 'reactions') {
-                    creature.statBlock.reactions.push(currentEntry);
-                } else if (currentSection === 'legendaryActions') {
-                    // Check for cost
-                    const costMatch = entryName.match(/\(Costs?\s+(\d+)\s+Actions?\)/i);
-                    if (costMatch) {
-                        currentEntry.cost = parseInt(costMatch[1]);
-                    } else {
-                        currentEntry.cost = 1;
-                    }
-                    creature.statBlock.legendaryActions.options.push(currentEntry);
-                } else if (currentSection === 'lairActions') {
-                    creature.statBlock.lairActions.options.push(currentEntry);
-                } else if (currentSection === 'regionalEffects') {
-                    creature.statBlock.regionalEffects.effects.push(currentEntry);
-                }
-            } else if (currentEntry && line.length > 0) {
-                // Continue previous entry description
-                currentEntry.description += ' ' + line;
-            }
-        }
-    }
-
-    /**
-     * Parse usage information from text
-     * @param {string} usageText - Usage text (e.g., "3/Day")
-     * @returns {Object} Usage object
-     */
-    static parseUsage(usageText) {
-        const perDayMatch = usageText.match(/(\d+)\/Day/i);
-        if (perDayMatch) {
-            return {
-                type: 'perDay',
-                amount: parseInt(perDayMatch[1])
-            };
-        }
-
-        const rechargeMatch = usageText.match(/Recharge\s+([\d-]+)/i);
-        if (rechargeMatch) {
-            return {
-                type: 'recharge',
-                recharge: rechargeMatch[1]
-            };
-        }
-
-        return null;
-    }
-
-    /**
-     * Detect action type from name and description
-     * @param {string} name - Action name
-     * @param {string} description - Action description
-     * @returns {string} Action type
-     */
-    static detectActionType(name, description) {
-        if (name.toLowerCase().includes('multiattack')) {
-            return 'multiattack';
-        }
-
-        if (description.match(/Melee\s+(Weapon\s+)?Attack/i)) {
-            return 'melee';
-        }
-
-        if (description.match(/Ranged\s+(Weapon\s+)?Attack/i)) {
-            return 'ranged';
-        }
-
-        return 'special';
-    }
-
-    /**
-     * Parse attack details from description
-     * @param {string} description - Action description
-     * @param {Object} action - Action object to populate
-     */
-    static parseAttackDetails(description, action) {
-        // Attack bonus
-        const attackMatch = description.match(/Attack Roll:\s*([+-]?\d+)/i);
-        if (attackMatch) {
-            action.attackBonus = parseInt(attackMatch[1]);
-        }
-
-        // Reach
-        const reachMatch = description.match(/reach\s+(\d+)\s*ft/i);
-        if (reachMatch) {
-            action.reach = `${reachMatch[1]} ft.`;
-        }
-
-        // Range
-        const rangeMatch = description.match(/range\s+(\d+(?:\/\d+)?)\s*ft/i);
-        if (rangeMatch) {
-            action.range = `${rangeMatch[1]} ft.`;
-        }
-
-        // Damage
-        const damageMatch = description.match(/Hit:\s*(\d+)\s*\(([^)]+)\)\s*(\w+)\s+damage/i);
-        if (damageMatch) {
-            action.damage = `${damageMatch[1]} (${damageMatch[2]})`;
-            action.damageType = damageMatch[3].toLowerCase();
-        }
-
-        // Additional damage
-        const additionalMatch = description.match(/plus\s+(\d+)\s*\(([^)]+)\)\s*(\w+)\s+damage/i);
-        if (additionalMatch) {
-            action.additionalDamage = `${additionalMatch[1]} (${additionalMatch[2]})`;
-            action.additionalDamageType = additionalMatch[3].toLowerCase();
-        }
-
-        // Saving throw
-        const saveMatch = description.match(/(\w+)\s+Saving\s+Throw:\s*DC\s*(\d+)/i);
-        if (saveMatch) {
-            action.saveType = saveMatch[1];
-            action.saveDC = parseInt(saveMatch[2]);
-        }
-
-        // Area
-        const areaMatch = description.match(/(\d+-foot)\s+(Cone|Line|Cube|Sphere|Cylinder)/i);
-        if (areaMatch) {
-            action.area = `${areaMatch[1]} ${areaMatch[2].toLowerCase()}`;
-        }
-
-        // Recharge
-        const rechargeMatch = description.match(/\(Recharge\s+([\d-]+)\)/i);
-        if (rechargeMatch) {
-            action.recharge = rechargeMatch[1];
-        }
-    }
-
-    /**
-     * Parse senses string into senses object
-     * @param {string} sensesStr - Senses string
-     * @returns {Object} Senses object
-     */
-    static parseSenses(sensesStr) {
-        const senses = {
-            blindsight: null,
-            darkvision: null,
-            tremorsense: null,
-            truesight: null,
-            passivePerception: null
-        };
-
-        const parts = sensesStr.split(',').map(p => p.trim());
-
-        for (const part of parts) {
-            const match = part.match(/(Blindsight|Darkvision|Tremorsense|Truesight)\s+(\d+)\s*ft/i);
-            if (match) {
-                const senseType = match[1].toLowerCase();
-                const value = parseInt(match[2]);
-                senses[senseType] = value;
-            }
-
-            const passiveMatch = part.match(/Passive\s+Perception\s+(\d+)/i);
-            if (passiveMatch) {
-                senses.passivePerception = parseInt(passiveMatch[1]);
-            }
-        }
-
-        return senses;
-    }
-
-    /**
-     * Parse speed string into speed object
-     * @param {string} speedStr - Speed string (e.g., "40 ft., burrow 40 ft., fly 80 ft.")
-     * @returns {Object} Speed object
-     */
-    static parseSpeed(speedStr) {
-        const speed = {
-            walk: null,
-            burrow: null,
-            climb: null,
-            fly: null,
-            swim: null,
-            hover: false
-        };
-
-        // Split by comma
-        const parts = speedStr.split(',').map(p => p.trim());
-
-        for (const part of parts) {
-            const match = part.match(/(\w+)?\s*(\d+)\s*ft/i);
-            if (match) {
-                const type = match[1]?.toLowerCase() || 'walk';
-                const value = parseInt(match[2]);
-
-                if (type === 'walk' || !match[1]) {
-                    speed.walk = value;
-                } else if (speed.hasOwnProperty(type)) {
-                    speed[type] = value;
-                }
-            }
-
-            if (part.includes('hover')) {
-                speed.hover = true;
-            }
-        }
-
-        return speed;
-    }
-
-    /**
-     * Display stat block preview
-     * @param {Object} creature - Parsed creature object
-     */
-    static displayStatBlockPreview(creature) {
-        const previewDiv = document.getElementById('stat-block-preview');
-        if (!previewDiv) return;
-
-        let html = `
-            <div class="creature-details-header">
-                <h3>${creature.name}</h3>
-                <span class="creature-type-badge badge-${creature.type}">${creature.type.toUpperCase()}</span>
-            </div>
-        `;
-
-        if (creature.statBlock.fullType) {
-            html += `<p class="creature-full-type">${creature.statBlock.fullType}</p>`;
-        }
-
-        html += `<div style="margin-top: var(--spacing-md);">`;
-
-        if (creature.statBlock.armorClass) {
-            html += `<p><strong>AC</strong> ${creature.statBlock.armorClass.value}`;
-            if (creature.statBlock.armorClass.type) html += ` (${creature.statBlock.armorClass.type})`;
-            html += `</p>`;
-        } else {
-            html += `<p><strong>AC</strong> ${creature.ac}</p>`;
-        }
-
-        if (creature.statBlock.hitPoints) {
-            html += `<p><strong>HP</strong> ${creature.statBlock.hitPoints.average}`;
-            if (creature.statBlock.hitPoints.formula) html += ` (${creature.statBlock.hitPoints.formula})`;
-            html += `</p>`;
-        } else {
-            html += `<p><strong>HP</strong> ${creature.maxHP}</p>`;
-        }
-
-        if (creature.statBlock.speed) {
-            const speeds = [];
-            if (creature.statBlock.speed.walk) speeds.push(`${creature.statBlock.speed.walk} ft.`);
-            if (creature.statBlock.speed.burrow) speeds.push(`burrow ${creature.statBlock.speed.burrow} ft.`);
-            if (creature.statBlock.speed.climb) speeds.push(`climb ${creature.statBlock.speed.climb} ft.`);
-            if (creature.statBlock.speed.fly) speeds.push(`fly ${creature.statBlock.speed.fly} ft.${creature.statBlock.speed.hover ? ' (hover)' : ''}`);
-            if (creature.statBlock.speed.swim) speeds.push(`swim ${creature.statBlock.speed.swim} ft.`);
-            if (speeds.length > 0) {
-                html += `<p><strong>Speed</strong> ${speeds.join(', ')}</p>`;
-            }
-        }
-
-        if (creature.statBlock.abilities) {
-            html += `<table class="ability-scores-table" style="margin-top: var(--spacing-md); width: 100%;">
-                <thead>
-                    <tr>
-                        <th>STR</th><th>DEX</th><th>CON</th><th>INT</th><th>WIS</th><th>CHA</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>${creature.statBlock.abilities.str.score} (${this.formatModifier(creature.statBlock.abilities.str.modifier)})</td>
-                        <td>${creature.statBlock.abilities.dex.score} (${this.formatModifier(creature.statBlock.abilities.dex.modifier)})</td>
-                        <td>${creature.statBlock.abilities.con.score} (${this.formatModifier(creature.statBlock.abilities.con.modifier)})</td>
-                        <td>${creature.statBlock.abilities.int.score} (${this.formatModifier(creature.statBlock.abilities.int.modifier)})</td>
-                        <td>${creature.statBlock.abilities.wis.score} (${this.formatModifier(creature.statBlock.abilities.wis.modifier)})</td>
-                        <td>${creature.statBlock.abilities.cha.score} (${this.formatModifier(creature.statBlock.abilities.cha.modifier)})</td>
-                    </tr>
-                </tbody>
-            </table>`;
-        }
-
-        html += `</div>`;
-
-        // Additional stats section
-        html += `<div style="margin-top: var(--spacing-md);">`;
-
-        // Skills
-        if (creature.statBlock.skills && Object.keys(creature.statBlock.skills).length > 0) {
-            const skills = [];
-            for (const [skill, bonus] of Object.entries(creature.statBlock.skills)) {
-                const skillName = skill.replace(/([A-Z])/g, ' $1').trim();
-                const capitalizedSkill = skillName.charAt(0).toUpperCase() + skillName.slice(1);
-                skills.push(`${capitalizedSkill} ${this.formatModifier(bonus)}`);
-            }
-            html += `<p><strong>Skills</strong> ${skills.join(', ')}</p>`;
-        }
-
-        // Damage Immunities/Resistances/Vulnerabilities
-        if (creature.statBlock.damageImmunities && creature.statBlock.damageImmunities.length > 0) {
-            html += `<p><strong>Damage Immunities</strong> ${creature.statBlock.damageImmunities.join(', ')}</p>`;
-        }
-        if (creature.statBlock.damageResistances && creature.statBlock.damageResistances.length > 0) {
-            html += `<p><strong>Damage Resistances</strong> ${creature.statBlock.damageResistances.join(', ')}</p>`;
-        }
-        if (creature.statBlock.damageVulnerabilities && creature.statBlock.damageVulnerabilities.length > 0) {
-            html += `<p><strong>Damage Vulnerabilities</strong> ${creature.statBlock.damageVulnerabilities.join(', ')}</p>`;
-        }
-
-        // Senses
-        if (creature.statBlock.senses) {
-            const senses = [];
-            if (creature.statBlock.senses.blindsight) senses.push(`Blindsight ${creature.statBlock.senses.blindsight} ft.`);
-            if (creature.statBlock.senses.darkvision) senses.push(`Darkvision ${creature.statBlock.senses.darkvision} ft.`);
-            if (creature.statBlock.senses.tremorsense) senses.push(`Tremorsense ${creature.statBlock.senses.tremorsense} ft.`);
-            if (creature.statBlock.senses.truesight) senses.push(`Truesight ${creature.statBlock.senses.truesight} ft.`);
-            if (creature.statBlock.senses.passivePerception) senses.push(`Passive Perception ${creature.statBlock.senses.passivePerception}`);
-            if (senses.length > 0) {
-                html += `<p><strong>Senses</strong> ${senses.join(', ')}</p>`;
-            }
-        }
-
-        // Languages
-        if (creature.statBlock.languages && creature.statBlock.languages.length > 0) {
-            html += `<p><strong>Languages</strong> ${creature.statBlock.languages.join(', ')}</p>`;
-        }
-
-        // CR
-        if (creature.statBlock.challengeRating) {
-            html += `<p><strong>CR</strong> ${creature.statBlock.challengeRating.cr}`;
-            if (creature.statBlock.challengeRating.xp) html += ` (${creature.statBlock.challengeRating.xp.toLocaleString()} XP)`;
-            html += `</p>`;
-        } else if (creature.cr) {
-            html += `<p><strong>CR</strong> ${creature.cr}</p>`;
-        }
-
-        html += `</div>`;
-
-        // Traits
-        if (creature.statBlock.traits && creature.statBlock.traits.length > 0) {
-            html += `<div class="stat-block-section stat-block-traits" style="margin-top: var(--spacing-md);">`;
-            creature.statBlock.traits.forEach(trait => {
-                let traitHtml = `<p><strong><em>${trait.name}.</em></strong> ${trait.description}`;
-                if (trait.usage) {
-                    traitHtml += ` <em>(${trait.usage})</em>`;
-                }
-                traitHtml += `</p>`;
-                html += traitHtml;
-            });
-            html += `</div>`;
-        }
-
-        // Actions
-        if (creature.statBlock.actions && creature.statBlock.actions.length > 0) {
-            html += `<div class="stat-block-section" style="margin-top: var(--spacing-md);"><h4 class="stat-block-heading">Actions</h4>`;
-            creature.statBlock.actions.forEach(action => {
-                html += `<p><strong><em>${action.name}.</em></strong> ${action.description}</p>`;
-            });
-            html += `</div>`;
-        }
-
-        // Bonus Actions
-        if (creature.statBlock.bonusActions && creature.statBlock.bonusActions.length > 0) {
-            html += `<div class="stat-block-section" style="margin-top: var(--spacing-md);"><h4 class="stat-block-heading">Bonus Actions</h4>`;
-            creature.statBlock.bonusActions.forEach(action => {
-                html += `<p><strong><em>${action.name}.</em></strong> ${action.description}</p>`;
-            });
-            html += `</div>`;
-        }
-
-        // Reactions
-        if (creature.statBlock.reactions && creature.statBlock.reactions.length > 0) {
-            html += `<div class="stat-block-section" style="margin-top: var(--spacing-md);"><h4 class="stat-block-heading">Reactions</h4>`;
-            creature.statBlock.reactions.forEach(reaction => {
-                html += `<p><strong><em>${reaction.name}.</em></strong> ${reaction.description}</p>`;
-            });
-            html += `</div>`;
-        }
-
-        // Legendary Actions
-        if (creature.statBlock.legendaryActions && creature.statBlock.legendaryActions.options && creature.statBlock.legendaryActions.options.length > 0) {
-            html += `<div class="stat-block-section" style="margin-top: var(--spacing-md);"><h4 class="stat-block-heading">Legendary Actions</h4>`;
-            if (creature.statBlock.legendaryActions.description) {
-                html += `<p>${creature.statBlock.legendaryActions.description}</p>`;
-            }
-            creature.statBlock.legendaryActions.options.forEach(option => {
-                html += `<p><strong><em>${option.name}`;
-                if (option.cost && option.cost > 1) html += ` (Costs ${option.cost} Actions)`;
-                html += `.</em></strong> ${option.description}</p>`;
-            });
-            html += `</div>`;
-        }
-
-        // Lair Actions
-        if (creature.statBlock.lairActions && (creature.statBlock.lairActions.description || (creature.statBlock.lairActions.options && creature.statBlock.lairActions.options.length > 0))) {
-            html += `<div class="stat-block-section" style="margin-top: var(--spacing-md);"><h4 class="stat-block-heading">Lair Actions</h4>`;
-            if (creature.statBlock.lairActions.description) {
-                html += `<p>${creature.statBlock.lairActions.description}</p>`;
-            }
-            if (creature.statBlock.lairActions.options && creature.statBlock.lairActions.options.length > 0) {
-                creature.statBlock.lairActions.options.forEach(option => {
-                    html += `<p><strong><em>${option.name}.</em></strong> ${option.description}</p>`;
-                });
-            }
-            html += `</div>`;
-        }
-
-        // Regional Effects
-        if (creature.statBlock.regionalEffects && (creature.statBlock.regionalEffects.description || (creature.statBlock.regionalEffects.effects && creature.statBlock.regionalEffects.effects.length > 0))) {
-            html += `<div class="stat-block-section" style="margin-top: var(--spacing-md);"><h4 class="stat-block-heading">Regional Effects</h4>`;
-            if (creature.statBlock.regionalEffects.description) {
-                html += `<p>${creature.statBlock.regionalEffects.description}</p>`;
-            }
-            if (creature.statBlock.regionalEffects.effects && creature.statBlock.regionalEffects.effects.length > 0) {
-                creature.statBlock.regionalEffects.effects.forEach(effect => {
-                    html += `<p><strong><em>${effect.name}.</em></strong> ${effect.description}</p>`;
-                });
-            }
-            html += `</div>`;
-        }
-
-        // Spellcasting
-        if (creature.statBlock.spellcasting) {
-            html += `<div class="stat-block-section" style="margin-top: var(--spacing-md);"><h4 class="stat-block-heading">Spellcasting</h4>`;
-            if (creature.statBlock.spellcasting.description) {
-                html += `<p>${creature.statBlock.spellcasting.description}</p>`;
-            }
-
-            if (creature.statBlock.spellcasting.spells) {
-                // At-will spells
-                if (creature.statBlock.spellcasting.spells.atWill && creature.statBlock.spellcasting.spells.atWill.length > 0) {
-                    const spellNames = creature.statBlock.spellcasting.spells.atWill.map(s => {
-                        return s.level !== null ? `${s.name} (${s.level})` : s.name;
-                    }).join(', ');
-                    html += `<p><strong>At will:</strong> ${spellNames}</p>`;
-                }
-
-                // Per day spells
-                if (creature.statBlock.spellcasting.spells.perDay) {
-                    for (const [times, spells] of Object.entries(creature.statBlock.spellcasting.spells.perDay)) {
-                        const spellNames = spells.map(s => {
-                            return s.level !== null ? `${s.name} (${s.level})` : s.name;
-                        }).join(', ');
-                        html += `<p><strong>${times}/day each:</strong> ${spellNames}</p>`;
-                    }
-                }
-
-                // Spell slots (if using spell slots system)
-                if (creature.statBlock.spellcasting.spells.slots) {
-                    const slotInfo = [];
-                    for (const [level, count] of Object.entries(creature.statBlock.spellcasting.spells.slots)) {
-                        const ordinal = level == 1 ? '1st' : level == 2 ? '2nd' : level == 3 ? '3rd' : `${level}th`;
-                        slotInfo.push(`${ordinal} level (${count} slots)`);
-                    }
-                    if (slotInfo.length > 0) {
-                        html += `<p><strong>Spell Slots:</strong> ${slotInfo.join(', ')}</p>`;
-                    }
-                }
-            }
-            html += `</div>`;
-        }
-
-        previewDiv.innerHTML = html;
-    }
-
-    /**
-     * Format modifier with + or - sign
-     * @param {number} modifier - Modifier value
-     * @returns {string} Formatted modifier
-     */
-    static formatModifier(modifier) {
-        return modifier >= 0 ? `+${modifier}` : `${modifier}`;
-    }
-
-    /**
-     * Handle importing a parsed creature into the compendium
-     * @param {HTMLElement} target - The import button
-     */
-    static async handleImportParsedCreature(target) {
-        try {
-            const parsedDataStr = target.dataset.parsedCreature;
-            if (!parsedDataStr) {
-                throw new Error('No parsed creature data found');
-            }
-
-            const creature = JSON.parse(parsedDataStr);
-
-            // Mark as custom creature
-            creature.isCustom = true;
-
-            // Get existing custom creatures
-            const customCreatures = JSON.parse(localStorage.getItem('dnd-custom-creatures') || '[]');
-
-            // Check if creature with this ID already exists
-            const existingIndex = customCreatures.findIndex(c => c.id === creature.id);
-            if (existingIndex >= 0) {
-                const confirm = window.confirm(`A creature named "${creature.name}" already exists. Overwrite it?`);
-                if (confirm) {
-                    customCreatures[existingIndex] = creature;
-                } else {
-                    ToastSystem.show('Import cancelled', 'info', 2000);
-                    return;
-                }
-            } else {
-                customCreatures.push(creature);
-            }
-
-            // Save to localStorage
-            localStorage.setItem('dnd-custom-creatures', JSON.stringify(customCreatures));
-
-            // Reload the consolidated database
-            if (DataServices.combatantManager) {
-                await DataServices.combatantManager.loadCreatureDatabase();
-            }
-
-            ToastSystem.show(`✅ "${creature.name}" imported to compendium!`, 'success', 3000);
-
-            // Store the creature ID for auto-selection
-            const creatureId = creature.id;
-
-            // Close parser modal
-            ModalSystem.hide('stat-block-parser');
-
-            // Clear form
-            const textArea = document.getElementById('stat-block-text');
-            if (textArea) textArea.value = '';
-
-            const previewDiv = document.getElementById('stat-block-preview');
-            if (previewDiv) {
-                previewDiv.innerHTML = `<div class="empty-state" style="text-align: center; color: var(--color-text-muted);"><p>Paste a stat block and click "Parse Stat Block" to see a preview</p></div>`;
-            }
-
-            // Hide import button
-            const importButton = document.getElementById('import-parsed-creature');
-            if (importButton) {
-                importButton.style.display = 'none';
-                delete importButton.dataset.parsedCreature;
-            }
-
-            // Wait for parser modal close animation, then open compendium
-            setTimeout(() => {
-                // Open the compendium modal
-                ModalSystem.show('creature-database');
-
-                // Get the compendium modal and refresh its list
-                const compendiumModal = document.querySelector('[data-modal="creature-database"]');
-                if (compendiumModal) {
-                    // Refresh the creature list to include the newly imported creature
-                    CreatureModalEvents.setupCreatureDatabaseModal(compendiumModal);
-
-                    // Wait for list to populate, then select the imported creature
-                    setTimeout(() => {
-                        const creatureItem = compendiumModal.querySelector(`.creature-list-item[data-creature-id="${creatureId}"]`);
-                        if (creatureItem) {
-                            creatureItem.click();
-                            creatureItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                        }
-                    }, 100);
-                }
-            }, 250);
-
-        } catch (error) {
-            console.error('Error importing parsed creature:', error);
-            ToastSystem.show('Failed to import creature: ' + error.message, 'error', 3000);
-        }
-    }
-
-    // Note: Form handling now routed through handleFormSubmission
-
-    /**
-     * Set up combat control handlers
-     */
     static setupCombatControls() {
         // Combat controls use the action-based routing system (data-action attributes)
         // No additional setup needed - all handled by event delegation
@@ -1990,5 +1139,272 @@ export class EventCoordinator {
      */
     static getSelectedCombatants() {
         return CombatantEvents.getSelectedCombatants();
+    }
+
+    /**
+     * Handle editing an existing condition
+     * @param {HTMLElement} target - The condition name element that was clicked
+     */
+    static handleEditCondition(target) {
+        const combatantCard = target.closest('[data-combatant-id]');
+        const combatantId = combatantCard?.getAttribute('data-combatant-id');
+
+        if (!combatantId) {
+            console.error('No combatant ID found');
+            return;
+        }
+
+        // Get condition data from the clicked element
+        const conditionData = {
+            name: target.getAttribute('data-condition-name'),
+            duration: target.getAttribute('data-condition-duration'),
+            note: target.getAttribute('data-condition-note'),
+            expiresAt: target.getAttribute('data-condition-expires-at') || 'start'
+        };
+
+        // Get the combatant
+        const combatant = DataServices.combatantManager?.getCombatant(combatantId);
+        if (!combatant) {
+            console.error('Combatant not found:', combatantId);
+            return;
+        }
+
+        // Open the condition modal
+        const modal = document.querySelector('[data-modal="condition"]');
+        if (modal) {
+            // Set the target combatant
+            modal.setAttribute('data-current-target', combatantId);
+            const targetNameEl = modal.querySelector('[data-target-name]');
+            if (targetNameEl) {
+                targetNameEl.textContent = combatant.name;
+            }
+
+            // Pre-populate the modal with existing data
+            ModalEvents.prePopulateConditionModal(modal, conditionData);
+
+            // Show the modal
+            ModalSystem.show('condition');
+
+            console.log(`✏️ Editing condition "${conditionData.name}" for ${combatant.name}`);
+        }
+    }
+
+    /**
+     * Handle editing an existing effect
+     * @param {HTMLElement} target - The effect name element that was clicked
+     */
+    static handleEditEffect(target) {
+        const combatantCard = target.closest('[data-combatant-id]');
+        const combatantId = combatantCard?.getAttribute('data-combatant-id');
+
+        if (!combatantId) {
+            console.error('No combatant ID found');
+            return;
+        }
+
+        // Get effect data from the clicked element
+        const effectData = {
+            name: target.getAttribute('data-effect-name'),
+            duration: target.getAttribute('data-effect-duration'),
+            note: target.getAttribute('data-effect-note'),
+            expiresAt: target.getAttribute('data-effect-expires-at') || 'start'
+        };
+
+        // Get the combatant
+        const combatant = DataServices.combatantManager?.getCombatant(combatantId);
+        if (!combatant) {
+            console.error('Combatant not found:', combatantId);
+            return;
+        }
+
+        // Open the effect modal
+        const modal = document.querySelector('[data-modal="effect"]');
+        if (modal) {
+            // Set the target combatant
+            modal.setAttribute('data-current-target', combatantId);
+            const targetNameEl = modal.querySelector('[data-target-name]');
+            if (targetNameEl) {
+                targetNameEl.textContent = combatant.name;
+            }
+
+            // Pre-populate the modal with existing data
+            ModalEvents.prePopulateEffectModal(modal, effectData);
+
+            // Show the modal
+            ModalSystem.show('effect');
+
+            console.log(`✏️ Editing effect "${effectData.name}" for ${combatant.name}`);
+        }
+    }
+
+    /**
+     * Handle editing a timer by clicking on the timer badge
+     * @param {HTMLElement} target - The timer name element that was clicked
+     */
+    static handleEditTimer(target) {
+        const combatantCard = target.closest('[data-combatant-id]');
+        const combatantId = combatantCard?.getAttribute('data-combatant-id');
+
+        if (!combatantId) {
+            console.error('No combatant ID found');
+            return;
+        }
+
+        // Get the combatant
+        const combatant = DataServices.combatantManager.getCombatant(combatantId);
+        if (!combatant || !combatant.timer) {
+            console.error('Combatant or timer not found');
+            return;
+        }
+
+        // Open the timer modal
+        const modal = document.querySelector('[data-modal="placeholder-timer"]');
+        if (modal) {
+            // Set the target combatant
+            modal.setAttribute('data-current-target', combatantId);
+            const targetNameEl = modal.querySelector('[data-target-name]');
+            if (targetNameEl) {
+                targetNameEl.textContent = combatant.name;
+            }
+
+            // Pre-populate the modal with existing timer data
+            const turnsInput = modal.querySelector('#timer-turns');
+            const noteInput = modal.querySelector('#timer-note');
+            const infinityBtn = modal.querySelector('[data-toggle-target="timer-turns"]');
+
+            if (combatant.timer.duration === 'infinite') {
+                if (infinityBtn) {
+                    infinityBtn.classList.add('active');
+                    infinityBtn.setAttribute('data-infinity-state', 'true');
+                }
+                if (turnsInput) {
+                    turnsInput.value = 'infinite';
+                    turnsInput.disabled = true;
+                }
+            } else {
+                if (turnsInput) {
+                    turnsInput.value = combatant.timer.duration;
+                }
+            }
+
+            if (noteInput) {
+                noteInput.value = combatant.timer.note || '';
+            }
+
+            // Show the modal
+            ModalSystem.show('placeholder-timer');
+
+            console.log(`✏️ Editing timer for ${combatant.name}`);
+        }
+    }
+
+    /**
+     * Handle clicking a dice notation link in a stat block
+     * Opens the dice roller and automatically performs the roll
+     * @param {HTMLElement} target - The clicked dice link element
+     */
+    static handleRollDiceFromStatBlock(target) {
+        try {
+            // Extract roll data from the clicked element
+            const rollData = DiceLinkConverter.extractRollData(target);
+
+            console.log('🎲 Rolling dice from stat block:', rollData);
+
+            // Open dice roller and execute the roll
+            DiceRoller.showAndRoll(rollData);
+
+            // Show toast notification
+            const formula = rollData.formula || `${rollData.multiplier}d${rollData.diceType}`;
+            const damageType = rollData.damageType ? ` (${rollData.damageType})` : '';
+            ToastSystem.show(`Rolling ${formula}${damageType}`, 'info', 1500);
+        } catch (error) {
+            console.error('Failed to roll dice from stat block:', error);
+            ToastSystem.show('Failed to execute roll', 'error', 2000);
+        }
+    }
+
+    /**
+     * Handle importing creature database from JSON file
+     */
+    static async handleImportCreatureDatabase() {
+        try {
+            // Create file input
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json,application/json';
+
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const success = await CreatureService.importDatabase(file);
+
+                if (success) {
+                    // Reload creature database in CombatantManager
+                    if (DataServices.combatantManager) {
+                        await DataServices.combatantManager.loadCreatureDatabase();
+                    }
+
+                    // Refresh the compendium modal if it's open
+                    const modal = document.querySelector('[data-modal="creature-database"]');
+                    if (modal && modal.style.display !== 'none') {
+                        CreatureModalEvents.setupCreatureDatabaseModal(modal);
+                        CreatureModalEvents.updateCreatureDatabaseFileStatus(modal);
+                    }
+                }
+            };
+
+            // Trigger file picker
+            input.click();
+        } catch (error) {
+            console.error('❌ Error importing creature database:', error);
+            ToastSystem.show('Failed to import database: ' + error.message, 'error', 3000);
+        }
+    }
+
+    /**
+     * Handle exporting creature database to JSON file
+     */
+    static async handleExportCreatureDatabase() {
+        try {
+            const success = await CreatureService.exportDatabase();
+
+            if (success) {
+                // Update file status indicator
+                const modal = document.querySelector('[data-modal="creature-database"]');
+                if (modal) {
+                    CreatureModalEvents.updateCreatureDatabaseFileStatus(modal);
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error exporting creature database:', error);
+            ToastSystem.show('Failed to export database: ' + error.message, 'error', 3000);
+        }
+    }
+
+    /**
+     * Handle resetting creature database to base version
+     */
+    static async handleResetCreatureDatabase() {
+        try {
+            const success = await CreatureService.resetToBase();
+
+            if (success) {
+                // Reload creature database in CombatantManager
+                if (DataServices.combatantManager) {
+                    await DataServices.combatantManager.loadCreatureDatabase();
+                }
+
+                // Refresh the compendium modal if it's open
+                const modal = document.querySelector('[data-modal="creature-database"]');
+                if (modal && modal.style.display !== 'none') {
+                    CreatureModalEvents.setupCreatureDatabaseModal(modal);
+                    CreatureModalEvents.updateCreatureDatabaseFileStatus(modal);
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error resetting creature database:', error);
+            ToastSystem.show('Failed to reset database: ' + error.message, 'error', 3000);
+        }
     }
 }
