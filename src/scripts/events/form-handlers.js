@@ -401,6 +401,8 @@ export class FormHandlers {
         const ac = parseInt(formData.get('ac'));
         const maxHP = parseInt(formData.get('maxHP'));
 
+        console.log('🐛 Form submission - Type received:', type);
+
         // Validate required fields
         if (!name || !type || isNaN(ac) || isNaN(maxHP)) {
             this._submittingCreatureForm = false;
@@ -408,18 +410,11 @@ export class FormHandlers {
             return;
         }
 
-        // Generate a unique ID for the creature (use existing ID if editing)
-        const id = isEdit ? existingId : name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-
-        // For new creatures, check if ID already exists
-        if (!isEdit) {
-            const existingCreatures = DataServices.combatantManager.getAvailableCreatures();
-            if (existingCreatures.some(creature => creature.id === id)) {
-                this._submittingCreatureForm = false;
-                ToastSystem.show(`A creature named "${name}" already exists`, 'error', 3000);
-                return;
-            }
-        }
+        // WHY: Generate a unique ID for the creature
+        // For new creatures, use CreatureService.generateCreatureId() which adds a timestamp
+        // to ensure uniqueness. For edits, preserve the existing ID.
+        // This prevents NPCs with the same name from overwriting each other.
+        const id = isEdit ? existingId : CreatureService.generateCreatureId(name);
 
         // Build creature data structure
         const creatureData = {
@@ -940,39 +935,34 @@ export class FormHandlers {
         }
 
         try {
-            // Get custom creatures from localStorage
-            const customCreatures = JSON.parse(localStorage.getItem('dnd-custom-creatures') || '[]');
+            // WHY: Use CreatureService for all creature operations (including players)
+            // Players are just creatures with type='player', so they use the same
+            // database system as enemies and NPCs
+            let success = false;
 
             if (isEdit) {
-                // Update existing player
-                const customIndex = customCreatures.findIndex(c => c.id === id);
-                if (customIndex !== -1) {
-                    // Preserve the original createdAt timestamp when editing
-                    if (customCreatures[customIndex].createdAt) {
-                        playerData.createdAt = customCreatures[customIndex].createdAt;
-                    }
-                    customCreatures[customIndex] = playerData;
-                } else {
-                    // Player doesn't exist in custom list, add it
-                    playerData.createdAt = Date.now();
-                    customCreatures.push(playerData);
+                // Update existing player using CreatureService
+                success = await CreatureService.updateCreature(id, playerData);
+                if (success) {
+                    ToastSystem.show(`Updated: ${name}`, 'success', 2000);
+                    console.log(`✅ Updated player character: ${name} (${id})`);
                 }
-
-                ToastSystem.show(`Updated: ${name}`, 'success', 2000);
-                console.log(`✅ Updated player character: ${name} (${id})`);
             } else {
-                // Create new player with timestamp
+                // Create new player using CreatureService
                 playerData.createdAt = Date.now();
-                customCreatures.push(playerData);
-
-                ToastSystem.show(`Created: ${name}`, 'success', 2000);
-                console.log(`✅ Created player character: ${name} (${id})`);
+                success = await CreatureService.addCreature(playerData);
+                if (success) {
+                    ToastSystem.show(`Created: ${name}`, 'success', 2000);
+                    console.log(`✅ Created player character: ${name} (${id})`);
+                }
             }
 
-            // Save to localStorage
-            localStorage.setItem('dnd-custom-creatures', JSON.stringify(customCreatures));
+            if (!success) {
+                ToastSystem.show(`Failed to ${isEdit ? 'update' : 'create'} player character`, 'error', 3000);
+                return;
+            }
 
-            // Reload the consolidated database to pick up changes
+            // Reload the database to pick up changes
             if (DataServices.combatantManager) {
                 await DataServices.combatantManager.loadCreatureDatabase();
             }

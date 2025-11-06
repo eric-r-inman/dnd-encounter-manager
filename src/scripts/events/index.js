@@ -37,6 +37,10 @@ import { StatBlockParser } from '../parsers/stat-block-parser.js';
 import { CreatureService } from '../services/creature-service.js';
 
 export class EventCoordinator {
+    // Debounce timer for placeholder editing
+    static placeholderEditDebounceTimer = null;
+    static PLACEHOLDER_SAVE_DELAY = 500; // 500ms delay after user stops typing
+
     /**
      * Initialize all event handling modules
      */
@@ -467,6 +471,7 @@ export class EventCoordinator {
 
     /**
      * Handle editing a placeholder text line
+     * WHY: Debounced to avoid saving on every keystroke - only saves after user stops typing
      * @param {HTMLElement} target - The input element
      */
     static handleEditPlaceholderLine(target) {
@@ -483,11 +488,19 @@ export class EventCoordinator {
         const combatant = DataServices.combatantManager.combatants.get(combatantId);
         if (!combatant || !combatant.isPlaceholder) return;
 
-        // Update the notes field
+        // Update the notes field immediately (for UI responsiveness)
         combatant.notes = newValue;
 
-        // Save instances
-        DataServices.combatantManager.saveInstances();
+        // WHY: Debounce the save operation to avoid excessive saves on every keystroke
+        // Clear any existing timer
+        if (this.placeholderEditDebounceTimer) {
+            clearTimeout(this.placeholderEditDebounceTimer);
+        }
+
+        // Set new timer - only save after user stops typing for PLACEHOLDER_SAVE_DELAY ms
+        this.placeholderEditDebounceTimer = setTimeout(() => {
+            DataServices.combatantManager.saveInstances();
+        }, this.PLACEHOLDER_SAVE_DELAY);
     }
 
     static async handleSaveEncounter() {

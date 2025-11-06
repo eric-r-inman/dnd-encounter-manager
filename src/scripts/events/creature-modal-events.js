@@ -616,6 +616,8 @@ export class CreatureModalEvents {
      * Setup creature form for adding a new creature
      */
     static setupCreatureFormForAdd() {
+        console.log('🎯 setupCreatureFormForAdd() called');
+
         // Reset modal title
         const titleElement = document.getElementById('creature-form-title');
         if (titleElement) {
@@ -634,35 +636,39 @@ export class CreatureModalEvents {
             idField.value = '';
         }
 
-        // Reset the form
+        // Reset the form completely
         const form = document.getElementById('creature-form');
         if (form) {
-            // Don't use form.reset() as it resets to default HTML values, not empty
-            // Instead, explicitly clear all fields
+            // WHY: Explicitly clear ALL fields to ensure no pre-populated data from previous creatures
+            // Don't use form.reset() as it resets to default HTML values which may retain previous data
             const inputs = form.querySelectorAll('input, textarea, select');
             inputs.forEach(input => {
                 if (input.type === 'checkbox' || input.type === 'radio') {
                     input.checked = false;
-                } else if (input.type === 'hidden') {
-                    // Clear hidden fields but we'll set some specifically later
-                    input.value = '';
                 } else if (input.tagName === 'SELECT') {
                     // Reset select to first option
                     input.selectedIndex = 0;
                 } else {
-                    // Clear all other inputs
+                    // Clear all inputs (including text, number, hidden, etc.)
                     input.value = '';
                 }
             });
 
-            // Set default values for specific fields
+            // Set default values for specific fields AFTER clearing everything
             // Read creature type from sessionStorage (set by creature type selection modal)
             const pendingType = sessionStorage.getItem('pending-creature-type') || 'enemy';
+            console.log('📋 Read pending creature type from sessionStorage:', pendingType);
             sessionStorage.removeItem('pending-creature-type'); // Clear after reading
 
             const typeField = document.getElementById('creature-form-type');
             const typeReadonly = document.getElementById('creature-form-type-readonly');
             const typeHidden = document.getElementById('creature-form-type-hidden');
+
+            console.log('🔍 Form elements found:', {
+                typeField: !!typeField,
+                typeReadonly: !!typeReadonly,
+                typeHidden: !!typeHidden
+            });
 
             // Show select for enemy/npc, readonly for player (though player should not be selectable yet)
             if (pendingType === 'player') {
@@ -679,10 +685,13 @@ export class CreatureModalEvents {
                     typeHidden.value = 'player';
                 }
             } else {
+                // WHY: Set the type field for enemy/npc creatures
+                // Make sure the dropdown shows the correct type selected
                 if (typeField) {
                     typeField.style.display = 'block';
                     typeField.setAttribute('name', 'type'); // Submit via select
-                    typeField.value = pendingType;
+                    typeField.value = pendingType; // Set to 'enemy' or 'npc'
+                    console.log('Setting creature type to:', pendingType, 'Actual value:', typeField.value);
                 }
                 if (typeReadonly) typeReadonly.style.display = 'none';
                 if (typeHidden) {
@@ -691,14 +700,35 @@ export class CreatureModalEvents {
                 }
             }
 
+            // Set default values for required fields
             const sizeField = document.getElementById('creature-form-size');
             if (sizeField) sizeField.value = 'Medium';
 
+            // Leave AC and HP empty (no defaults) so user is forced to enter them
             const acField = document.getElementById('creature-form-ac');
             if (acField) acField.value = '';
 
             const hpField = document.getElementById('creature-form-hp');
             if (hpField) hpField.value = '';
+
+            // Clear all other optional fields explicitly
+            const crField = document.getElementById('creature-form-cr');
+            if (crField) crField.value = '';
+
+            const raceField = document.getElementById('creature-form-race');
+            if (raceField) raceField.value = '';
+
+            const subraceField = document.getElementById('creature-form-subrace');
+            if (subraceField) subraceField.value = '';
+
+            const alignmentField = document.getElementById('creature-form-alignment');
+            if (alignmentField) alignmentField.value = '';
+
+            const sourceField = document.getElementById('creature-form-source');
+            if (sourceField) sourceField.value = 'Custom'; // Default source
+
+            const descriptionField = document.getElementById('creature-form-description');
+            if (descriptionField) descriptionField.value = '';
         }
 
         // Clear dynamic containers (skills, traits, actions, legendary actions, custom sections)
@@ -723,25 +753,32 @@ export class CreatureModalEvents {
             }
         });
 
-        console.log('📝 Creature form set up for adding new creature');
+        console.log('📝 Creature form set up for adding new creature with default/empty fields');
     }
 
     /**
      * Setup player form for adding a new player character
      */
     static setupPlayerFormForAdd() {
+        console.log('🎯 setupPlayerFormForAdd() called');
+
         // Reset modal title
         const titleElement = document.getElementById('player-form-title');
         if (titleElement) {
             titleElement.textContent = 'Add Player Character';
         }
 
-        // Reset the form
+        // Clear the ID field (no ID means it's a new player)
+        const idField = document.getElementById('player-form-id');
+        if (idField) {
+            idField.value = '';
+        }
+
+        // Reset the form completely
         const form = document.getElementById('player-form');
         if (form) {
-            form.reset();
-
-            // Explicitly clear all input, textarea, and select fields
+            // WHY: Explicitly clear ALL fields first to ensure no pre-populated data from previous players
+            // We clear everything first, then set defaults
             const inputs = form.querySelectorAll('input, textarea, select');
             inputs.forEach(input => {
                 if (input.type === 'checkbox' || input.type === 'radio') {
@@ -749,31 +786,73 @@ export class CreatureModalEvents {
                 } else if (input.tagName === 'SELECT') {
                     input.selectedIndex = 0;
                 } else {
+                    // Clear all inputs (text, number, hidden, etc.)
                     input.value = '';
                 }
             });
 
-            // Set default values for ability scores
+            // Now set default values for specific fields AFTER clearing everything
+
+            // Clear text fields (name, class, race, background, notes)
+            const nameField = document.getElementById('player-form-name');
+            if (nameField) nameField.value = '';
+
+            const classField = document.getElementById('player-form-class');
+            if (classField) classField.value = '';
+
+            const raceField = document.getElementById('player-form-race');
+            if (raceField) raceField.value = '';
+
+            const backgroundField = document.getElementById('player-form-background');
+            if (backgroundField) backgroundField.value = '';
+
+            const notesField = document.getElementById('player-form-notes');
+            if (notesField) notesField.value = '';
+
+            // Set default ability scores to 10
             ['str', 'dex', 'con', 'int', 'wis', 'cha'].forEach(ability => {
                 const field = document.getElementById(`player-form-${ability}`);
                 if (field) field.value = '10';
             });
 
-            // Set default level, speed, and proficiency bonus
+            // Set default level to 1
             const levelField = document.getElementById('player-form-level');
             if (levelField) levelField.value = '1';
 
+            // Clear AC and HP fields (no defaults, user must enter)
+            const acField = document.getElementById('player-form-ac');
+            if (acField) acField.value = '';
+
+            const maxHPField = document.getElementById('player-form-max-hp');
+            if (maxHPField) maxHPField.value = '';
+
+            const currentHPField = document.getElementById('player-form-current-hp');
+            if (currentHPField) currentHPField.value = '';
+
+            // Set default speed
             const speedField = document.getElementById('player-form-speed');
             if (speedField) speedField.value = '30';
 
+            // Set default proficiency bonus for level 1
             const profBonusField = document.getElementById('player-form-proficiency-bonus');
             if (profBonusField) profBonusField.value = '2';
 
+            // Set default initiative bonus to 0
             const initBonusField = document.getElementById('player-form-initiative-bonus');
             if (initBonusField) initBonusField.value = '0';
+
+            // Uncheck all saving throw and skill proficiencies
+            const savingThrowCheckboxes = document.querySelectorAll('input[name="savingThrows"]');
+            savingThrowCheckboxes.forEach(cb => cb.checked = false);
+
+            const skillCheckboxes = document.querySelectorAll('input[name="skills"]');
+            skillCheckboxes.forEach(cb => cb.checked = false);
+
+            const expertiseCheckboxes = document.querySelectorAll('input[name="skillsExpertise"]');
+            expertiseCheckboxes.forEach(cb => cb.checked = false);
         }
 
-        console.log('📝 Player form set up for adding new character');
+        console.log('📝 Player form set up for adding new character with default/empty fields');
     }
 
     /**
