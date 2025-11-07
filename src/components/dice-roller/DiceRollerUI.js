@@ -224,6 +224,11 @@ export class DiceRollerUI {
             isDisadvantage: result.isDisadvantage || false
         }).replace(/"/g, '&quot;');
 
+        // Format damage type if present
+        const damageTypeDisplay = result.damageType
+            ? `<span class="damage-type">${result.damageType}</span>`
+            : '';
+
         return `
             <li class="history-item">
                 <div class="history-item-header">
@@ -238,6 +243,7 @@ export class DiceRollerUI {
                     <span class="roll-formula">${result.formula}:</span>
                     <span class="roll-details">${rollsDisplay}</span>
                     <span class="roll-total">= ${result.total}</span>
+                    ${damageTypeDisplay}
                 </div>
             </li>
         `;

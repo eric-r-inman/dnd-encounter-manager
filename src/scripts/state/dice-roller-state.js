@@ -80,9 +80,10 @@ export class DiceRollerState {
     /**
      * Perform a normal dice roll
      * @param {Object} currentState - Current state object
+     * @param {string} damageType - Optional damage type for this roll
      * @returns {Object} Updated state with new roll in history
      */
-    static rollDice(currentState) {
+    static rollDice(currentState, damageType = null) {
         const { selectedDiceType, multiplier, modifier } = currentState;
 
         if (selectedDiceType === null) {
@@ -105,7 +106,8 @@ export class DiceRollerState {
             rolls: rolls,
             modifier: modifier,
             total: total,
-            timestamp: new Date().toLocaleTimeString()
+            timestamp: new Date().toLocaleTimeString(),
+            damageType: damageType || null
         };
 
         return this.addToHistory(currentState, result);

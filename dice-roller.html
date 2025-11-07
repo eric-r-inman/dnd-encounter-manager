@@ -215,8 +215,8 @@
             state = DiceRollerState.updateMultiplier(state, rollData.multiplier);
             state = DiceRollerState.updateModifier(state, rollData.modifier);
 
-            // Perform the roll
-            state = DiceRollerState.rollDice(state);
+            // Perform the roll with damage type if provided
+            state = DiceRollerState.rollDice(state, rollData.damageType);
 
             console.log('✅ Roll executed, new history length:', state.rollHistory.length);
             console.log('📜 Latest roll:', state.rollHistory[0]);

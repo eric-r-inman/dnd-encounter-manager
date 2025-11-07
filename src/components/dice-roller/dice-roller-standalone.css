@@ -330,6 +330,18 @@ body {
     font-size: 16px;
 }
 
+.damage-type {
+    margin-left: 8px;
+    padding: 2px 8px;
+    background-color: rgba(88, 166, 255, 0.15);
+    border: 1px solid rgba(88, 166, 255, 0.3);
+    border-radius: 4px;
+    color: #58a6ff;
+    font-size: 13px;
+    font-style: italic;
+    font-weight: 500;
+}
+
 .coin-result {
     font-weight: 700;
     color: #FFD700;
