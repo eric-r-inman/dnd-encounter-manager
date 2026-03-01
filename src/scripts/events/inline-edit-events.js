@@ -13,10 +13,12 @@ import { ToastSystem } from '../../components/toast/ToastSystem.js';
 import { DataServices } from '../data-services.js';
 import { CombatEvents } from './combat-events.js';
 import { InitiativeEvents } from './initiative-events.js';
+import { ModalSystem } from '../../components/modals/ModalSystem.js';
+import { TIMING } from '../constants.js';
 
 export class InlineEditEvents {
     /**
-     * Handle initiative inline editing
+     * Handle initiative click - opens initiative modal
      * @param {HTMLElement} target - The initiative element that was clicked
      */
     static handleInitiativeEdit(target) {
@@ -31,18 +33,51 @@ export class InlineEditEvents {
             return;
         }
 
-        // Find the initiative value element - it might be the target itself or inside the target
-        let initiativeValue = target.classList.contains('initiative-value') ? target : target.querySelector('.initiative-value');
-        if (!initiativeValue || initiativeValue.querySelector('input')) return; // Already editing
+        // Store the current combatant ID in the modal
+        const modal = document.querySelector('[data-modal="quick-initiative"]');
+        if (!modal) return;
 
-        this.createInlineInput(initiativeValue, combatant.initiative, {
-            type: 'initiative',
-            combatantId: combatantId,
-            combatant: combatant,
-            min: 0,
-            max: 99,
-            width: '40px',
-            height: '20px'
+        const hiddenField = modal.querySelector('#quick-init-combatant-id');
+        if (hiddenField) {
+            hiddenField.value = combatantId;
+        }
+
+        // Update the "Roll Initiative & Sort" button text to include creature name
+        const singleBtn = modal.querySelector('#roll-init-single-btn');
+        if (singleBtn && combatant.name) {
+            singleBtn.textContent = `🎲 Roll Initiative & Sort: ${combatant.name}`;
+        }
+
+        // Update selected count displays
+        this.updateSelectedCounts(modal);
+
+        // Open the modal
+        ModalSystem.show('quick-initiative');
+    }
+
+    /**
+     * Update selected count displays in initiative modal
+     * @param {HTMLElement} modal - The initiative modal element
+     */
+    static updateSelectedCounts(modal) {
+        const allCombatants = DataServices.combatantManager.getAllCombatants();
+        const selectedCombatants = allCombatants.filter(c => c.isSelected);
+        const count = selectedCombatants.length;
+
+        const countSpans = modal.querySelectorAll('#init-selected-count, #init-custom-selected-count');
+        countSpans.forEach(span => span.textContent = count);
+
+        // Disable selected buttons if no creatures are selected
+        const selectedButtons = modal.querySelectorAll('[data-action="roll-init-selected"], [data-action="apply-custom-init-selected"]');
+        selectedButtons.forEach(btn => {
+            btn.disabled = count === 0;
+            if (count === 0) {
+                btn.style.opacity = '0.5';
+                btn.style.cursor = 'not-allowed';
+            } else {
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+            }
         });
     }
 
@@ -160,7 +195,7 @@ export class InlineEditEvents {
             const newValue = parseInt(input.value);
             if (isNaN(newValue) || newValue < min || newValue > max) {
                 const fieldName = type === 'initiative' ? 'Initiative' : 'AC';
-                ToastSystem.show(`${fieldName} must be between ${min} and ${max}`, 'error', 2000);
+                ToastSystem.show(`${fieldName} must be between ${min} and ${max}`, 'error', TIMING.TOAST_SHORT);
                 input.focus();
                 return;
             }
@@ -172,7 +207,7 @@ export class InlineEditEvents {
             valueElement.textContent = newValue;
 
             const fieldName = type === 'initiative' ? 'initiative' : 'AC';
-            ToastSystem.show(`${combatant.name}'s ${fieldName} updated to ${newValue}`, 'success', 2000);
+            ToastSystem.show(`${combatant.name}'s ${fieldName} updated to ${newValue}`, 'success', TIMING.TOAST_SHORT);
 
             // Re-render if initiative changed (to update order)
             if (type === 'initiative') {

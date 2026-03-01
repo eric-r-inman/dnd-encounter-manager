@@ -83,7 +83,7 @@ export class DiceRollerUI {
                         id="multiplier"
                         class="dice-input"
                         min="1"
-                        max="20"
+                        max="99"
                         value="${multiplier}"
                         data-action="update-multiplier">
                 </div>
@@ -94,8 +94,8 @@ export class DiceRollerUI {
                         type="number"
                         id="modifier"
                         class="dice-input"
-                        min="-999"
-                        max="999"
+                        min="-99"
+                        max="99"
                         value="${modifier}"
                         data-action="update-modifier">
                 </div>

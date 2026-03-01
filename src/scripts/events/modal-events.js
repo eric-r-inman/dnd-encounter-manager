@@ -1132,6 +1132,10 @@ export class ModalEvents {
                 batchBtn = modal.querySelector('#note-batch-apply-btn');
                 batchCount = modal.querySelector('#note-batch-count');
                 break;
+            case 'auto-roll':
+                batchBtn = modal.querySelector('#auto-roll-batch-apply-btn');
+                batchCount = modal.querySelector('#auto-roll-batch-count');
+                break;
         }
 
         if (batchBtn && batchCount) {

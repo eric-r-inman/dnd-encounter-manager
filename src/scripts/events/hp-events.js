@@ -103,6 +103,9 @@ export class HPEvents {
         // Clear the amount field
         modal.querySelector('#hp-amount').value = '';
 
+        // Setup auto-save UI based on action type
+        this.setupAutoSaveUI(modal, actionType, combatant);
+
         // Check for selected combatants and show/hide batch button
         const selectedCombatants = this.getSelectedCombatants();
         const batchBtn = modal.querySelector('#hp-batch-apply-btn');
@@ -134,9 +137,34 @@ export class HPEvents {
             historyData.forEach(entry => {
                 const entryElement = document.createElement('div');
                 entryElement.className = 'hp-history-entry';
+
+                // Build save information display if available
+                let saveDisplay = '';
+                if (entry.saveInfo) {
+                    const saveIcon = entry.saveInfo.success ? '✅' : '❌';
+                    const saveText = entry.saveInfo.success ? 'Saved' : 'Failed';
+                    const abilityAbbr = entry.saveInfo.ability ? entry.saveInfo.ability.toUpperCase().substring(0, 3) : 'CON';
+                    const rollDetails = `d20(${entry.saveInfo.roll})+${entry.saveInfo.modifier}=${entry.saveInfo.total} vs DC${entry.saveInfo.dc}`;
+
+                    saveDisplay = `
+                        <div class="hp-history-save-info">
+                            <span class="save-result ${entry.saveInfo.success ? 'save-success' : 'save-failed'}">
+                                ${saveIcon} ${abilityAbbr} Save: ${saveText}
+                            </span>
+                            <span class="save-roll-details">${rollDetails}</span>
+                            ${entry.saveInfo.success && entry.saveInfo.reduction > 0
+                                ? `<span class="save-reduction">(${entry.saveInfo.reduction} damage avoided)</span>`
+                                : ''}
+                        </div>
+                    `;
+                }
+
                 entryElement.innerHTML = `
-                    <span class="hp-history-amount ${actionType}">${entry.amount} ${modalTitle}</span>
-                    <span class="hp-history-round">Round ${entry.round}</span>
+                    <div class="hp-history-main-row">
+                        <span class="hp-history-amount ${actionType}">${entry.amount} ${modalTitle}</span>
+                        <span class="hp-history-round"> Round ${entry.round}</span>
+                    </div>
+                    ${saveDisplay}
                 `;
                 historyListElement.appendChild(entryElement);
             });
@@ -169,12 +197,32 @@ export class HPEvents {
             return;
         }
 
-        // Apply HP modification and show result
-        const result = this.applySingleHPModification(combatant, actionType, amount);
+        // Check for save configuration
+        let saveConfig = null;
+        if (actionType === 'damage' && formData.get('rollSave')) {
+            saveConfig = {
+                rollSave: true,
+                ability: formData.get('saveAbility'),
+                modifier: formData.get('saveModifier'),
+                dc: formData.get('saveDC'),
+                reduction: formData.get('damageReduction')
+            };
+        }
+
+        // Apply HP modification with save handling
+        const result = this.applySingleHPModification(combatant, actionType, amount, saveConfig);
 
         // Close modal and show success message
         ModalSystem.hideAll();
         ToastSystem.show(result.message, 'success', 3000);
+
+        // Show save result if applicable
+        if (result.saveResult) {
+            const saveMsg = result.saveResult.success ?
+                `✅ ${combatant.name} saved! ${result.saveResult.rollString} - Avoided ${result.saveResult.damageReduction} damage` :
+                `❌ ${combatant.name} failed save! ${result.saveResult.rollString}`;
+            ToastSystem.show(saveMsg, result.saveResult.success ? 'info' : 'warning', 4000);
+        }
 
         // Show health state warnings
         this.showHealthStateWarnings(combatant, result.originalHP);
@@ -211,6 +259,18 @@ export class HPEvents {
             return;
         }
 
+        // Check for save configuration
+        let saveConfig = null;
+        if (actionType === 'damage' && modal.querySelector('#roll-save-toggle').checked) {
+            saveConfig = {
+                rollSave: true,
+                ability: modal.querySelector('#save-ability').value,
+                modifier: modal.querySelector('#save-modifier').value,
+                dc: modal.querySelector('#save-dc').value,
+                reduction: modal.querySelector('#damage-reduction').value
+            };
+        }
+
         // For damage, check if any combatants would go to 0 HP or below
         if (actionType === 'damage' && amount > 0) {
             const combatantsGoingDown = this.getCombatantsGoingDown(selectedCombatants, amount);
@@ -226,11 +286,20 @@ export class HPEvents {
         }
 
         // Apply the modification to all selected combatants
-        const results = this.applyBatchHPModification(selectedCombatants, actionType, amount);
+        const results = this.applyBatchHPModification(selectedCombatants, actionType, amount, saveConfig);
 
         // Show results
         ModalSystem.hideAll();
         ToastSystem.show(`${actionType} applied to ${results.successCount} combatants`, 'success', 3000);
+
+        // Show save results if applicable
+        if (results.saveResults && results.saveResults.length > 0) {
+            results.saveResults.forEach(result => {
+                setTimeout(() => {
+                    ToastSystem.show(result.message, result.type, 4000);
+                }, 100); // Small delay between toasts
+            });
+        }
 
         // Show warnings for health state changes
         results.warnings.forEach(warning => {
@@ -243,9 +312,10 @@ export class HPEvents {
      * @param {Object} combatant - The combatant object
      * @param {string} actionType - Type of modification (damage, heal, temp-hp)
      * @param {number} amount - Amount to apply
+     * @param {Object} saveConfig - Optional save configuration for damage
      * @returns {Object} Result object with message and original HP
      */
-    static applySingleHPModification(combatant, actionType, amount) {
+    static applySingleHPModification(combatant, actionType, amount, saveConfig = null) {
         // Store original values
         const originalHP = combatant.currentHP;
         const originalTempHP = combatant.tempHP;
@@ -254,13 +324,23 @@ export class HPEvents {
         let newHP = originalHP;
         let newTempHP = originalTempHP;
         let message = '';
+        let saveResult = null;
 
         switch (actionType) {
             case 'damage':
-                const damageResult = this.applyDamage(combatant, amount);
-                newHP = damageResult.newHP;
-                newTempHP = damageResult.newTempHP;
-                message = `${combatant.name} took ${damageResult.actualDamage} damage`;
+                // Handle damage with potential saving throw
+                if (saveConfig && saveConfig.rollSave) {
+                    const damageWithSaveResult = this.applyDamageWithSave(combatant, amount, saveConfig);
+                    newHP = damageWithSaveResult.newHP;
+                    newTempHP = damageWithSaveResult.newTempHP;
+                    saveResult = damageWithSaveResult.saveResult;
+                    message = `${combatant.name} took ${damageWithSaveResult.actualDamage} damage`;
+                } else {
+                    const damageResult = this.applyDamage(combatant, amount);
+                    newHP = damageResult.newHP;
+                    newTempHP = damageResult.newTempHP;
+                    message = `${combatant.name} took ${damageResult.actualDamage} damage`;
+                }
                 break;
 
             case 'heal':
@@ -293,13 +373,13 @@ export class HPEvents {
             DataServices.combatantManager.updateCombatant(combatant.id, 'deathSaves', clearedDeathSaves);
         }
 
-        // Add to history
-        this.addToHistory(combatant, actionType, amount, originalHP, newHP, originalTempHP, newTempHP);
+        // Add to history (pass saveResult for damage actions)
+        this.addToHistory(combatant, actionType, amount, originalHP, newHP, originalTempHP, newTempHP, saveResult);
 
         // Save the updated combatant data
         DataServices.combatantManager.saveInstances();
 
-        return { message, originalHP, newHP, newTempHP };
+        return { message, originalHP, newHP, newTempHP, saveResult };
     }
 
     /**
@@ -368,16 +448,44 @@ export class HPEvents {
      * @param {Array} combatants - Array of combatant objects
      * @param {string} actionType - Type of modification
      * @param {number} amount - Amount to apply
-     * @returns {Object} Results with success count and warnings
+     * @param {Object} saveConfig - Optional save configuration for damage
+     * @returns {Object} Results with success count, warnings, and save results
      */
-    static applyBatchHPModification(combatants, actionType, amount) {
+    static applyBatchHPModification(combatants, actionType, amount, saveConfig = null) {
         let successCount = 0;
         const warnings = [];
+        const saveResults = [];
 
         combatants.forEach(combatant => {
             try {
                 const originalHP = combatant.currentHP;
-                const result = this.applySingleHPModification(combatant, actionType, amount);
+
+                // For batch saves, each creature uses its own modifier
+                let individualSaveConfig = saveConfig;
+                if (saveConfig && saveConfig.rollSave) {
+                    // Get the individual creature's modifier for the selected ability
+                    const ability = saveConfig.ability;
+                    const modifier = combatant.getAbilityModifier ?
+                        combatant.getAbilityModifier(ability) : 0;
+
+                    individualSaveConfig = {
+                        ...saveConfig,
+                        modifier: modifier.toString()
+                    };
+                }
+
+                const result = this.applySingleHPModification(combatant, actionType, amount, individualSaveConfig);
+
+                // Add save result message if applicable
+                if (result.saveResult) {
+                    const saveMsg = result.saveResult.success ?
+                        `✅ ${combatant.name}: ${result.saveResult.rollString} - Saved!` :
+                        `❌ ${combatant.name}: ${result.saveResult.rollString} - Failed!`;
+                    saveResults.push({
+                        message: saveMsg,
+                        type: result.saveResult.success ? 'info' : 'warning'
+                    });
+                }
 
                 // Check for health state warnings
                 const healthWarnings = this.getHealthStateWarnings(combatant, originalHP);
@@ -393,7 +501,7 @@ export class HPEvents {
             }
         });
 
-        return { successCount, warnings };
+        return { successCount, warnings, saveResults };
     }
 
     /**
@@ -436,15 +544,17 @@ export class HPEvents {
      * @param {number} newHP - HP after modification
      * @param {number} originalTempHP - Temp HP before modification
      * @param {number} newTempHP - Temp HP after modification
+     * @param {Object} saveResult - Optional save result for damage actions
      */
-    static addToHistory(combatant, actionType, amount, originalHP, newHP, originalTempHP, newTempHP) {
+    static addToHistory(combatant, actionType, amount, originalHP, newHP, originalTempHP, newTempHP, saveResult = null) {
         const currentRound = StateManager.state.combat.round || 1;
 
         switch (actionType) {
             case 'damage':
                 const actualDamage = originalHP + originalTempHP - newHP - newTempHP;
                 if (actualDamage > 0) {
-                    combatant.addDamageHistory(actualDamage, currentRound);
+                    // Pass save information if available
+                    combatant.addDamageHistory(actualDamage, currentRound, saveResult);
                 }
                 break;
 
@@ -542,5 +652,142 @@ export class HPEvents {
         });
 
         return selectedCombatants;
+    }
+
+    /**
+     * Setup auto-save UI in the damage modal
+     * @param {HTMLElement} modal - The modal element
+     * @param {string} actionType - Type of HP modification
+     * @param {Object} combatant - The combatant object
+     */
+    static setupAutoSaveUI(modal, actionType, combatant) {
+        const autoSaveSection = modal.querySelector('#auto-save-section');
+        const rollSaveToggle = modal.querySelector('#roll-save-toggle');
+        const saveConfigFields = modal.querySelector('#save-config-fields');
+        const saveAbilitySelect = modal.querySelector('#save-ability');
+        const saveModifierInput = modal.querySelector('#save-modifier');
+
+        // Show/hide auto-save section based on action type
+        if (actionType === 'damage') {
+            autoSaveSection.style.display = 'block';
+
+            // Setup toggle handler
+            if (!rollSaveToggle.hasAttribute('data-listener-added')) {
+                rollSaveToggle.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        saveConfigFields.style.display = 'flex';
+                        // Update modifier based on selected ability
+                        this.updateSaveModifier(modal, combatant);
+                    } else {
+                        saveConfigFields.style.display = 'none';
+                    }
+                });
+                rollSaveToggle.setAttribute('data-listener-added', 'true');
+            }
+
+            // Setup ability select handler
+            if (!saveAbilitySelect.hasAttribute('data-listener-added')) {
+                saveAbilitySelect.addEventListener('change', () => {
+                    this.updateSaveModifier(modal, combatant);
+                });
+                saveAbilitySelect.setAttribute('data-listener-added', 'true');
+            }
+
+            // Reset toggle state
+            rollSaveToggle.checked = false;
+            saveConfigFields.style.display = 'none';
+
+            // Reset to defaults
+            saveAbilitySelect.value = 'con';
+            saveModifierInput.value = '+0';
+            modal.querySelector('#save-dc').value = '13';
+            modal.querySelector('#damage-reduction').value = '0.5';
+        } else {
+            // Hide auto-save for heal and temp-hp
+            autoSaveSection.style.display = 'none';
+        }
+    }
+
+    /**
+     * Update save modifier based on selected ability and combatant
+     * @param {HTMLElement} modal - The modal element
+     * @param {Object} combatant - The combatant object
+     */
+    static updateSaveModifier(modal, combatant) {
+        const saveAbilitySelect = modal.querySelector('#save-ability');
+        const saveModifierInput = modal.querySelector('#save-modifier');
+        const selectedAbility = saveAbilitySelect.value;
+
+        // Get modifier from combatant
+        const modifier = combatant.getAbilityModifier ?
+            combatant.getAbilityModifier(selectedAbility) : 0;
+
+        // Format modifier with + or - sign
+        const formattedModifier = modifier >= 0 ? `+${modifier}` : `${modifier}`;
+        saveModifierInput.value = formattedModifier;
+    }
+
+    /**
+     * Roll a saving throw
+     * @param {number} modifier - The ability modifier
+     * @param {number} dc - The DC to beat
+     * @returns {Object} Result with roll details
+     */
+    static rollSavingThrow(modifier, dc) {
+        const d20Roll = Math.floor(Math.random() * 20) + 1;
+        const total = d20Roll + modifier;
+        const success = total >= dc;
+
+        return {
+            d20Roll,
+            modifier,
+            total,
+            dc,
+            success,
+            rollString: `1d20 (${d20Roll}) + ${modifier >= 0 ? '+' : ''}${modifier} = ${total} vs DC ${dc}`
+        };
+    }
+
+    /**
+     * Apply damage with saving throws
+     * @param {Object} combatant - The combatant
+     * @param {number} damage - Base damage amount
+     * @param {Object} saveConfig - Saving throw configuration
+     * @returns {Object} Result with actual damage and save details
+     */
+    static applyDamageWithSave(combatant, damage, saveConfig) {
+        let actualDamage = damage;
+        let saveResult = null;
+
+        if (saveConfig && saveConfig.rollSave) {
+            // Parse modifier (remove + sign if present)
+            const modifierStr = saveConfig.modifier.replace('+', '');
+            const modifier = parseInt(modifierStr) || 0;
+            const dc = parseInt(saveConfig.dc) || 13;
+            const avoidancePercent = parseFloat(saveConfig.reduction) || 0.5;
+
+            // Roll the save
+            saveResult = this.rollSavingThrow(modifier, dc);
+
+            // Add ability information to save result
+            saveResult.ability = saveConfig.ability;
+
+            // Apply damage reduction if save succeeded
+            if (saveResult.success) {
+                // Calculate damage taken (100% - avoided%)
+                const damageMultiplier = 1 - avoidancePercent;
+                actualDamage = Math.floor(damage * damageMultiplier);
+                saveResult.damageReduction = damage - actualDamage;
+            }
+        }
+
+        // Apply the damage
+        const damageResult = this.applyDamage(combatant, actualDamage);
+
+        return {
+            ...damageResult,
+            originalDamage: damage,
+            saveResult
+        };
     }
 }

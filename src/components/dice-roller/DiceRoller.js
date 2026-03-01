@@ -9,8 +9,8 @@
  * - Opens in minimal browser window (no menubar/toolbar)
  * - Rainbow-colored dice buttons (d4-d100)
  * - Number inputs for multiplier and modifier
- * - Roll history with timestamps (max 25 rolls)
- * - Session storage persistence
+ * - Roll history with timestamps (max 30 rolls)
+ * - LocalStorage persistence (history survives window close/reopen)
  * - Auto-roll support for stat block dice notation
  *
  * Integration:
@@ -19,7 +19,7 @@
  * - See: dice-roller.html for standalone implementation
  *
  * @component DiceRoller
- * @version 2.1.0
+ * @version 2.2.0
  * @example
  * // Open dice roller window
  * DiceRoller.show();

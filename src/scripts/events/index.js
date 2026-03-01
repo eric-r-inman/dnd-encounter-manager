@@ -17,12 +17,14 @@ import { CombatEvents } from './combat-events.js';
 import { KeyboardEvents } from './keyboard-events.js';
 import { InlineEditEvents } from './inline-edit-events.js';
 import { InitiativeEvents } from './initiative-events.js';
+import { InitiativeManagerEvents } from './initiative-manager-events.js';
 import { EncounterEvents } from './encounter-events.js';
 import { ImportExportEvents } from './import-export-events.js';
 import { CreatureHandlers } from './creature-handlers.js';
 import { ImportExportHandlers } from './import-export-handlers.js';
 import { RecentItems } from './recent-items.js';
 import { DiceRollerEvents } from './dice-roller-events.js';
+import { AutoRollEvents } from './auto-roll-events.js';
 import { DiceRoller } from '../../components/dice-roller/DiceRoller.js';
 import { DiceLinkConverter } from '../utils/dice-link-converter.js';
 import { StateManager } from '../state-manager.js';
@@ -35,6 +37,7 @@ import { STORAGE_KEYS, MODAL_NAMES, TIMING } from '../constants.js';
 import { returnToCompendiumAfterCancel } from '../utils/modal-utils.js';
 import { StatBlockParser } from '../parsers/stat-block-parser.js';
 import { CreatureService } from '../services/creature-service.js';
+import { validateCreatureSelected, validateCombatantsSelected, validateRequired, validateDiceFormula } from '../utils/validators.js';
 
 export class EventCoordinator {
     // Debounce timer for placeholder editing
@@ -159,6 +162,8 @@ export class EventCoordinator {
                 CreatureHandlers.handleSearchCreatures(target, event);
             } else if (action === 'edit-placeholder-line') {
                 this.handleEditPlaceholderLine(target);
+            } else if (action === 'edit-flying-height') {
+                this.handleEditFlyingHeight(target);
             }
         });
 
@@ -251,8 +256,20 @@ export class EventCoordinator {
             case 'batch-effect':
                 this.handleBatchEffect(target);
                 break;
+            case 'batch-note':
+                this.handleBatchNote(target);
+                break;
+            case 'batch-auto-roll':
+                this.handleBatchAutoRoll(target);
+                break;
             case 'clear-note':
                 this.handleClearNote(target);
+                break;
+            case 'open-auto-roll-modal':
+                AutoRollEvents.handleOpenAutoRollModal(target);
+                break;
+            case 'clear-auto-roll':
+                AutoRollEvents.handleClearAutoRoll(target);
                 break;
             case 'toggle-concentration-status':
                 this.handleToggleConcentration(target);
@@ -262,6 +279,30 @@ export class EventCoordinator {
                 break;
             case 'toggle-flying-status':
                 this.handleToggleFlying(target);
+                break;
+            case 'edit-flying-height':
+                this.handleEditFlyingHeight(target);
+                break;
+            case 'increment-flying-height':
+                this.handleIncrementFlyingHeight(target);
+                break;
+            case 'decrement-flying-height':
+                this.handleDecrementFlyingHeight(target);
+                break;
+            case 'apply-falling-damage':
+                this.handleApplyFallingDamage(target);
+                break;
+            case 'roll-ability-check':
+                this.handleRollAbilityCheck(target);
+                break;
+            case 'roll-saving-throw':
+                this.handleRollSavingThrow(target);
+                break;
+            case 'roll-skill-check':
+                this.handleRollSkillCheck(target);
+                break;
+            case 'roll-creature-initiative':
+                this.handleRollCreatureInitiative(target);
                 break;
             case 'toggle-death-save':
                 this.handleToggleDeathSave(target);
@@ -401,6 +442,24 @@ export class EventCoordinator {
             case 'roll-quick-initiative':
                 InitiativeEvents.rollQuickInitiative(target);
                 break;
+            case 'quick-sort-encounter':
+                InitiativeManagerEvents.handleQuickSortEncounter();
+                break;
+            case 'roll-init-single':
+                this.handleRollInitSingle();
+                break;
+            case 'roll-init-all':
+                InitiativeManagerEvents.handleRollInitiativeAll();
+                break;
+            case 'roll-init-selected':
+                InitiativeManagerEvents.handleRollInitiativeSelected();
+                break;
+            case 'apply-custom-init-single':
+                this.handleApplyCustomInitSingle();
+                break;
+            case 'apply-custom-init-selected':
+                this.handleApplyCustomInitSelected();
+                break;
             default:
                 console.warn('Unhandled action:', action);
         }
@@ -434,7 +493,7 @@ export class EventCoordinator {
     static handleAddPlaceholder() {
         if (DataServices.combatantManager) {
             DataServices.combatantManager.addPlaceholder();
-            ToastSystem.show('Added placeholder', 'success', 2000);
+            ToastSystem.show('Added placeholder', 'success', TIMING.TOAST_SHORT);
         }
     }
 
@@ -449,7 +508,7 @@ export class EventCoordinator {
 
         const selectedType = form.querySelector('input[name="creature-type"]:checked')?.value;
         if (!selectedType) {
-            ToastSystem.show('Please select a creature type', 'warning', 2000);
+            ToastSystem.show('Please select a creature type', 'warning', TIMING.TOAST_SHORT);
             return;
         }
 
@@ -520,16 +579,13 @@ export class EventCoordinator {
         if (!modal) return;
 
         const creatureId = modal.getAttribute('data-selected-creature-id');
-        if (!creatureId) {
-            ToastSystem.show('Please select a creature first', 'warning', 2000);
-            return;
-        }
+        if (!validateCreatureSelected(creatureId)) return;
 
         // Get creature from CreatureService
         const creature = await CreatureService.getCreature(creatureId);
 
         if (!creature) {
-            ToastSystem.show('Creature not found', 'error', 2000);
+            ToastSystem.show('Creature not found', 'error', TIMING.TOAST_SHORT);
             return;
         }
 
@@ -544,7 +600,7 @@ export class EventCoordinator {
             const success = await CreatureService.deleteCreature(creatureId);
 
             if (!success) {
-                ToastSystem.show('Failed to delete creature', 'error', 3000);
+                ToastSystem.show('Failed to delete creature', 'error', TIMING.TOAST_LONG);
                 return;
             }
 
@@ -553,7 +609,7 @@ export class EventCoordinator {
                 await DataServices.combatantManager.loadCreatureDatabase();
             }
 
-            ToastSystem.show(`Deleted: ${creature.name}`, 'success', 2000);
+            ToastSystem.show(`Deleted: ${creature.name}`, 'success', TIMING.TOAST_SHORT);
             console.log(`✅ Deleted creature: ${creature.name}`);
 
             // Refresh the compendium to show updated list
@@ -575,7 +631,7 @@ export class EventCoordinator {
 
         } catch (error) {
             console.error('❌ Error deleting creature:', error);
-            ToastSystem.show('Failed to delete creature: ' + error.message, 'error', 3000);
+            ToastSystem.show('Failed to delete creature: ' + error.message, 'error', TIMING.TOAST_LONG);
         }
     }
 
@@ -588,17 +644,14 @@ export class EventCoordinator {
         if (!modal) return;
 
         const creatureId = modal.getAttribute('data-selected-creature-id');
-        if (!creatureId) {
-            ToastSystem.show('Please select a creature first', 'warning', 2000);
-            return;
-        }
+        if (!validateCreatureSelected(creatureId)) return;
 
         // Get creature from consolidated database
         const allCreatures = DataServices.combatantManager?.creatureDatabase || [];
         const creature = allCreatures.find(c => c.id === creatureId);
 
         if (!creature) {
-            ToastSystem.show('Creature not found', 'error', 2000);
+            ToastSystem.show('Creature not found', 'error', TIMING.TOAST_SHORT);
             return;
         }
 
@@ -641,7 +694,7 @@ export class EventCoordinator {
                 await DataServices.combatantManager.loadCreatureDatabase();
             }
 
-            ToastSystem.show(`Duplicated: ${duplicate.name}`, 'success', 2000);
+            ToastSystem.show(`Duplicated: ${duplicate.name}`, 'success', TIMING.TOAST_SHORT);
             console.log(`✅ Duplicated creature: ${creature.name} → ${duplicate.name}`);
 
             // Refresh the compendium
@@ -658,7 +711,7 @@ export class EventCoordinator {
 
         } catch (error) {
             console.error('❌ Error duplicating creature:', error);
-            ToastSystem.show('Failed to duplicate creature: ' + error.message, 'error', 3000);
+            ToastSystem.show('Failed to duplicate creature: ' + error.message, 'error', TIMING.TOAST_LONG);
         }
     }
 
@@ -718,7 +771,7 @@ export class EventCoordinator {
             `${combatant.name} is now holding an action` :
             `${combatant.name} is no longer holding an action`;
 
-        ToastSystem.show(message, 'info', 2000);
+        ToastSystem.show(message, 'info', TIMING.TOAST_SHORT);
 
         // Update combat header if this is the active combatant
         if (combatant.status.isActive) {
@@ -797,7 +850,7 @@ export class EventCoordinator {
         // Set this combatant as active
         DataServices.combatantManager.updateCombatant(combatantId, 'status.isActive', true);
 
-        ToastSystem.show(`${combatant.name} is now the active combatant`, 'success', 2000);
+        ToastSystem.show(`${combatant.name} is now the active combatant`, 'success', TIMING.TOAST_SHORT);
 
         // Update combat header to reflect the new active combatant
         CombatEvents.updateCombatHeader();
@@ -830,11 +883,11 @@ export class EventCoordinator {
             // Remove the combatant using CombatantManager
             DataServices.combatantManager.removeCombatant(combatantId);
 
-            ToastSystem.show(`Removed ${combatant.name} from encounter`, 'success', 3000);
+            ToastSystem.show(`Removed ${combatant.name} from encounter`, 'success', TIMING.TOAST_LONG);
             console.log(`✅ Removed combatant: ${combatant.name} (${combatantId})`);
         } catch (error) {
             console.error('❌ Error removing combatant:', error);
-            ToastSystem.show('Failed to remove combatant: ' + error.message, 'error', 4000);
+            ToastSystem.show('Failed to remove combatant: ' + error.message, 'error', TIMING.TOAST_EXTRA_LONG);
         }
     }
 
@@ -857,19 +910,17 @@ export class EventCoordinator {
         const condition = formData.get('condition');
         const turns = formData.get('turns');
         const note = formData.get('note')?.trim() || '';
+        const expiresAt = formData.get('expiresAt') || 'start'; // 'start' or 'end'
 
         // Validation
         if (!condition) {
-            ToastSystem.show('Please select a condition', 'error', 2000);
+            ToastSystem.show('Please select a condition', 'error', TIMING.TOAST_SHORT);
             return;
         }
 
         // Get selected combatants
         const selectedCombatants = this.getSelectedCombatants();
-        if (selectedCombatants.length === 0) {
-            ToastSystem.show('No combatants selected', 'warning', 2000);
-            return;
-        }
+        if (!validateCombatantsSelected(selectedCombatants)) return;
 
         // Apply condition to all selected combatants
         let successCount = 0;
@@ -878,8 +929,15 @@ export class EventCoordinator {
             const conditionObj = {
                 name: condition,
                 duration: turns === 'infinite' ? 'infinite' : parseInt(turns) || 1,
-                note: note
+                note: note,
+                expiresAt: expiresAt // 'start' = beginning of turn, 'end' = end of turn
             };
+
+            // Special case: If this condition expires at "end" and is being applied to the active combatant,
+            // set a flag to skip the first end-of-turn decrement (so it expires at the end of their NEXT turn)
+            if (expiresAt === 'end' && combatant.status.isActive) {
+                conditionObj.skipNextEndDecrement = true;
+            }
 
             // Check if condition already exists
             const existingIndex = combatant.conditions.findIndex(c => c.name === condition);
@@ -900,7 +958,7 @@ export class EventCoordinator {
         ModalSystem.hideAll();
 
         // Show success message
-        ToastSystem.show(`Applied ${condition} to ${successCount} combatant${successCount !== 1 ? 's' : ''}`, 'success', 3000);
+        ToastSystem.show(`Applied ${condition} to ${successCount} combatant${successCount !== 1 ? 's' : ''}`, 'success', TIMING.TOAST_LONG);
 
         // Update combat header if any of the selected are active
         const hasActiveCombatant = selectedCombatants.some(c => c.status.isActive);
@@ -929,16 +987,13 @@ export class EventCoordinator {
 
         // Validation
         if (!effectName) {
-            ToastSystem.show('Please enter or select an effect', 'error', 2000);
+            ToastSystem.show('Please enter or select an effect', 'error', TIMING.TOAST_SHORT);
             return;
         }
 
         // Get selected combatants
         const selectedCombatants = this.getSelectedCombatants();
-        if (selectedCombatants.length === 0) {
-            ToastSystem.show('No combatants selected', 'warning', 2000);
-            return;
-        }
+        if (!validateCombatantsSelected(selectedCombatants)) return;
 
         // Apply effect to all selected combatants
         let successCount = 0;
@@ -979,13 +1034,105 @@ export class EventCoordinator {
         ModalSystem.hideAll();
 
         // Show success message
-        ToastSystem.show(`Applied ${effectName} to ${successCount} combatant${successCount !== 1 ? 's' : ''}`, 'success', 3000);
+        ToastSystem.show(`Applied ${effectName} to ${successCount} combatant${successCount !== 1 ? 's' : ''}`, 'success', TIMING.TOAST_LONG);
 
         // Update combat header if any of the selected are active
         const hasActiveCombatant = selectedCombatants.some(c => c.status.isActive);
         if (hasActiveCombatant) {
             CombatEvents.updateCombatHeader();
         }
+    }
+
+    /**
+     * Handle batch note application to selected combatants
+     * @param {HTMLElement} target - The batch button that was clicked
+     */
+    static handleBatchNote(target) {
+        const modal = target.closest('.modal-overlay');
+        if (!modal) return;
+
+        // Get form data
+        const form = modal.querySelector('form');
+        const formData = new FormData(form);
+
+        const noteText = formData.get('noteText')?.trim() || '';
+
+        // Validation
+        if (!noteText) {
+            ToastSystem.show('Please enter a note', 'error', TIMING.TOAST_SHORT);
+            return;
+        }
+
+        // Get selected combatants
+        const selectedCombatants = this.getSelectedCombatants();
+        if (!validateCombatantsSelected(selectedCombatants)) return;
+
+        // Apply note to all selected combatants
+        let successCount = 0;
+        selectedCombatants.forEach(combatant => {
+            DataServices.combatantManager.updateCombatant(combatant.id, 'notes', noteText);
+            successCount++;
+        });
+
+        // Add to recent notes for future use
+        RecentItems.addToRecentNotes(noteText);
+
+        // Close modal
+        ModalSystem.hideAll();
+
+        // Show success message
+        ToastSystem.show(`Applied note to ${successCount} combatant${successCount !== 1 ? 's' : ''}`, 'success', TIMING.TOAST_LONG);
+    }
+
+    /**
+     * Handle batch auto-roll application to selected combatants
+     * @param {HTMLElement} target - The batch button that was clicked
+     */
+    static handleBatchAutoRoll(target) {
+        const modal = target.closest('.modal-overlay');
+        if (!modal) return;
+
+        // Get form data
+        const form = modal.querySelector('form');
+        const formData = new FormData(form);
+
+        const formula = formData.get('formula');
+        const trigger = formData.get('trigger');
+
+        // Validate formula
+        if (!validateDiceFormula(formula)) return;
+
+        // Additional validation using AutoRollEvents
+        import('./auto-roll-events.js').then(module => {
+            if (!module.AutoRollEvents.validateDiceFormula(formula)) {
+                return;
+            }
+
+            // Get selected combatants
+            const selectedCombatants = this.getSelectedCombatants();
+            if (selectedCombatants.length === 0) {
+                ToastSystem.show('No combatants selected', 'warning', TIMING.TOAST_SHORT);
+                return;
+            }
+
+            // Apply auto-roll to all selected combatants
+            let successCount = 0;
+            selectedCombatants.forEach(combatant => {
+                combatant.autoRoll = {
+                    formula: formula,
+                    trigger: trigger,
+                    lastResult: null
+                };
+                combatant.update();
+                successCount++;
+            });
+
+            // Close modal
+            ModalSystem.hideAll();
+
+            // Show success message
+            ToastSystem.show(`Applied auto-roll to ${successCount} combatant${successCount !== 1 ? 's' : ''}`, 'success', TIMING.TOAST_LONG);
+        });
     }
 
     static handleClearNote(target) {
@@ -1003,7 +1150,7 @@ export class EventCoordinator {
         // Clear the note
         DataServices.combatantManager.updateCombatant(combatantId, 'notes', '');
 
-        ToastSystem.show(`Note cleared for ${combatant.name}`, 'success', 2000);
+        ToastSystem.show(`Note cleared for ${combatant.name}`, 'success', TIMING.TOAST_SHORT);
 
         // Re-render to update the display
         DataServices.combatantManager.renderAll();
@@ -1020,6 +1167,172 @@ export class EventCoordinator {
     static handleToggleFlying(target) {
         CombatantEvents.handleToggleFlying(target);
     }
+
+    static handleEditFlyingHeight(target) {
+        CombatantEvents.handleEditFlyingHeight(target);
+    }
+
+    static handleIncrementFlyingHeight(target) {
+        CombatantEvents.handleIncrementFlyingHeight(target);
+    }
+
+    static handleDecrementFlyingHeight(target) {
+        CombatantEvents.handleDecrementFlyingHeight(target);
+    }
+
+    static handleApplyFallingDamage(target) {
+        CombatantEvents.handleApplyFallingDamage(target);
+    }
+
+    /**
+     * Handle ability check roll from stat block
+     * @param {HTMLElement} target - The ability score cell that was clicked
+     */
+    static handleRollAbilityCheck(target) {
+        const ability = target.getAttribute('data-ability');
+        const modifier = parseInt(target.getAttribute('data-modifier')) || 0;
+
+        // Format ability name for display
+        const abilityNames = {
+            'str': 'Strength',
+            'dex': 'Dexterity',
+            'con': 'Constitution',
+            'int': 'Intelligence',
+            'wis': 'Wisdom',
+            'cha': 'Charisma'
+        };
+        const abilityName = abilityNames[ability] || ability.toUpperCase();
+
+        // Import DiceRoller and open window with automatic 1d20 + modifier roll
+        import('../../components/dice-roller/DiceRoller.js').then(module => {
+            const DiceRoller = module.DiceRoller;
+
+            // Open dice roller and execute 1d20 + modifier roll
+            DiceRoller.showAndRoll({
+                multiplier: 1,
+                diceType: 20,
+                modifier: modifier,
+                damageType: `${abilityName} Check`,
+                formula: `1d20${modifier >= 0 ? '+' : ''}${modifier}`
+            });
+
+            console.log(`🎲 Rolling ${abilityName} check: 1d20${modifier >= 0 ? '+' : ''}${modifier}`);
+        });
+    }
+
+    /**
+     * Handle saving throw roll from stat block
+     * @param {HTMLElement} target - The saving throw cell that was clicked
+     */
+    static handleRollSavingThrow(target) {
+        const ability = target.getAttribute('data-ability');
+        const modifier = parseInt(target.getAttribute('data-modifier')) || 0;
+
+        // Format ability name for display
+        const abilityNames = {
+            'str': 'Strength',
+            'dex': 'Dexterity',
+            'con': 'Constitution',
+            'int': 'Intelligence',
+            'wis': 'Wisdom',
+            'cha': 'Charisma'
+        };
+        const abilityName = abilityNames[ability] || ability.toUpperCase();
+
+        // Import DiceRoller and open window with automatic 1d20 + modifier roll
+        import('../../components/dice-roller/DiceRoller.js').then(module => {
+            const DiceRoller = module.DiceRoller;
+
+            // Open dice roller and execute 1d20 + modifier roll
+            DiceRoller.showAndRoll({
+                multiplier: 1,
+                diceType: 20,
+                modifier: modifier,
+                damageType: `${abilityName} Save`,
+                formula: `1d20${modifier >= 0 ? '+' : ''}${modifier}`
+            });
+
+            console.log(`🎲 Rolling ${abilityName} save: 1d20${modifier >= 0 ? '+' : ''}${modifier}`);
+        });
+    }
+
+    /**
+     * Handle skill check roll from stat block
+     * @param {HTMLElement} target - The skill check cell that was clicked
+     */
+    static handleRollSkillCheck(target) {
+        const skill = target.getAttribute('data-skill');
+        const modifier = parseInt(target.getAttribute('data-modifier')) || 0;
+
+        // Import DiceRoller and open window with automatic 1d20 + modifier roll
+        import('../../components/dice-roller/DiceRoller.js').then(module => {
+            const DiceRoller = module.DiceRoller;
+
+            // Capitalize skill name for display
+            const skillName = skill.charAt(0).toUpperCase() + skill.slice(1);
+
+            // Open dice roller and execute 1d20 + modifier roll
+            DiceRoller.showAndRoll({
+                multiplier: 1,
+                diceType: 20,
+                modifier: modifier,
+                damageType: `${skillName}`,
+                formula: `1d20${modifier >= 0 ? '+' : ''}${modifier}`
+            });
+
+            console.log(`🎲 Rolling ${skillName} check: 1d20${modifier >= 0 ? '+' : ''}${modifier}`);
+        });
+    }
+
+    /**
+     * Handle initiative roll from stat block
+     * @param {HTMLElement} target - The initiative cell that was clicked
+     */
+    static handleRollCreatureInitiative(target) {
+        const creatureId = target.getAttribute('data-creature-id');
+        const modifier = parseInt(target.getAttribute('data-modifier')) || 0;
+
+        if (!creatureId) {
+            ToastSystem.show('Creature ID not found', 'error', TIMING.TOAST_SHORT);
+            return;
+        }
+
+        // Check if this creature is in the encounter
+        const allCombatants = DataServices.combatantManager.getAllCombatants();
+        const combatant = allCombatants.find(c => c.creatureId === creatureId);
+
+        if (!combatant) {
+            ToastSystem.show('This creature is not in the encounter', 'warning', 2500);
+            return;
+        }
+
+        // Roll initiative: 1d20 + modifier
+        const roll = Math.floor(Math.random() * 20) + 1;
+        const total = roll + modifier;
+
+        // Update combatant initiative
+        DataServices.combatantManager.updateCombatant(combatant.id, 'initiative', total);
+
+        // Sort and render
+        DataServices.combatantManager.sortCombatants();
+        DataServices.combatantManager.renderAll();
+
+        // Show result
+        ToastSystem.show(
+            `${combatant.name}: ${roll} (d20) + ${modifier} (INIT) = ${total}`,
+            'success',
+            3000
+        );
+
+        // Close the creature database modal if it's open
+        const modal = document.querySelector('[data-modal="creature-database"]');
+        if (modal && modal.style.display !== 'none') {
+            ModalSystem.hide('creature-database');
+        }
+
+        console.log(`🎲 Rolled initiative for ${combatant.name}: 1d20${modifier >= 0 ? '+' : ''}${modifier} = ${total}`);
+    }
+
     static handleToggleDeathSave(target) {
         CombatantEvents.handleToggleDeathSave(target);
     }
@@ -1042,6 +1355,58 @@ export class EventCoordinator {
      */
     static handleQuickInitiative(initiativeDisplay) {
         InitiativeEvents.openQuickInitiativeModal(initiativeDisplay);
+    }
+
+    /**
+     * Handle roll initiative for single combatant
+     */
+    static handleRollInitSingle() {
+        const modal = document.querySelector('[data-modal="quick-initiative"]');
+        if (!modal) return;
+
+        const hiddenField = modal.querySelector('#quick-init-combatant-id');
+        const combatantId = hiddenField?.value;
+
+        if (!combatantId) {
+            ToastSystem.show('No combatant selected', 'error', TIMING.TOAST_SHORT);
+            return;
+        }
+
+        InitiativeManagerEvents.handleRollInitiativeSingle(combatantId);
+    }
+
+    /**
+     * Handle apply custom initiative for single combatant
+     */
+    static handleApplyCustomInitSingle() {
+        const modal = document.querySelector('[data-modal="quick-initiative"]');
+        if (!modal) return;
+
+        const hiddenField = modal.querySelector('#quick-init-combatant-id');
+        const combatantId = hiddenField?.value;
+
+        const customField = modal.querySelector('#custom-initiative-value');
+        const customValue = customField?.value;
+
+        if (!combatantId) {
+            ToastSystem.show('No combatant selected', 'error', TIMING.TOAST_SHORT);
+            return;
+        }
+
+        InitiativeManagerEvents.handleApplyCustomInitiativeSingle(combatantId, customValue);
+    }
+
+    /**
+     * Handle apply custom initiative for selected combatants
+     */
+    static handleApplyCustomInitSelected() {
+        const modal = document.querySelector('[data-modal="quick-initiative"]');
+        if (!modal) return;
+
+        const customField = modal.querySelector('#custom-initiative-value');
+        const customValue = customField?.value;
+
+        InitiativeManagerEvents.handleApplyCustomInitiativeSelected(customValue);
     }
 
     static handleClearCondition(target) {
@@ -1071,7 +1436,7 @@ export class EventCoordinator {
         combatant.timer = null;
         DataServices.combatantManager.updateCombatant(combatantId, 'timer', null);
 
-        ToastSystem.show(`Timer cleared for ${combatant.name}`, 'success', 2000);
+        ToastSystem.show(`Timer cleared for ${combatant.name}`, 'success', TIMING.TOAST_SHORT);
 
         // Update combat header if this is the active combatant
         if (combatant.status.isActive) {
@@ -1089,7 +1454,7 @@ export class EventCoordinator {
         const creatureType = document.getElementById('stat-block-creature-type')?.value || 'enemy';
 
         if (!statBlockText || statBlockText.trim() === '') {
-            ToastSystem.show('Please paste a stat block first', 'warning', 2000);
+            ToastSystem.show('Please paste a stat block first', 'warning', TIMING.TOAST_SHORT);
             return;
         }
 
@@ -1115,7 +1480,7 @@ export class EventCoordinator {
             const errorDiv = document.getElementById('stat-block-errors');
             if (errorDiv) errorDiv.style.display = 'none';
 
-            ToastSystem.show('Stat block parsed successfully!', 'success', 2000);
+            ToastSystem.show('Stat block parsed successfully!', 'success', TIMING.TOAST_SHORT);
         } catch (error) {
             console.error('Error parsing stat block:', error);
 
@@ -1126,7 +1491,7 @@ export class EventCoordinator {
                 errorDiv.style.display = 'block';
             }
 
-            ToastSystem.show('Failed to parse stat block', 'error', 3000);
+            ToastSystem.show('Failed to parse stat block', 'error', TIMING.TOAST_LONG);
         }
     }
 
@@ -1332,7 +1697,7 @@ export class EventCoordinator {
             ToastSystem.show(`Rolling ${formula}${damageType}`, 'info', 1500);
         } catch (error) {
             console.error('Failed to roll dice from stat block:', error);
-            ToastSystem.show('Failed to execute roll', 'error', 2000);
+            ToastSystem.show('Failed to execute roll', 'error', TIMING.TOAST_SHORT);
         }
     }
 
@@ -1371,7 +1736,7 @@ export class EventCoordinator {
             input.click();
         } catch (error) {
             console.error('❌ Error importing creature database:', error);
-            ToastSystem.show('Failed to import database: ' + error.message, 'error', 3000);
+            ToastSystem.show('Failed to import database: ' + error.message, 'error', TIMING.TOAST_LONG);
         }
     }
 
@@ -1391,7 +1756,7 @@ export class EventCoordinator {
             }
         } catch (error) {
             console.error('❌ Error exporting creature database:', error);
-            ToastSystem.show('Failed to export database: ' + error.message, 'error', 3000);
+            ToastSystem.show('Failed to export database: ' + error.message, 'error', TIMING.TOAST_LONG);
         }
     }
 
@@ -1417,7 +1782,7 @@ export class EventCoordinator {
             }
         } catch (error) {
             console.error('❌ Error resetting creature database:', error);
-            ToastSystem.show('Failed to reset database: ' + error.message, 'error', 3000);
+            ToastSystem.show('Failed to reset database: ' + error.message, 'error', TIMING.TOAST_LONG);
         }
     }
 }

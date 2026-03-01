@@ -13,6 +13,8 @@ import { ToastSystem } from '../../components/toast/ToastSystem.js';
 import { ModalSystem } from '../../components/modals/ModalSystem.js';
 import { DataServices } from '../data-services.js';
 import { CombatEvents } from './combat-events.js';
+import { getInitiativeModifier } from '../utils/initiative-utils.js';
+import { TIMING } from '../constants.js';
 
 export class InitiativeEvents {
     /**
@@ -90,7 +92,7 @@ export class InitiativeEvents {
             combatantsToRoll = allCombatants.filter(c => c.isSelected);
 
             if (combatantsToRoll.length === 0) {
-                ToastSystem.show('No creatures selected', 'warning', 2000);
+                ToastSystem.show('No creatures selected', 'warning', TIMING.TOAST_SHORT);
                 return;
             }
         } else {
@@ -131,8 +133,8 @@ export class InitiativeEvents {
         const results = [];
 
         combatants.forEach(combatant => {
-            // Get initiative modifier from creature
-            const initiativeModifier = this._getDexModifier(combatant);
+            // Get initiative modifier from creature using shared utility
+            const initiativeModifier = getInitiativeModifier(combatant, DataServices.combatantManager.creatureDatabase);
 
             // Roll d20
             const d20Roll = Math.floor(Math.random() * 20) + 1;
@@ -156,29 +158,6 @@ export class InitiativeEvents {
     }
 
     /**
-     * Get initiative modifier for a combatant
-     * Prefers statBlock.initiative.modifier if available, otherwise uses DEX modifier
-     * @param {Object} combatant - The combatant
-     * @returns {number} Initiative modifier
-     * @private
-     */
-    static _getDexModifier(combatant) {
-        const creature = DataServices.combatantManager.creatureDatabase.find(c => c.id === combatant.creatureId);
-
-        // Use statBlock.initiative.modifier if available (includes DEX + any bonuses)
-        if (creature?.statBlock?.initiative?.modifier !== undefined) {
-            return creature.statBlock.initiative.modifier;
-        }
-
-        // Otherwise fall back to DEX modifier
-        if (creature?.statBlock?.abilities?.dex?.modifier !== undefined) {
-            return creature.statBlock.abilities.dex.modifier;
-        }
-
-        return 0;
-    }
-
-    /**
      * Display roll results to user
      * @param {Array} results - Array of roll results
      * @private
@@ -190,14 +169,14 @@ export class InitiativeEvents {
             ToastSystem.show(
                 `${r.name}: ${r.roll} (d20) + ${r.initMod} (INIT)${modText} = ${r.total}`,
                 'success',
-                3000
+                TIMING.TOAST_LONG
             );
         } else {
             const summary = results.map(r => `${r.name}: ${r.total}`).join(', ');
             ToastSystem.show(
                 `Rolled initiative for ${results.length} creatures: ${summary}`,
                 'success',
-                4000
+                TIMING.TOAST_EXTRA_LONG
             );
         }
     }

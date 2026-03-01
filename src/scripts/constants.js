@@ -64,6 +64,7 @@ export const TIMING = {
     // Toast notification durations
     TOAST_SHORT: 2000,
     TOAST_LONG: 3000,
+    TOAST_EXTRA_LONG: 4000,
 
     // Animation and debounce delays
     ANIMATION_DURATION: 300,
@@ -225,4 +226,25 @@ export const UI = {
         WARNING: 'warning',
         INFO: 'info'
     }
+};
+
+// ============================================================================
+// Game Mechanics Constants
+// ============================================================================
+
+/**
+ * Initiative value constraints
+ */
+export const INITIATIVE_CONSTRAINTS = {
+    MIN: 0,
+    MAX: 99
+};
+
+/**
+ * Flying height constraints and increment
+ */
+export const FLYING_HEIGHT = {
+    MIN: 0,
+    MAX: 999,
+    INCREMENT: 5
 };

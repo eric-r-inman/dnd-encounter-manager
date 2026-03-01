@@ -491,6 +491,46 @@
     padding: var(--spacing-md);
 }
 
+/* Save information in history */
+.hp-history-main-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.hp-history-save-info {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed var(--color-border-muted);
+    font-size: 0.85em;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.save-result {
+    font-weight: 600;
+}
+
+.save-result.save-success {
+    color: var(--color-success);
+}
+
+.save-result.save-failed {
+    color: var(--color-danger);
+}
+
+.save-roll-details {
+    color: var(--color-text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+}
+
+.save-reduction {
+    color: var(--color-info);
+    font-weight: 500;
+}
+
 /* Batch selection tooltip */
 .batch-tooltip {
     position: fixed;
@@ -1828,4 +1868,69 @@ select[name="actionType[]"] {
     margin-left: calc(var(--spacing-md) + var(--spacing-sm));
     color: var(--color-text-secondary);
     font-size: var(--font-size-sm);
+}
+
+/* =============================================================================
+ * INITIATIVE MODAL STYLES
+ * ============================================================================= */
+
+.modal-medium {
+    max-width: 600px;
+}
+
+.initiative-modal-body {
+    padding: var(--spacing-lg);
+}
+
+.initiative-section {
+    margin-bottom: var(--spacing-xl);
+    padding-bottom: var(--spacing-lg);
+    border-bottom: 1px solid var(--color-border-muted);
+}
+
+.initiative-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.section-heading {
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-warning);
+    margin: 0 0 var(--spacing-md) 0;
+    text-align: center;
+}
+
+.button-group-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.btn-block {
+    width: 100%;
+    justify-content: center;
+}
+
+.help-text {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    text-align: center;
+}
+
+/* Button styling for initiative actions */
+[data-action^="roll-init"],
+[data-action^="apply-custom-init"],
+[data-action="quick-sort-encounter"] {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+    transition: all var(--transition-fast);
+}
+
+[data-action^="roll-init"]:hover:not(:disabled),
+[data-action^="apply-custom-init"]:hover:not(:disabled),
+[data-action="quick-sort-encounter"]:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }

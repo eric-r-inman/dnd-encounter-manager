@@ -15,8 +15,15 @@ import { ModalSystem } from '../../components/modals/ModalSystem.js';
 import { DataServices } from '../data-services.js';
 import { TooltipEvents } from './tooltip-events.js';
 import { CombatEvents } from './combat-events.js';
+import { StateManager } from '../state-manager.js';
+import { FLYING_HEIGHT } from '../constants.js';
+import { updateAndRefreshActive } from '../utils/render-helpers.js';
 
 export class CombatantEvents {
+    // Debounce timer for flying height input
+    static flyingHeightDebounceTimer = null;
+    static FLYING_HEIGHT_SAVE_DELAY = 500; // 500ms delay after user stops typing
+
     /**
      * Handle batch selection toggle for combatants
      * @param {HTMLElement} target - The checkbox that was clicked
@@ -254,11 +261,232 @@ export class CombatantEvents {
         const newFlyingState = !combatant.status.flying;
         DataServices.combatantManager.updateCombatant(combatantId, 'status.flying', newFlyingState);
 
+        // If turning off flying, reset height to 0
+        if (!newFlyingState) {
+            DataServices.combatantManager.updateCombatant(combatantId, 'status.flyingHeight', 0);
+        }
+
         const message = newFlyingState ?
             `${combatant.name} is now flying` :
             `${combatant.name} is no longer flying`;
 
         ToastSystem.show(message, 'info', 2000);
+
+        // Update combat header if this is the active combatant
+        if (combatant.status.isActive) {
+            CombatEvents.updateCombatHeader();
+        }
+    }
+
+    /**
+     * Handle editing flying height for combatant
+     * @param {HTMLElement} target - The height input field
+     */
+    static handleEditFlyingHeight(target) {
+        const combatantCard = target.closest('[data-combatant-id]');
+        const combatantId = combatantCard?.getAttribute('data-combatant-id');
+
+        if (!combatantId) return;
+
+        const combatant = DataServices.combatantManager.getCombatant(combatantId);
+        if (!combatant) {
+            console.error('Combatant not found:', combatantId);
+            return;
+        }
+
+        // Get the raw value from input
+        const rawValue = target.value.trim();
+
+        // If empty, set height to 0 but don't update the field itself
+        if (rawValue === '') {
+            combatant.status.flyingHeight = 0;
+
+            // Clear any existing timer
+            if (this.flyingHeightDebounceTimer) {
+                clearTimeout(this.flyingHeightDebounceTimer);
+            }
+
+            // Debounce the save operation
+            this.flyingHeightDebounceTimer = setTimeout(() => {
+                DataServices.combatantManager.saveInstances();
+
+                // Update combat header if this is the active combatant
+                if (combatant.status.isActive) {
+                    CombatEvents.updateCombatHeader();
+                }
+            }, this.FLYING_HEIGHT_SAVE_DELAY);
+            return;
+        }
+
+        // Parse and validate the height value
+        let height = parseInt(rawValue);
+
+        // If not a valid number, don't update anything
+        if (isNaN(height)) {
+            return;
+        }
+
+        // Enforce min/max constraints
+        if (height < 0) height = 0;
+        if (height > 999) height = 999;
+
+        // Only update the input value if it was clamped
+        if (height !== parseInt(rawValue)) {
+            target.value = height;
+        }
+
+        // Update the combatant's data directly (without triggering re-render)
+        combatant.status.flyingHeight = height;
+
+        // Clear any existing timer
+        if (this.flyingHeightDebounceTimer) {
+            clearTimeout(this.flyingHeightDebounceTimer);
+        }
+
+        // Debounce the save operation to avoid excessive saves while typing
+        this.flyingHeightDebounceTimer = setTimeout(() => {
+            DataServices.combatantManager.saveInstances();
+
+            // Update combat header if this is the active combatant
+            if (combatant.status.isActive) {
+                CombatEvents.updateCombatHeader();
+            }
+        }, this.FLYING_HEIGHT_SAVE_DELAY);
+    }
+
+    /**
+     * Handle increment flying height button
+     * @param {HTMLElement} target - The increment button
+     */
+    static handleIncrementFlyingHeight(target) {
+        const combatantCard = target.closest('[data-combatant-id]');
+        const combatantId = combatantCard?.getAttribute('data-combatant-id');
+
+        if (!combatantId) return;
+
+        const combatant = DataServices.combatantManager.getCombatant(combatantId);
+        if (!combatant) {
+            console.error('Combatant not found:', combatantId);
+            return;
+        }
+
+        // Increment by defined step, max defined limit
+        let newHeight = (combatant.status.flyingHeight || 0) + FLYING_HEIGHT.INCREMENT;
+        if (newHeight > FLYING_HEIGHT.MAX) newHeight = FLYING_HEIGHT.MAX;
+
+        // Update combatant and refresh if active
+        updateAndRefreshActive(combatantId, 'status.flyingHeight', newHeight);
+    }
+
+    /**
+     * Handle decrement flying height button
+     * @param {HTMLElement} target - The decrement button
+     */
+    static handleDecrementFlyingHeight(target) {
+        const combatantCard = target.closest('[data-combatant-id]');
+        const combatantId = combatantCard?.getAttribute('data-combatant-id');
+
+        if (!combatantId) return;
+
+        const combatant = DataServices.combatantManager.getCombatant(combatantId);
+        if (!combatant) {
+            console.error('Combatant not found:', combatantId);
+            return;
+        }
+
+        // Decrement by defined step, min defined limit
+        let newHeight = (combatant.status.flyingHeight || 0) - FLYING_HEIGHT.INCREMENT;
+        if (newHeight < FLYING_HEIGHT.MIN) newHeight = FLYING_HEIGHT.MIN;
+
+        // Update combatant and refresh if active
+        updateAndRefreshActive(combatantId, 'status.flyingHeight', newHeight);
+    }
+
+    /**
+     * Handle applying falling damage to a flying combatant
+     * @param {HTMLElement} target - The falling damage button that was clicked
+     */
+    static handleApplyFallingDamage(target) {
+        const combatantCard = target.closest('[data-combatant-id]');
+        const combatantId = combatantCard?.getAttribute('data-combatant-id');
+
+        if (!combatantId) return;
+
+        const combatant = DataServices.combatantManager.getCombatant(combatantId);
+        if (!combatant) {
+            console.error('Combatant not found:', combatantId);
+            return;
+        }
+
+        // Get the flying height
+        const height = combatant.status.flyingHeight || 0;
+
+        if (height === 0) {
+            ToastSystem.show('No height to fall from', 'warning', 2000);
+            return;
+        }
+
+        // Show confirmation dialog
+        const confirmed = confirm('Apply falling damage?');
+        if (!confirmed) {
+            return;
+        }
+
+        // Calculate falling damage: 1d6 per 10 feet, max 20d6
+        const diceCount = Math.min(Math.floor(height / 10), 20);
+
+        if (diceCount === 0) {
+            ToastSystem.show('Height too low to cause falling damage', 'info', 2000);
+            return;
+        }
+
+        // Roll the dice
+        const rolls = [];
+        let totalDamage = 0;
+        for (let i = 0; i < diceCount; i++) {
+            const roll = Math.floor(Math.random() * 6) + 1;
+            rolls.push(roll);
+            totalDamage += roll;
+        }
+
+        // Apply damage to the combatant
+        const previousHP = combatant.currentHP;
+        const previousTempHP = combatant.tempHP;
+
+        // Damage temp HP first
+        let remainingDamage = totalDamage;
+        if (combatant.tempHP > 0) {
+            const tempHPDamage = Math.min(combatant.tempHP, remainingDamage);
+            combatant.tempHP -= tempHPDamage;
+            remainingDamage -= tempHPDamage;
+        }
+
+        // Then damage regular HP
+        if (remainingDamage > 0) {
+            combatant.currentHP = Math.max(0, combatant.currentHP - remainingDamage);
+        }
+
+        // Add to damage history with correct round number
+        const currentRound = StateManager.state.combat.round || 1;
+        combatant.addDamageHistory(totalDamage, currentRound);
+
+        // Update the combatant in the manager
+        DataServices.combatantManager.updateCombatant(combatantId, 'currentHP', combatant.currentHP);
+        DataServices.combatantManager.updateCombatant(combatantId, 'tempHP', combatant.tempHP);
+
+        // Turn off flying and reset height
+        DataServices.combatantManager.updateCombatant(combatantId, 'status.flying', false);
+        DataServices.combatantManager.updateCombatant(combatantId, 'status.flyingHeight', 0);
+
+        // Show detailed toast with damage breakdown
+        const rollsText = rolls.join(', ');
+        ToastSystem.show(
+            `${combatant.name} took ${totalDamage} falling damage (${diceCount}d6: ${rollsText}) from ${height}ft`,
+            'error',
+            5000
+        );
+
+        console.log(`💥 Falling damage: ${combatant.name} fell ${height}ft, rolled ${diceCount}d6 (${rollsText}) = ${totalDamage} damage`);
 
         // Update combat header if this is the active combatant
         if (combatant.status.isActive) {
@@ -371,6 +599,10 @@ export class CombatantEvents {
             case 'combatant-note':
                 batchBtn = modal.querySelector('#note-batch-apply-btn');
                 batchCount = modal.querySelector('#note-batch-count');
+                break;
+            case 'auto-roll':
+                batchBtn = modal.querySelector('#auto-roll-batch-apply-btn');
+                batchCount = modal.querySelector('#auto-roll-batch-count');
                 break;
         }
 

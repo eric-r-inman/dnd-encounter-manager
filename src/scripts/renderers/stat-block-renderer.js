@@ -115,7 +115,11 @@ function buildCoreStats(creature, statBlock, hasFullStatBlock) {
 
     // Initiative (show regardless of hasFullStatBlock, as long as data exists)
     if (statBlock?.initiative) {
-        html += `<p><strong>Initiative</strong> ${formatModifier(statBlock.initiative.modifier)}`;
+        html += `<p><strong>Initiative</strong> <span class="initiative-roll-cell"
+            data-action="roll-creature-initiative"
+            data-creature-id="${creature.id}"
+            data-modifier="${statBlock.initiative.modifier}"
+            title="Click to quick-roll initiative & sort">${formatModifier(statBlock.initiative.modifier)}</span>`;
         if (statBlock.initiative.total) html += ` (${statBlock.initiative.total})`;
         html += `</p>`;
     }
@@ -161,12 +165,12 @@ function buildAbilityScores(statBlock, hasFullStatBlock) {
             </thead>
             <tbody>
                 <tr>
-                    <td>${statBlock.abilities.str.score} (${formatModifier(statBlock.abilities.str.modifier)})</td>
-                    <td>${statBlock.abilities.dex.score} (${formatModifier(statBlock.abilities.dex.modifier)})</td>
-                    <td>${statBlock.abilities.con.score} (${formatModifier(statBlock.abilities.con.modifier)})</td>
-                    <td>${statBlock.abilities.int.score} (${formatModifier(statBlock.abilities.int.modifier)})</td>
-                    <td>${statBlock.abilities.wis.score} (${formatModifier(statBlock.abilities.wis.modifier)})</td>
-                    <td>${statBlock.abilities.cha.score} (${formatModifier(statBlock.abilities.cha.modifier)})</td>
+                    <td class="ability-score-cell" data-action="roll-ability-check" data-ability="str" data-modifier="${statBlock.abilities.str.modifier}" title="Click to roll 1d20${formatModifier(statBlock.abilities.str.modifier)}">${statBlock.abilities.str.score} (${formatModifier(statBlock.abilities.str.modifier)})</td>
+                    <td class="ability-score-cell" data-action="roll-ability-check" data-ability="dex" data-modifier="${statBlock.abilities.dex.modifier}" title="Click to roll 1d20${formatModifier(statBlock.abilities.dex.modifier)}">${statBlock.abilities.dex.score} (${formatModifier(statBlock.abilities.dex.modifier)})</td>
+                    <td class="ability-score-cell" data-action="roll-ability-check" data-ability="con" data-modifier="${statBlock.abilities.con.modifier}" title="Click to roll 1d20${formatModifier(statBlock.abilities.con.modifier)}">${statBlock.abilities.con.score} (${formatModifier(statBlock.abilities.con.modifier)})</td>
+                    <td class="ability-score-cell" data-action="roll-ability-check" data-ability="int" data-modifier="${statBlock.abilities.int.modifier}" title="Click to roll 1d20${formatModifier(statBlock.abilities.int.modifier)}">${statBlock.abilities.int.score} (${formatModifier(statBlock.abilities.int.modifier)})</td>
+                    <td class="ability-score-cell" data-action="roll-ability-check" data-ability="wis" data-modifier="${statBlock.abilities.wis.modifier}" title="Click to roll 1d20${formatModifier(statBlock.abilities.wis.modifier)}">${statBlock.abilities.wis.score} (${formatModifier(statBlock.abilities.wis.modifier)})</td>
+                    <td class="ability-score-cell" data-action="roll-ability-check" data-ability="cha" data-modifier="${statBlock.abilities.cha.modifier}" title="Click to roll 1d20${formatModifier(statBlock.abilities.cha.modifier)}">${statBlock.abilities.cha.score} (${formatModifier(statBlock.abilities.cha.modifier)})</td>
                 </tr>
             </tbody>
         </table>
@@ -186,7 +190,12 @@ function buildCombatStats(statBlock, creature, hasFullStatBlock) {
         const saves = [];
         for (const [ability, bonus] of Object.entries(statBlock.savingThrows)) {
             if (bonus !== null && bonus !== undefined) {
-                saves.push(`${ability.toUpperCase()} ${formatModifier(bonus)}`);
+                const saveHtml = `<span class="saving-throw-cell"
+                    data-action="roll-saving-throw"
+                    data-ability="${ability}"
+                    data-modifier="${bonus}"
+                    title="Click to roll 1d20${formatModifier(bonus)}">${ability.toUpperCase()} ${formatModifier(bonus)}</span>`;
+                saves.push(saveHtml);
             }
         }
         if (saves.length > 0) {
@@ -208,7 +217,12 @@ function buildCombatStats(statBlock, creature, hasFullStatBlock) {
                 skillName = skillName.charAt(0).toUpperCase() + skillName.slice(1);
             }
 
-            skills.push(`${skillName} ${formatModifier(bonus)}`);
+            const skillHtml = `<span class="skill-check-cell"
+                data-action="roll-skill-check"
+                data-skill="${skill}"
+                data-modifier="${bonus}"
+                title="Click to roll 1d20${formatModifier(bonus)}">${skillName} ${formatModifier(bonus)}</span>`;
+            skills.push(skillHtml);
         }
         html += `<p><strong>Skills</strong> ${skills.join(', ')}</p>`;
     }

@@ -98,6 +98,13 @@ export class CombatEvents {
         if (currentActiveCombatant) {
             this.processEndOfTurnEffects(currentActiveCombatant);
 
+            // Trigger end-of-turn auto-roll if configured
+            if (currentActiveCombatant.autoRoll && currentActiveCombatant.autoRoll.trigger === 'end') {
+                import('./auto-roll-events.js').then(module => {
+                    module.AutoRollEvents.triggerAutoRoll(currentActiveCombatant, 'end');
+                });
+            }
+
             // WHY: D&D 5e rule - Surprised condition lasts until the end of the creature's first turn
             if (currentActiveCombatant.status.surprised) {
                 DataServices.combatantManager.updateCombatant(currentActiveCombatant.id, 'status.surprised', false);
@@ -119,6 +126,13 @@ export class CombatEvents {
         // Some D&D effects expire "at the start of your turn" (e.g., Hunter's Mark concentration check)
         this.processTurnEffects(newActiveCombatant);
 
+        // Trigger start-of-turn auto-roll if configured
+        if (newActiveCombatant.autoRoll && newActiveCombatant.autoRoll.trigger === 'start') {
+            import('./auto-roll-events.js').then(module => {
+                module.AutoRollEvents.triggerAutoRoll(newActiveCombatant, 'start');
+            });
+        }
+
         // Update combat header
         this.updateCombatHeader();
 
@@ -129,7 +143,7 @@ export class CombatEvents {
      * Handle combat reset - restore all combatants to default stats
      */
     static handleResetCombat() {
-        if (!confirm('Reset combat? This will restore all combatants to full HP and clear all conditions, effects, and status flags.')) {
+        if (!confirm('Reset combat? This will restore all combatants to full HP and clear all conditions, effects, auto-rolls, and status flags.')) {
             return;
         }
 
@@ -156,6 +170,9 @@ export class CombatEvents {
 
             // Clear all effects
             DataServices.combatantManager.updateCombatant(combatant.id, 'effects', []);
+
+            // Clear auto-roll (turn-based dice roller)
+            DataServices.combatantManager.updateCombatant(combatant.id, 'autoRoll', null);
 
             // Clear HP history
             DataServices.combatantManager.updateCombatant(combatant.id, 'damageHistory', []);

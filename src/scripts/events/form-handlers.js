@@ -40,6 +40,11 @@ export class FormHandlers {
             case 'combatant-note':
                 this.handleNoteForm(form);
                 break;
+            case 'auto-roll':
+                import('./auto-roll-events.js').then(module => {
+                    module.AutoRollEvents.handleAutoRollForm(form);
+                });
+                break;
             case 'creature':
                 this.handleCreatureForm(form);
                 break;

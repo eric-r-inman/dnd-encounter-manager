@@ -3,24 +3,24 @@
  *
  * Handles dice roller state including:
  * - Selected dice type and multiplier/modifier
- * - Roll history with session storage persistence
+ * - Roll history with localStorage persistence (survives window close)
  * - Roll calculations for normal, advantage, and disadvantage
  *
  * State structure:
  * - selectedDiceType: number | null - Currently selected dice (d4, d6, etc.)
  * - multiplier: number - Number of dice to roll (1-20)
  * - modifier: number - Modifier to add to roll total (-20 to +20)
- * - rollHistory: Array - List of previous rolls (max 25)
+ * - rollHistory: Array - List of previous rolls (max 30, persists across sessions)
  *
  * @module DiceRollerState
- * @version 2.0.0
+ * @version 2.1.0
  */
 
 export class DiceRollerState {
     /** @type {number} Maximum number of history items to keep */
-    static MAX_HISTORY = 25;
+    static MAX_HISTORY = 30;
 
-    /** @type {string} SessionStorage key for roll history */
+    /** @type {string} LocalStorage key for roll history */
     static STORAGE_KEY = 'diceRollerHistory';
 
     /**
@@ -246,24 +246,24 @@ export class DiceRollerState {
     }
 
     /**
-     * Save roll history to session storage
+     * Save roll history to localStorage (persists across window closures)
      * @param {Array} history - Roll history array
      */
     static saveHistory(history) {
         try {
-            sessionStorage.setItem(this.STORAGE_KEY, JSON.stringify(history));
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(history));
         } catch (error) {
             console.error('Failed to save dice roller history:', error);
         }
     }
 
     /**
-     * Load roll history from session storage
+     * Load roll history from localStorage
      * @returns {Array} Loaded roll history or empty array
      */
     static loadHistory() {
         try {
-            const saved = sessionStorage.getItem(this.STORAGE_KEY);
+            const saved = localStorage.getItem(this.STORAGE_KEY);
             if (saved) {
                 return JSON.parse(saved);
             }

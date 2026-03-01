@@ -1,12 +1,14 @@
 /**
  * CombatantCard Component
- * 
+ *
  * Represents a single combatant in the initiative order.
  * Handles rendering, state management, and interactions for one combatant.
- * 
+ *
  * @class CombatantCard
  * @version 1.0.0
  */
+
+import { FLYING_HEIGHT } from '../../scripts/constants.js';
 
 export class CombatantCard {
     /**
@@ -23,7 +25,11 @@ export class CombatantCard {
         this.type = creatureData.type; // player, enemy, npc
         this.ac = creatureData.ac;
         this.maxHP = creatureData.maxHP;
-        
+
+        // Store creature abilities for saving throws
+        // If creature has a statBlock with abilities, use those; otherwise default to null
+        this.abilities = creatureData.statBlock?.abilities || null;
+
         // Instance-specific data with defaults
         this.initiative = instanceData.initiative ?? 1;
         this.currentHP = instanceData.currentHP ?? creatureData.maxHP;
@@ -40,6 +46,7 @@ export class CombatantCard {
             concentrationSpell: instanceData.status?.concentrationSpell || instanceData.concentrationSpell || '',
             hiding: instanceData.status?.hiding || instanceData.hiding || false,
             flying: instanceData.status?.flying || instanceData.flying || false,
+            flyingHeight: instanceData.status?.flyingHeight || instanceData.flyingHeight || 0, // Height in feet (0-999)
             cover: instanceData.status?.cover || instanceData.cover || 'none', // none, half, three-quarters, full
             surprised: instanceData.status?.surprised || instanceData.surprised || false
         };
@@ -64,7 +71,10 @@ export class CombatantCard {
         
         // Track if this card is selected for batch operations
         this.isSelected = false;
-        
+
+        // Auto-roll configuration
+        this.autoRoll = instanceData.autoRoll || null; // { formula: "1d20+5", trigger: "start"|"end", lastResult: null }
+
         // Bind methods to preserve context
         this.render = this.render.bind(this);
         this.update = this.update.bind(this);
@@ -84,6 +94,20 @@ export class CombatantCard {
             return 'bloodied';
         }
         return 'healthy';
+    }
+
+    /**
+     * Get ability modifier for a specific ability
+     * @param {string} ability - Ability name (str, dex, con, int, wis, cha)
+     * @returns {number} The ability modifier, or 0 if not found
+     */
+    getAbilityModifier(ability) {
+        // Check if abilities exist and has the requested ability
+        if (this.abilities && this.abilities[ability.toLowerCase()]) {
+            return this.abilities[ability.toLowerCase()].modifier || 0;
+        }
+        // Default to +0 if no ability data
+        return 0;
     }
     
     /**
@@ -256,13 +280,12 @@ export class CombatantCard {
         return `
             <div class="combatant-content">
                 <div class="${orderControlsClass}">
-                    <div class="batch-select-checkbox">
-                        <input type="checkbox" 
-                               id="select-${this.id}" 
-                               name="batch-select" 
+                    <div class="batch-select-checkbox" title="Shift-Click to select/deselect all">
+                        <input type="checkbox"
+                               id="select-${this.id}"
+                               name="batch-select"
                                value="${this.id}"
                                data-action="toggle-batch-select"
-                               title="Select for batch operations"
                                ${this.isSelected ? 'checked' : ''}>
                     </div>
                     <button class="order-btn order-up" data-action="move-combatant-up-initiative">↑</button>
@@ -312,6 +335,31 @@ export class CombatantCard {
                                     <span class="stealth-indicator" data-is-hiding="${this.status.hiding}" title="Click to toggle hiding" data-action="toggle-stealth-status">${this.status.hiding ? 'Hiding' : 'Not hiding'}</span>
                                     <span class="status-separator">|</span>
                                     <span class="flying-indicator" data-is-flying="${this.status.flying}" title="Click to toggle flying" data-action="toggle-flying-status">${this.status.flying ? 'Flying' : 'Not flying'}</span>
+                                    ${this.status.flying ? `
+                                        <span class="flying-height-controls">
+                                            <button class="flying-height-btn flying-height-down"
+                                                data-action="decrement-flying-height"
+                                                title="Decrease height by 5 ft"
+                                                type="button">▼</button>
+                                            <input type="number"
+                                                class="flying-height-input"
+                                                data-action="edit-flying-height"
+                                                value="${this.status.flyingHeight > 0 ? this.status.flyingHeight : ''}"
+                                                placeholder=""
+                                                min="${FLYING_HEIGHT.MIN}"
+                                                max="${FLYING_HEIGHT.MAX}"
+                                                title="Flying height in feet">
+                                            <button class="flying-height-btn flying-height-up"
+                                                data-action="increment-flying-height"
+                                                title="Increase height by 5 ft"
+                                                type="button">▲</button>
+                                            <span class="flying-height-unit">ft</span>
+                                            <button class="falling-damage-btn"
+                                                data-action="apply-falling-damage"
+                                                title="Apply falling damage"
+                                                type="button">↯</button>
+                                        </span>
+                                    ` : ''}
                                 </div>
                             </div>
                         </div>
@@ -332,9 +380,9 @@ export class CombatantCard {
                                     data-action="toggle-hold-action">
                                 ${this.status.holdAction ? '✊ Holding' : '✋ Hold'}
                             </button>
-                            <button class="btn btn-sm btn-secondary btn-icon" 
-                                    title="Add note" 
-                                    data-modal-show="combatant-note" 
+                            <button class="btn btn-sm btn-secondary btn-icon"
+                                    title="Add note"
+                                    data-modal-show="combatant-note"
                                     data-modal-target="${this.id}"
                                     data-note-type="general"
                                     style="padding: 0 8px; font-size: 14px;">📝</button>
@@ -342,6 +390,18 @@ export class CombatantCard {
                                 <span class="combatant-note-display">
                                     ${this.notes}
                                     <button class="note-clear" title="Clear note" data-action="clear-note">×</button>
+                                </span>
+                            ` : ''}
+                            <button class="btn btn-sm btn-secondary btn-icon"
+                                    title="Set auto-roll"
+                                    data-action="open-auto-roll-modal"
+                                    data-combatant-id="${this.id}"
+                                    style="padding: 0 8px; font-size: 14px;">🎲</button>
+                            ${this.autoRoll ? `
+                                <span class="auto-roll-display" id="auto-roll-${this.id}">
+                                    <span class="auto-roll-formula">${this.autoRoll.formula}</span>
+                                    ${this.autoRoll.lastResult ? `<span class="auto-roll-result animated-result">${this.autoRoll.lastResult}</span>` : ''}
+                                    <button class="auto-roll-clear" title="Clear auto-roll" data-action="clear-auto-roll">×</button>
                                 </span>
                             ` : ''}
                         </div>
@@ -486,9 +546,29 @@ export class CombatantCard {
      * Add an entry to damage history
      * @param {number} amount - Amount of damage
      * @param {number} round - Round number when damage occurred
+     * @param {Object} saveInfo - Optional save information
      */
-    addDamageHistory(amount, round) {
-        this.damageHistory.unshift({ amount, round, timestamp: Date.now() });
+    addDamageHistory(amount, round, saveInfo = null) {
+        const entry = {
+            amount,
+            round,
+            timestamp: Date.now()
+        };
+
+        // Add save information if provided
+        if (saveInfo) {
+            entry.saveInfo = {
+                success: saveInfo.success,
+                ability: saveInfo.ability,
+                roll: saveInfo.d20Roll,
+                modifier: saveInfo.modifier,
+                total: saveInfo.total,
+                dc: saveInfo.dc,
+                reduction: saveInfo.damageReduction || 0
+            };
+        }
+
+        this.damageHistory.unshift(entry);
         // Keep only the 5 most recent entries
         this.damageHistory = this.damageHistory.slice(0, 5);
     }

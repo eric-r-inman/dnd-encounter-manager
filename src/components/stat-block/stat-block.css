@@ -403,6 +403,60 @@
     border-bottom: 1px solid var(--color-border-muted);
 }
 
+/* Clickable ability score cells */
+.ability-score-cell {
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.ability-score-cell:hover {
+    background-color: var(--color-bg-hover);
+    color: var(--color-text-primary);
+    transform: scale(1.05);
+}
+
+/* Clickable saving throw cells */
+.saving-throw-cell {
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: all var(--transition-fast);
+}
+
+.saving-throw-cell:hover {
+    background-color: var(--color-bg-hover);
+    color: var(--color-text-primary);
+    text-decoration: underline;
+}
+
+/* Clickable skill check cells */
+.skill-check-cell {
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: all var(--transition-fast);
+}
+
+.skill-check-cell:hover {
+    background-color: var(--color-bg-hover);
+    color: var(--color-text-primary);
+    text-decoration: underline;
+}
+
+/* Clickable initiative roll cells */
+.initiative-roll-cell {
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: all var(--transition-fast);
+}
+
+.initiative-roll-cell:hover {
+    background-color: var(--color-bg-hover);
+    color: var(--color-text-primary);
+    text-decoration: underline;
+}
+
 /* Stat Block Section Headings (Actions, Reactions, etc.) */
 .stat-block-heading {
     font-size: var(--font-size-base);

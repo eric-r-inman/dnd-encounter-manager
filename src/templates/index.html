@@ -1674,60 +1674,92 @@
     </div>
 </div>
 
-    <!-- Quick Initiative Modal -->
+    <!-- Initiative Modal -->
     <div class="modal-overlay" style="display: none;"
          data-modal="quick-initiative"
          data-modal-type="form"
          data-modal-category="combat"
-         data-modal-purpose="initiative-rolling">
-        <div class="modal modal-small">
+         data-modal-purpose="initiative-management">
+        <div class="modal modal-medium">
             <div class="modal-header">
-                <h2>⚡ Quick Initiative</h2>
+                <h2>⚡ Initiative Manager</h2>
                 <button class="modal-close" aria-label="Close modal" data-modal-close>&times;</button>
             </div>
-            <form class="modal-body"
-                  id="quick-initiative-form"
-                  data-modal-form="quick-initiative"
-                  data-form-type="initiative-rolling"
-                  novalidate>
-                <div id="quick-initiative-target-selection" style="display: none; margin-bottom: var(--spacing-md);">
-                    <p style="margin: 0 0 8px 0; font-size: var(--font-size-sm);">Roll initiative for:</p>
-                    <div style="display: flex; gap: var(--spacing-md); flex-wrap: wrap;">
-                        <label style="display: inline-flex; align-items: center; cursor: pointer; margin: 0;">
-                            <input type="radio" name="initiative-target" value="current" checked style="margin: 0 6px 0 0;">
-                            <span style="white-space: nowrap;">Current creature only</span>
-                        </label>
-                        <label style="display: inline-flex; align-items: center; cursor: pointer; margin: 0;">
-                            <input type="radio" name="initiative-target" value="selected" style="margin: 0 6px 0 0;">
-                            <span style="white-space: nowrap;">All selected creatures (<strong id="selected-count">0</strong>)</span>
-                        </label>
+            <div class="modal-body initiative-modal-body">
+                <!-- Quick Sort Button -->
+                <div class="initiative-section">
+                    <button type="button"
+                            class="btn btn-primary btn-block"
+                            data-action="quick-sort-encounter"
+                            style="margin-bottom: var(--spacing-md);">
+                        🔄 Quick Sort Encounter
+                    </button>
+                    <p class="help-text" style="margin: 0 0 var(--spacing-lg) 0; text-align: center; font-size: var(--font-size-sm); color: var(--color-text-muted);">
+                        Sort all creatures by their current initiative values
+                    </p>
+                </div>
+
+                <!-- Auto-Roll Buttons -->
+                <div class="initiative-section">
+                    <h3 class="section-heading">Auto-Roll Initiative</h3>
+                    <div class="button-group-vertical">
+                        <button type="button"
+                                class="btn btn-success btn-block"
+                                data-action="roll-init-single"
+                                id="roll-init-single-btn">
+                            🎲 Roll Initiative & Sort
+                        </button>
+                        <button type="button"
+                                class="btn btn-success btn-block"
+                                data-action="roll-init-all">
+                            🎲 Roll Initiative & Sort: All
+                        </button>
+                        <button type="button"
+                                class="btn btn-success btn-block"
+                                data-action="roll-init-selected"
+                                id="roll-init-selected-btn">
+                            🎲 Roll Initiative & Sort: Selected (<span id="init-selected-count">0</span>)
+                        </button>
+                    </div>
+                    <p class="help-text" style="margin: var(--spacing-sm) 0 0 0; font-size: var(--font-size-xs); color: var(--color-text-muted);">
+                        Rolls 1d20 + creature's initiative bonus from stat block
+                    </p>
+                </div>
+
+                <!-- Custom Initiative Entry -->
+                <div class="initiative-section">
+                    <h3 class="section-heading">Custom Initiative</h3>
+                    <div class="form-group" style="margin-bottom: var(--spacing-sm);">
+                        <label for="custom-initiative-value">Initiative Value:</label>
+                        <input type="number"
+                               id="custom-initiative-value"
+                               name="customInitiative"
+                               placeholder="Enter 1-99"
+                               min="0"
+                               max="99"
+                               style="width: 120px;">
+                    </div>
+                    <div class="button-group-vertical">
+                        <button type="button"
+                                class="btn btn-info btn-block"
+                                data-action="apply-custom-init-single"
+                                id="apply-custom-init-single-btn">
+                            ✓ Apply and Sort
+                        </button>
+                        <button type="button"
+                                class="btn btn-info btn-block"
+                                data-action="apply-custom-init-selected"
+                                id="apply-custom-init-selected-btn">
+                            ✓ Apply to Selected (<span id="init-custom-selected-count">0</span>) and Sort
+                        </button>
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="quick-init-modifier">Optional Initiative Modifier:</label>
-                    <input type="number"
-                           id="quick-init-modifier"
-                           name="modifier"
-                           placeholder="0"
-                           style="width: 100px;">
-                    <small style="display: block; margin-top: var(--spacing-xs); color: var(--color-text-muted);">
-                        Roll: d20 + DEX modifier + this value
-                    </small>
-                </div>
-
+                <!-- Hidden field to track current combatant -->
                 <input type="hidden" id="quick-init-combatant-id" name="combatantId">
-            </form>
+            </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-modal-close>Cancel</button>
-                <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
-                    <button type="submit" class="btn btn-primary" form="quick-initiative-form" data-action="roll-quick-initiative">
-                        🎲 Roll Initiative
-                    </button>
-                    <small style="color: var(--color-warning); font-weight: var(--font-weight-medium);">
-                        This will re-sort the encounter list!
-                    </small>
-                </div>
+                <button type="button" class="btn btn-secondary" data-modal-close>Close</button>
             </div>
         </div>
     </div>
@@ -2013,11 +2045,73 @@
                         <span id="temp-hp-display" style="display: none;"> (Temp: <span id="temp-hp-value">0</span>)</span>
                     </small>
                 </div>
-                
+
+                <!-- Auto-Save Feature -->
+                <div class="form-group" id="auto-save-section" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--color-border-muted);">
+                    <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                        <!-- Roll Save Toggle -->
+                        <label style="display: flex; align-items: center; gap: 8px; margin: 0;">
+                            <input type="checkbox" id="roll-save-toggle" name="rollSave" style="width: 18px; height: 18px;">
+                            <span style="font-weight: 500;">Roll Save</span>
+                        </label>
+
+                        <!-- Save Configuration Fields (hidden by default) -->
+                        <div id="save-config-fields" style="display: none; flex: 1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                            <!-- Ability Select -->
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <label for="save-ability" style="margin: 0; font-size: 0.9em;">Ability:</label>
+                                <select id="save-ability" name="saveAbility" style="padding: 4px 8px; font-size: 0.9em;">
+                                    <option value="con" selected>Con</option>
+                                    <option value="dex">Dex</option>
+                                    <option value="str">Str</option>
+                                    <option value="wis">Wis</option>
+                                    <option value="int">Int</option>
+                                    <option value="cha">Cha</option>
+                                </select>
+                            </div>
+
+                            <!-- Modifier Display/Input -->
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <label for="save-modifier" style="margin: 0; font-size: 0.9em;">Mod:</label>
+                                <input type="text"
+                                       id="save-modifier"
+                                       name="saveModifier"
+                                       value="+0"
+                                       style="width: 45px; padding: 4px; text-align: center; font-size: 0.9em;"
+                                       pattern="[+-]?\d+"
+                                       title="Enter modifier (e.g., +2, -1, 0)">
+                            </div>
+
+                            <!-- DC Input -->
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <label for="save-dc" style="margin: 0; font-size: 0.9em;">DC:</label>
+                                <input type="number"
+                                       id="save-dc"
+                                       name="saveDC"
+                                       value="13"
+                                       min="1"
+                                       max="30"
+                                       style="width: 50px; padding: 4px; text-align: center; font-size: 0.9em;">
+                            </div>
+
+                            <!-- Damage Reduction Select -->
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <label for="damage-reduction" style="margin: 0; font-size: 0.9em;">On Save:</label>
+                                <select id="damage-reduction" name="damageReduction" style="padding: 4px 8px; font-size: 0.9em;">
+                                    <option value="0.25">25% avoided</option>
+                                    <option value="0.5" selected>50% avoided</option>
+                                    <option value="0.75">75% avoided</option>
+                                    <option value="1">100% avoided</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Hidden fields to track action type and combatant -->
                 <input type="hidden" name="actionType" id="hp-action-type-field" value="damage">
                 <input type="hidden" name="combatantId" id="hp-combatant-id" value="">
-                
+
                 <div class="modal-footer-actions">
                     <button type="button" class="btn btn-secondary" data-modal-close>
                         Cancel
@@ -2026,9 +2120,9 @@
                         Apply
                     </button>
                     <!-- Batch apply button (hidden by default) -->
-                    <button type="button" 
-                            class="btn" 
-                            id="hp-batch-apply-btn" 
+                    <button type="button"
+                            class="btn"
+                            id="hp-batch-apply-btn"
                             style="display: none;"
                             data-action="batch-hp-modification">
                         Apply to Selected (<span id="batch-count">0</span>)
@@ -2041,6 +2135,73 @@
                     <div class="hp-history-list" id="hp-history-list">
                         <!-- History entries will be populated here -->
                     </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Auto-Roll Modal -->
+    <div class="modal-overlay" style="display: none;"
+        data-modal="auto-roll"
+        data-modal-type="form"
+        data-modal-category="combat">
+        <div class="modal" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>Auto-Roll for <span data-target-name>Combatant</span></h2>
+                <button class="modal-close" aria-label="Close modal" data-modal-close>&times;</button>
+            </div>
+            <form class="modal-body"
+                data-modal-form="auto-roll"
+                data-form-type="auto-roll"
+                novalidate>
+
+                <div class="form-group">
+                    <label for="auto-roll-formula">Dice Formula:</label>
+                    <input type="text"
+                        id="auto-roll-formula"
+                        name="formula"
+                        placeholder="e.g., 1d20+5, 2d6-2"
+                        required
+                        pattern="^\d+d\d+([+-]\d+)?$"
+                        title="Enter dice notation like 1d20+5"
+                        style="width: 100%; padding: 8px; font-family: monospace;">
+                    <small style="color: var(--color-text-muted);">
+                        Format: XdY+Z (e.g., 1d20+5, 2d6-2, 1d8)
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label>When to Roll:</label>
+                    <div style="display: flex; gap: 15px;">
+                        <label style="display: flex; align-items: center; gap: 5px;">
+                            <input type="radio" name="trigger" value="start" checked>
+                            <span>Start of turn</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px;">
+                            <input type="radio" name="trigger" value="end">
+                            <span>End of turn</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Hidden field to track combatant -->
+                <input type="hidden" name="combatantId" id="auto-roll-combatant-id" value="">
+
+                <div class="modal-footer-actions">
+                    <button type="button" class="btn btn-secondary" data-modal-close>
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        Set Auto-Roll
+                    </button>
+                    <!-- Batch apply button (hidden by default) -->
+                    <button type="button"
+                            class="btn btn-primary"
+                            id="auto-roll-batch-apply-btn"
+                            style="display: none;"
+                            data-action="batch-auto-roll">
+                        Apply to Selected (<span id="auto-roll-batch-count">0</span>)
+                    </button>
                 </div>
             </form>
         </div>
