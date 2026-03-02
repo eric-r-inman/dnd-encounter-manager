@@ -779,7 +779,7 @@ input[type="number"] {
     transform: scale(1.05);
 }
 
-/* Condition/Effect badges */
+/* Condition/Effect/Timer badges */
 .combatant-condition-badge,
 .combatant-effect-badge {
     color: var(--color-purple);
@@ -797,9 +797,26 @@ input[type="number"] {
     transition: all var(--transition-fast);
 }
 
-/* Condition/Effect name text - clickable for editing */
+.combatant-timer-badge {
+    color: #ffbf1e; /* dark yellow */
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background-color: var(--color-bg-hover);
+    padding: 2px 6px;
+    border-radius: var(--border-radius);
+    border: 1px solid #daa520; /* goldenrod */
+    margin-right: var(--spacing-xs);
+    margin-bottom: var(--spacing-xs);
+    transition: all var(--transition-fast);
+}
+
+/* Condition/Effect/Timer name text - clickable for editing */
 .condition-name-text,
-.effect-name-text {
+.effect-name-text,
+.timer-name-text {
     cursor: pointer;
     text-decoration: underline dotted transparent;
     transition: all var(--transition-fast);
@@ -811,9 +828,15 @@ input[type="number"] {
     opacity: 0.8;
 }
 
-/* Condition note styling - same as effect notes */
+.timer-name-text:hover {
+    text-decoration: underline dotted #b8860b;
+    opacity: 0.8;
+}
+
+/* Condition/Effect/Timer note styling */
 .condition-note,
-.effect-note {
+.effect-note,
+.timer-note {
     font-size: var(--font-size-xs);
     color: var(--color-text-muted);
     font-style: italic;
@@ -826,9 +849,15 @@ input[type="number"] {
     border-color: var(--color-purple-hover);
 }
 
+.combatant-timer-badge:hover {
+    background-color: rgba(255, 217, 0, 0.07);
+    border-color: #daa520; /* goldenrod */
+}
+
 /* Duration states */
 .condition-duration-counter,
-.effect-duration-counter {
+.effect-duration-counter,
+.timer-duration-counter {
     font-weight: var(--font-weight-semibold);
     font-size: var(--font-size-sm);
     padding: 0 4px;
@@ -840,16 +869,26 @@ input[type="number"] {
     color: var(--color-npc);
 }
 
+.timer-duration-counter.duration-remaining {
+    color: #ffea4c;
+}
+
 .condition-duration-counter.duration-expired,
-.effect-duration-counter.duration-expired {
+.effect-duration-counter.duration-expired,
+.timer-duration-counter.duration-expired {
     color: var(--color-danger);
 }
 
 .condition-duration-counter.duration-permanent,
-.effect-duration-counter.duration-permanent {
+.effect-duration-counter.duration-permanent,
+.timer-duration-counter.duration-permanent {
     color: var(--color-npc);
     font-weight: var(--font-weight-bold);
     font-size: var(--font-size-base);
+}
+
+.timer-duration-counter.duration-permanent {
+    color: #ffea4c;
 }
 
 /* Clear buttons */
@@ -1032,7 +1071,8 @@ input[type="number"] {
     }
     
     .combatant-condition-badge,
-    .combatant-effect-badge {
+    .combatant-effect-badge,
+    .combatant-timer-badge {
         font-size: var(--font-size-xs);
         padding: 1px 4px;
     }

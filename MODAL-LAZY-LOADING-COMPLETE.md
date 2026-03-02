@@ -106,11 +106,11 @@ Test each modal to ensure it works correctly:
 
 - [X] **combatant-note**: Click combatant menu → "📝 Add Note"
 - [X] **duplicate-combatant**: Click "⎘" duplicate button on combatant card
-- [ ] **auto-roll**: Click combatant menu → "🔄 Auto-Roll"
+- [X] **auto-roll**: Click combatant menu → "🔄 Auto-Roll"
 - [ ] **hp-modification**: Click HP damage/heal buttons on combatant card
 - [ ] **placeholder-timer**: Click timer badge to edit existing timer
-- [X] **effect**: Click effect badge to edit existing effect
-- [X] **condition**: Click condition badge to edit existing condition
+- [ ] **effect**: Click effect badge to edit existing effect
+- [ ] **condition**: Click condition badge to edit existing condition
 - [ ] **quick-initiative**: Click "⚡" initiative button on combatant card
 - [ ] **add-combatant**: Press 'A' key or click "➕ Add Combatant" button
 - [ ] **stat-block-parser**: Compendium → "📋 Paste"

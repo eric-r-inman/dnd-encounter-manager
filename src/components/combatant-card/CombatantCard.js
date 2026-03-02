@@ -285,6 +285,22 @@ export class CombatantCard {
                 <button class="effect-clear" title="Clear effect" data-action="clear-effect">×</button>
             </span>
         `).join('');
+
+        // Build timer HTML if timer exists
+        const timerHTML = this.timer ? `
+            <span class="combatant-timer-badge">
+                <span class="timer-name-text"
+                      data-action="edit-timer"
+                      title="Click to edit timer">
+                    ⏱️ Timer
+                </span>
+                <span class="timer-duration-counter ${this.timer.duration === 'infinite' ? 'duration-permanent' : 'duration-remaining'}">
+                    ${this.timer.duration === 'infinite' ? '∞' : this.timer.duration}
+                </span>
+                ${this.timer.note ? `<span class="timer-note">(${this.timer.note})</span>` : ''}
+                <button class="timer-clear" title="Clear timer" data-action="clear-timer">×</button>
+            </span>
+        ` : '';
         
         // Determine if order controls should show hold action
         const orderControlsClass = this.status.holdAction ? 'combatant-order-controls hold-action' : 'combatant-order-controls';
@@ -329,6 +345,7 @@ export class CombatantCard {
                         <div class="combatant-conditions-effects">
                             ${conditionsHTML}
                             ${effectsHTML}
+                            ${timerHTML}
                         </div>
                     </div>
                     <div class="combatant-body">
@@ -406,6 +423,11 @@ export class CombatantCard {
                                     <button class="note-clear" title="Clear note" data-action="clear-note">×</button>
                                 </span>
                             ` : ''}
+                            <button class="btn btn-sm btn-secondary btn-icon"
+                                    title="Set timer"
+                                    data-modal-show="placeholder-timer"
+                                    data-modal-target="${this.id}"
+                                    style="padding: 0 8px; font-size: 14px;">⏱️</button>
                             <button class="btn btn-sm btn-secondary btn-icon"
                                     title="Set auto-roll"
                                     data-action="open-auto-roll-modal"
