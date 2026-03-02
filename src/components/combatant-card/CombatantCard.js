@@ -24,7 +24,7 @@ export class CombatantCard {
         this.name = instanceData.name || creatureData.name; // Allow instanceData to override name
         this.type = creatureData.type; // player, enemy, npc
         this.ac = creatureData.ac;
-        this.maxHP = creatureData.maxHP;
+        this.maxHP = instanceData.maxHP ?? creatureData.maxHP; // Allow instanceData to override maxHP
 
         // Store creature abilities for saving throws
         // If creature has a statBlock with abilities, use those; otherwise default to null
