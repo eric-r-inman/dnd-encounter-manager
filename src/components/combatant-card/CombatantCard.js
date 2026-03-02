@@ -306,6 +306,7 @@ export class CombatantCard {
                 </div>
                 <div class="combatant-main">
                     <button class="combatant-set-active-button" title="Set as active combatant" data-action="set-active-combatant">←</button>
+                    <button class="combatant-duplicate-button" title="Duplicate combatant" data-action="duplicate-combatant">⎘</button>
                     <button class="combatant-remove-button" title="Remove combatant" data-action="remove-combatant-from-encounter">×</button>
                     <div class="combatant-header">
                         <div class="initiative-circle editable-initiative" data-action="edit-combatant-initiative">

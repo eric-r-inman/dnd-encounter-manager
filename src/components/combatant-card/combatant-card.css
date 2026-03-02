@@ -199,6 +199,33 @@
     opacity: 1;
 }
 
+.combatant-duplicate-button {
+    position: absolute;
+    top: 54px; /* Position below the set-active button (28px + 24px height + 2px spacing) */
+    right: 2px; /* Align with the other buttons */
+    width: 24px;
+    height: 24px;
+    background-color: transparent;
+    color: var(--color-text-primary);
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-lg);
+    font-weight: bold;
+    cursor: pointer;
+    opacity: 0.7;
+    z-index: 3;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.combatant-duplicate-button:hover {
+    background-color: var(--color-success);
+    color: white;
+    opacity: 1;
+}
+
 /* Combatant header layout */
 .combatant-header {
     display: flex;

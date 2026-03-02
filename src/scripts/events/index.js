@@ -238,6 +238,14 @@ export class EventCoordinator {
             case 'set-active-combatant':
                 this.handleSetActiveCombatant(target);
                 break;
+            case 'duplicate-combatant':
+                this.handleDuplicateCombatant(target);
+                break;
+            case 'duplicate-fresh':
+            case 'duplicate-preserve':
+            case 'duplicate-ooze-split':
+                this.handleDuplicateOption(target, action);
+                break;
             case 'remove-combatant-from-encounter':
                 this.handleRemoveCombatant(target);
                 break;
@@ -889,6 +897,233 @@ export class EventCoordinator {
             console.error('❌ Error removing combatant:', error);
             ToastSystem.show('Failed to remove combatant: ' + error.message, 'error', TIMING.TOAST_EXTRA_LONG);
         }
+    }
+
+    static handleDuplicateCombatant(target) {
+        // Find the combatant card and get the ID
+        const combatantCard = target.closest('[data-combatant-id]');
+        const combatantId = combatantCard?.getAttribute('data-combatant-id');
+
+        if (!combatantId) {
+            console.error('Could not find combatant ID');
+            return;
+        }
+
+        // Get the combatant
+        const combatant = DataServices.combatantManager.getCombatant(combatantId);
+        if (!combatant) {
+            console.error('Combatant not found:', combatantId);
+            return;
+        }
+
+        // Store the combatant ID in the modal for later use
+        const modal = document.querySelector('[data-modal="duplicate-combatant"]');
+        if (!modal) {
+            console.error('Duplicate modal not found');
+            return;
+        }
+
+        modal.setAttribute('data-combatant-id', combatantId);
+
+        // Update modal title with combatant name
+        const nameSpan = modal.querySelector('#duplicate-combatant-name');
+        if (nameSpan) {
+            nameSpan.textContent = combatant.name;
+        }
+
+        // Show the modal
+        ModalSystem.show('duplicate-combatant');
+    }
+
+    static handleDuplicateOption(target, option) {
+        // Get the modal and combatant ID
+        const modal = target.closest('[data-modal="duplicate-combatant"]');
+        const combatantId = modal?.getAttribute('data-combatant-id');
+
+        if (!combatantId) {
+            console.error('Could not find combatant ID in modal');
+            return;
+        }
+
+        // Get the original combatant
+        const originalCombatant = DataServices.combatantManager.getCombatant(combatantId);
+        if (!originalCombatant) {
+            console.error('Combatant not found:', combatantId);
+            return;
+        }
+
+        try {
+            let newCombatant;
+
+            switch (option) {
+                case 'duplicate-fresh':
+                    newCombatant = this.duplicateCombatantFresh(originalCombatant);
+                    break;
+                case 'duplicate-preserve':
+                    newCombatant = this.duplicateCombatantPreserve(originalCombatant);
+                    break;
+                case 'duplicate-ooze-split':
+                    newCombatant = this.duplicateCombatantOozeSplit(originalCombatant);
+                    break;
+                default:
+                    console.error('Unknown duplicate option:', option);
+                    return;
+            }
+
+            // Close the modal
+            ModalSystem.hide('duplicate-combatant');
+
+            // Show success message
+            ToastSystem.show(`Created ${newCombatant.name}`, 'success', TIMING.TOAST_LONG);
+            console.log(`✅ Duplicated combatant: ${originalCombatant.name} → ${newCombatant.name}`);
+        } catch (error) {
+            console.error('❌ Error duplicating combatant:', error);
+            ToastSystem.show('Failed to duplicate combatant: ' + error.message, 'error', TIMING.TOAST_EXTRA_LONG);
+        }
+    }
+
+    static duplicateCombatantFresh(original) {
+        // Create a copy with reset HP and cleared conditions/effects
+        const newName = `${original.name} (copy)`;
+
+        const duplicateData = {
+            ...original,
+            name: newName,
+            currentHP: original.maxHP,
+            tempHP: 0,
+            deathSaves: [false, false, false],
+            conditions: [],
+            effects: [],
+            status: {
+                isActive: false,
+                holdAction: false,
+                surprised: false,
+                concentration: false,
+                concentrationSpell: '',
+                hiding: false,
+                cover: 'none',
+                flying: false,
+                flyingHeight: 0
+            },
+            autoRoll: null,
+            damageHistory: [],
+            healHistory: [],
+            tempHPHistory: [],
+            manualOrder: this.calculateNewManualOrder(original)
+        };
+
+        // Add the new combatant
+        const newCombatant = DataServices.combatantManager.addCombatant(duplicateData);
+        return newCombatant;
+    }
+
+    static duplicateCombatantPreserve(original) {
+        // Create an exact copy preserving all HP, conditions, effects, and auto-roll
+        const newName = `${original.name} (copy)`;
+
+        const duplicateData = {
+            ...original,
+            name: newName,
+            status: {
+                ...original.status,
+                isActive: false  // Don't make the duplicate active
+            },
+            // Keep original's death saves
+            deathSaves: [...original.deathSaves],
+            // Preserve conditions
+            conditions: original.conditions.map(c => ({ ...c })),
+            // Preserve effects
+            effects: original.effects.map(e => ({ ...e })),
+            // Preserve auto-roll if it exists
+            autoRoll: original.autoRoll ? { ...original.autoRoll } : null,
+            // Clear history for new combatant
+            damageHistory: [],
+            healHistory: [],
+            tempHPHistory: [],
+            manualOrder: this.calculateNewManualOrder(original)
+        };
+
+        // Add the new combatant
+        const newCombatant = DataServices.combatantManager.addCombatant(duplicateData);
+        return newCombatant;
+    }
+
+    static duplicateCombatantOozeSplit(original) {
+        // For ooze splits: divide max HP and current HP, remove temp HP, preserve conditions
+        const newName = `${original.name} (copy)`;
+        const halfMaxHP = Math.floor(original.maxHP / 2);
+        const halfCurrentHP = Math.floor(original.currentHP / 2);
+
+        // Update the original creature to have half HP
+        DataServices.combatantManager.updateCombatant(original.id, 'maxHP', halfMaxHP);
+        DataServices.combatantManager.updateCombatant(original.id, 'currentHP', halfCurrentHP);
+        DataServices.combatantManager.updateCombatant(original.id, 'tempHP', 0);
+
+        const duplicateData = {
+            ...original,
+            name: newName,
+            maxHP: halfMaxHP,
+            currentHP: halfCurrentHP,
+            tempHP: 0,
+            deathSaves: [false, false, false],  // New creature has no failed death saves
+            status: {
+                ...original.status,
+                isActive: false  // Don't make the duplicate active
+            },
+            // Preserve conditions
+            conditions: original.conditions.map(c => ({ ...c })),
+            // Preserve effects
+            effects: original.effects.map(e => ({ ...e })),
+            // Clear auto-roll for ooze split
+            autoRoll: null,
+            // Clear history for new combatant
+            damageHistory: [],
+            healHistory: [],
+            tempHPHistory: [],
+            manualOrder: this.calculateNewManualOrder(original)
+        };
+
+        // Add the new combatant
+        const newCombatant = DataServices.combatantManager.addCombatant(duplicateData);
+
+        // Show info toast about the split
+        ToastSystem.show(`${original.name} split! Both creatures now have ${halfMaxHP} max HP and ${halfCurrentHP} current HP`, 'info', TIMING.TOAST_EXTRA_LONG);
+
+        return newCombatant;
+    }
+
+    static calculateNewManualOrder(original) {
+        // Place the duplicate right after the original in turn order
+        // Get all combatants to find the position
+        const allCombatants = DataServices.combatantManager.getAllCombatants();
+
+        // If original has manual order, increment it by 0.5 to place it right after
+        if (original.manualOrder !== null) {
+            return original.manualOrder + 0.5;
+        }
+
+        // If no manual order, we need to assign manual orders to maintain position
+        // Sort combatants by current display order
+        const sortedCombatants = allCombatants.sort((a, b) => {
+            if (a.manualOrder !== null && b.manualOrder !== null) {
+                return a.manualOrder - b.manualOrder;
+            }
+            if (a.manualOrder !== null) return -1;
+            if (b.manualOrder !== null) return 1;
+            if (b.initiative !== a.initiative) {
+                return b.initiative - a.initiative;
+            }
+            return a.name.localeCompare(b.name);
+        });
+
+        // Find the original's index
+        const originalIndex = sortedCombatants.findIndex(c => c.id === original.id);
+        if (originalIndex === -1) {
+            return null; // Shouldn't happen, but fallback
+        }
+
+        // Return manual order that places duplicate right after original
+        return originalIndex + 0.5;
     }
 
     static handleHPModification(target, actionType) {
