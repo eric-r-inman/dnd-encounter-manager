@@ -500,6 +500,8 @@ export class CombatantCard {
      */
     getInstanceData() {
         return {
+            name: this.name, // Save custom name (for duplicates, splits, etc.)
+            maxHP: this.maxHP, // Save custom maxHP (for ooze splits, etc.)
             initiative: this.initiative,
             currentHP: this.currentHP,
             tempHP: this.tempHP,
@@ -508,6 +510,8 @@ export class CombatantCard {
             concentration: this.status.concentration,
             concentrationSpell: this.status.concentrationSpell,
             hiding: this.status.hiding,
+            flying: this.status.flying, // Save flying status
+            flyingHeight: this.status.flyingHeight, // Save flying height
             cover: this.status.cover,
             surprised: this.status.surprised,
             conditions: this.conditions,
@@ -519,6 +523,7 @@ export class CombatantCard {
             healHistory: this.healHistory,
             tempHPHistory: this.tempHPHistory,
             deathSaves: this.deathSaves,
+            autoRoll: this.autoRoll, // Save auto-roll configuration
             isPlaceholder: this.isPlaceholder || false
         };
     }
