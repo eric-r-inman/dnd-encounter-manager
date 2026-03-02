@@ -899,7 +899,7 @@ export class EventCoordinator {
         }
     }
 
-    static handleDuplicateCombatant(target) {
+    static async handleDuplicateCombatant(target) {
         // Find the combatant card and get the ID
         const combatantCard = target.closest('[data-combatant-id]');
         const combatantId = combatantCard?.getAttribute('data-combatant-id');
@@ -916,13 +916,17 @@ export class EventCoordinator {
             return;
         }
 
-        // Store the combatant ID in the modal for later use
+        // Show the modal FIRST (loads it if not already loaded)
+        await ModalSystem.show('duplicate-combatant');
+
+        // Now query for the modal (it should exist after show())
         const modal = document.querySelector('[data-modal="duplicate-combatant"]');
         if (!modal) {
-            console.error('Duplicate modal not found');
+            console.error('Duplicate modal not found even after show()');
             return;
         }
 
+        // Store the combatant ID in the modal for later use
         modal.setAttribute('data-combatant-id', combatantId);
 
         // Update modal title with combatant name
@@ -930,9 +934,6 @@ export class EventCoordinator {
         if (nameSpan) {
             nameSpan.textContent = combatant.name;
         }
-
-        // Show the modal
-        ModalSystem.show('duplicate-combatant');
     }
 
     static handleDuplicateOption(target, option) {
@@ -1801,7 +1802,7 @@ export class EventCoordinator {
      * Handle editing an existing condition
      * @param {HTMLElement} target - The condition name element that was clicked
      */
-    static handleEditCondition(target) {
+    static async handleEditCondition(target) {
         const combatantCard = target.closest('[data-combatant-id]');
         const combatantId = combatantCard?.getAttribute('data-combatant-id');
 
@@ -1825,7 +1826,10 @@ export class EventCoordinator {
             return;
         }
 
-        // Open the condition modal
+        // Show the modal FIRST (loads it if not already loaded)
+        await ModalSystem.show('condition');
+
+        // Now query for the modal (it should exist after show())
         const modal = document.querySelector('[data-modal="condition"]');
         if (modal) {
             // Set the target combatant
@@ -1838,9 +1842,6 @@ export class EventCoordinator {
             // Pre-populate the modal with existing data
             ModalEvents.prePopulateConditionModal(modal, conditionData);
 
-            // Show the modal
-            ModalSystem.show('condition');
-
             console.log(`✏️ Editing condition "${conditionData.name}" for ${combatant.name}`);
         }
     }
@@ -1849,7 +1850,7 @@ export class EventCoordinator {
      * Handle editing an existing effect
      * @param {HTMLElement} target - The effect name element that was clicked
      */
-    static handleEditEffect(target) {
+    static async handleEditEffect(target) {
         const combatantCard = target.closest('[data-combatant-id]');
         const combatantId = combatantCard?.getAttribute('data-combatant-id');
 
@@ -1873,7 +1874,10 @@ export class EventCoordinator {
             return;
         }
 
-        // Open the effect modal
+        // Show the modal FIRST (loads it if not already loaded)
+        await ModalSystem.show('effect');
+
+        // Now query for the modal (it should exist after show())
         const modal = document.querySelector('[data-modal="effect"]');
         if (modal) {
             // Set the target combatant
@@ -1886,9 +1890,6 @@ export class EventCoordinator {
             // Pre-populate the modal with existing data
             ModalEvents.prePopulateEffectModal(modal, effectData);
 
-            // Show the modal
-            ModalSystem.show('effect');
-
             console.log(`✏️ Editing effect "${effectData.name}" for ${combatant.name}`);
         }
     }
@@ -1897,7 +1898,7 @@ export class EventCoordinator {
      * Handle editing a timer by clicking on the timer badge
      * @param {HTMLElement} target - The timer name element that was clicked
      */
-    static handleEditTimer(target) {
+    static async handleEditTimer(target) {
         const combatantCard = target.closest('[data-combatant-id]');
         const combatantId = combatantCard?.getAttribute('data-combatant-id');
 
@@ -1913,7 +1914,10 @@ export class EventCoordinator {
             return;
         }
 
-        // Open the timer modal
+        // Show the modal FIRST (loads it if not already loaded)
+        await ModalSystem.show('placeholder-timer');
+
+        // Now query for the modal (it should exist after show())
         const modal = document.querySelector('[data-modal="placeholder-timer"]');
         if (modal) {
             // Set the target combatant
@@ -1946,9 +1950,6 @@ export class EventCoordinator {
             if (noteInput) {
                 noteInput.value = combatant.timer.note || '';
             }
-
-            // Show the modal
-            ModalSystem.show('placeholder-timer');
 
             console.log(`✏️ Editing timer for ${combatant.name}`);
         }

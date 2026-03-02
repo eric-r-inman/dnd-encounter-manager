@@ -104,7 +104,7 @@ src/
 
 Test each modal to ensure it works correctly:
 
-- [ ] **combatant-note**: Click three-dots menu → "Add Note"
+- [X] **combatant-note**: Click three-dots menu → "Add Note"
 - [ ] **duplicate-combatant**: Click three-dots menu → "Duplicate"
 - [ ] **auto-roll**: Click three-dots menu → "Auto-Roll"
 - [ ] **hp-modification**: Click HP damage/heal buttons
