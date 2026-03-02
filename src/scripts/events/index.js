@@ -1061,7 +1061,8 @@ export class EventCoordinator {
         const halfMaxHP = Math.floor(original.maxHP / 2);
         const halfCurrentHP = Math.floor(original.currentHP / 2);
 
-        // Update the original creature to have half HP
+        // Update the original creature to have half HP and add "(split)" to name
+        DataServices.combatantManager.updateCombatant(original.id, 'name', newName);
         DataServices.combatantManager.updateCombatant(original.id, 'maxHP', halfMaxHP);
         DataServices.combatantManager.updateCombatant(original.id, 'currentHP', halfCurrentHP);
         DataServices.combatantManager.updateCombatant(original.id, 'tempHP', 0);
