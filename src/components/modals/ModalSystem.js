@@ -79,17 +79,20 @@ export class ModalSystem {
             this.hide(this.activeModal);
         }
 
-        // Lazy load modal if enabled and not already loaded
-        if (this.lazyLoadingEnabled && !ModalLoader.isLoaded(modalId)) {
+        // Find the modal element (check if already in DOM)
+        let modalOverlay = document.querySelector(`[data-modal="${modalId}"]`);
+
+        // Lazy load modal if enabled and not in DOM
+        if (this.lazyLoadingEnabled && !modalOverlay) {
             const loaded = await ModalLoader.loadModal(modalId);
             if (!loaded) {
                 console.error(`Failed to lazy load modal: ${modalId}`);
                 return;
             }
+            // Re-query after loading
+            modalOverlay = document.querySelector(`[data-modal="${modalId}"]`);
         }
 
-        // Find the modal element
-        const modalOverlay = document.querySelector(`[data-modal="${modalId}"]`);
         if (!modalOverlay) {
             console.error(`Modal not found: ${modalId}`);
             return;
