@@ -23,7 +23,7 @@ export class HPEvents {
      * @param {HTMLElement} target - The clicked element
      * @param {string} actionType - Type of HP modification (damage, heal, temp-hp)
      */
-    static handleHPModification(target, actionType) {
+    static async handleHPModification(target, actionType) {
         // Find the combatant card
         const combatantCard = target.closest('[data-combatant-id]');
         const combatantId = combatantCard?.getAttribute('data-combatant-id');
@@ -40,9 +40,15 @@ export class HPEvents {
             return;
         }
 
-        // Set up the modal
+        // Show the modal FIRST (loads it if not already loaded)
+        await ModalSystem.show('hp-modification');
+
+        // Now query for the modal (it should exist after show())
         const modal = document.querySelector('[data-modal="hp-modification"]');
-        if (!modal) return;
+        if (!modal) {
+            console.error('HP modification modal not found even after show()');
+            return;
+        }
 
         // Update modal title and labels based on action type
         const actionTypeSpan = modal.querySelector('#hp-action-type');
@@ -169,9 +175,6 @@ export class HPEvents {
                 historyListElement.appendChild(entryElement);
             });
         }
-
-        // Show the modal
-        ModalSystem.show('hp-modification');
     }
 
     /**

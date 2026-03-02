@@ -16,7 +16,7 @@ export class AutoRollEvents {
      * Handle opening the auto-roll modal
      * @param {HTMLElement} target - The clicked element
      */
-    static handleOpenAutoRollModal(target) {
+    static async handleOpenAutoRollModal(target) {
         const combatantId = target.getAttribute('data-combatant-id');
         if (!combatantId) {
             console.error('No combatant ID found for auto-roll modal');
@@ -29,9 +29,15 @@ export class AutoRollEvents {
             return;
         }
 
-        // Set up the modal
+        // Show the modal FIRST (loads it if not already loaded)
+        await ModalSystem.show('auto-roll');
+
+        // Now query for the modal (it should exist after show())
         const modal = document.querySelector('[data-modal="auto-roll"]');
-        if (!modal) return;
+        if (!modal) {
+            console.error('Auto-roll modal not found even after show()');
+            return;
+        }
 
         // Update modal title
         const targetName = modal.querySelector('[data-target-name]');
@@ -71,9 +77,6 @@ export class AutoRollEvents {
 
         // Update batch buttons visibility based on selected combatants
         this.updateBatchButtons(modal);
-
-        // Show the modal
-        ModalSystem.show('auto-roll');
     }
 
     /**

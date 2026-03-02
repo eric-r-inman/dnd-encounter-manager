@@ -21,7 +21,7 @@ export class InlineEditEvents {
      * Handle initiative click - opens initiative modal
      * @param {HTMLElement} target - The initiative element that was clicked
      */
-    static handleInitiativeEdit(target) {
+    static async handleInitiativeEdit(target) {
         const combatantCard = target.closest('[data-combatant-id]');
         const combatantId = combatantCard?.getAttribute('data-combatant-id');
 
@@ -33,9 +33,15 @@ export class InlineEditEvents {
             return;
         }
 
-        // Store the current combatant ID in the modal
+        // Show the modal FIRST (loads it if not already loaded)
+        await ModalSystem.show('quick-initiative');
+
+        // Now query for the modal (it should exist after show())
         const modal = document.querySelector('[data-modal="quick-initiative"]');
-        if (!modal) return;
+        if (!modal) {
+            console.error('Quick initiative modal not found even after show()');
+            return;
+        }
 
         const hiddenField = modal.querySelector('#quick-init-combatant-id');
         if (hiddenField) {
@@ -50,9 +56,6 @@ export class InlineEditEvents {
 
         // Update selected count displays
         this.updateSelectedCounts(modal);
-
-        // Open the modal
-        ModalSystem.show('quick-initiative');
     }
 
     /**
