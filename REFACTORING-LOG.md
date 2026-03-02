@@ -168,7 +168,70 @@
 
 ---
 
+## Session 2: Performance Optimization - Modal Lazy Loading
+**Date**: March 2, 2026
+**Branch**: `feature/event-handler-refactor`
+
+### Phase 3: Modal Lazy Loading Infrastructure ✅
+
+**Objective**: Improve initial page load performance by implementing lazy loading for modal components
+
+**Problem Identified**:
+- All 14 modals (~1,500 lines) loaded upfront in [index.html](src/templates/index.html)
+- Unnecessary DOM weight on initial page load
+- Only 2-3 modals typically used in a session
+- Performance impact increases with each new modal added
+
+**Solution Implemented**:
+
+1. **Created ModalLoader utility** ([ModalLoader.js](src/components/modals/ModalLoader.js))
+   - Lazy loads modal HTML templates on-demand
+   - Caches loaded modals to prevent re-fetching
+   - Prevents duplicate loading with Promise tracking
+   - Supports preloading commonly-used modals during idle time
+   - 140 lines, comprehensive error handling
+
+2. **Enhanced ModalSystem** ([ModalSystem.js](src/components/modals/ModalSystem.js))
+   - Added lazy loading support (opt-in via feature flag)
+   - Made `show()` method async to support lazy loading
+   - Added `preloadModals()` for background loading
+   - Added `getLoadingStats()` for monitoring
+   - Maintains backward compatibility
+
+**Architecture**:
+```javascript
+// Feature flag approach - no breaking changes
+ModalSystem.init({ lazyLoading: true }); // Enable lazy loading
+
+// Usage remains the same
+await ModalSystem.show('creature-database');
+
+// Optional: Preload commonly-used modals during idle time
+await ModalSystem.preloadModals(['hp-modification', 'condition', 'effect']);
+```
+
+**Benefits**:
+- ✅ **Faster Initial Load**: Modal HTML only loaded when needed
+- ✅ **Reduced Memory**: Fewer DOM nodes on page init
+- ✅ **Scalable**: Adding new modals doesn't impact initial load
+- ✅ **Backward Compatible**: Feature flag allows gradual rollout
+- ✅ **Smart Caching**: Modals load once, reuse thereafter
+
+**Next Steps**:
+- Extract modal HTML to separate template files (to enable lazy loading)
+- Update main.js to enable lazy loading feature flag
+- Measure performance improvements with browser DevTools
+- Consider applying same pattern to large form components
+
+**Impact**:
+- Foundation for modal lazy loading established
+- Can reduce initial HTML size by ~60% (1,500 lines of modals)
+- Improved scalability for future modal additions
+- Pattern can be extended to other large components
+
+---
+
 *Last Updated: 2026-03-02*
 *Session Duration: 2 days*
-*Total Commits: 4*
-*Lines Changed: -413 (reduction)*
+*Total Commits: 5+ (in progress)*
+*Lines Changed: -413 + 200 (net: -213)*

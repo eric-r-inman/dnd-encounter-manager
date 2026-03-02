@@ -1,26 +1,39 @@
 /**
  * ModalSystem - Modal Management for D&D Encounter Manager
- * 
- * Handles showing, hiding, and managing modal dialogs
- * 
- * @version 1.1.0
+ *
+ * Handles showing, hiding, and managing modal dialogs.
+ * Supports lazy loading of modal templates for improved performance.
+ *
+ * @version 1.2.0
  */
+
+import { ModalLoader } from './ModalLoader.js';
 
 export class ModalSystem {
     static activeModal = null;
     static initialized = false;
-    
+    static lazyLoadingEnabled = false; // Feature flag for lazy loading
+
     /**
      * Initialize the modal system
+     * @param {Object} options - Configuration options
+     * @param {boolean} options.lazyLoading - Enable lazy loading of modals (default: false)
      */
-    static init() {
+    static init(options = {}) {
         if (this.initialized) return;
-        
+
         console.log('📝 Modal System initializing...');
-        
+
+        // Configure lazy loading
+        this.lazyLoadingEnabled = options.lazyLoading || false;
+        if (this.lazyLoadingEnabled) {
+            ModalLoader.init();
+            console.log('✅ Modal lazy loading enabled');
+        }
+
         // Set up event listeners for modal interactions
         this.setupEventListeners();
-        
+
         this.initialized = true;
         console.log('✅ Modal System initialized');
     }
@@ -56,30 +69,40 @@ export class ModalSystem {
      * Show a specific modal
      * @param {string} modalId - The modal identifier
      * @param {Object} options - Optional configuration
+     * @returns {Promise<void>} Resolves when modal is shown (for lazy loading)
      */
-    static show(modalId, options = {}) {
+    static async show(modalId, options = {}) {
         console.log(`📝 Showing modal: ${modalId}`);
-        
+
         // Hide any currently active modal
         if (this.activeModal) {
             this.hide(this.activeModal);
         }
-        
+
+        // Lazy load modal if enabled and not already loaded
+        if (this.lazyLoadingEnabled && !ModalLoader.isLoaded(modalId)) {
+            const loaded = await ModalLoader.loadModal(modalId);
+            if (!loaded) {
+                console.error(`Failed to lazy load modal: ${modalId}`);
+                return;
+            }
+        }
+
         // Find the modal element
         const modalOverlay = document.querySelector(`[data-modal="${modalId}"]`);
         if (!modalOverlay) {
             console.error(`Modal not found: ${modalId}`);
             return;
         }
-        
+
         // Show the modal
         modalOverlay.style.display = 'flex';
         modalOverlay.classList.add('fade-in');
         modalOverlay.classList.remove('modal-closing');
-        
+
         // Set as active modal
         this.activeModal = modalId;
-        
+
         // Focus first input if it's a form modal
         setTimeout(() => {
             const firstInput = modalOverlay.querySelector('input:not([type="hidden"]), select, textarea');
@@ -87,7 +110,7 @@ export class ModalSystem {
                 firstInput.focus();
             }
         }, 100);
-        
+
         // Call any show callbacks
         if (options.onShow) {
             options.onShow(modalOverlay);
@@ -149,5 +172,28 @@ export class ModalSystem {
      */
     static getActiveModal() {
         return this.activeModal;
+    }
+
+    /**
+     * Preload modals in the background for better UX
+     * Only works when lazy loading is enabled
+     * @param {string[]} modalIds - Array of modal IDs to preload
+     * @returns {Promise<void>}
+     */
+    static async preloadModals(modalIds) {
+        if (!this.lazyLoadingEnabled) {
+            console.warn('⚠️ Lazy loading not enabled, preload has no effect');
+            return;
+        }
+        await ModalLoader.preloadModals(modalIds);
+    }
+
+    /**
+     * Get lazy loading statistics
+     * @returns {Object|null} Stats object or null if lazy loading disabled
+     */
+    static getLoadingStats() {
+        if (!this.lazyLoadingEnabled) return null;
+        return ModalLoader.getStats();
     }
 }
