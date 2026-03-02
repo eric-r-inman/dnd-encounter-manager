@@ -970,6 +970,11 @@ export class EventCoordinator {
                     return;
             }
 
+            // Check if duplication was successful
+            if (!newCombatant) {
+                throw new Error('Failed to create duplicate combatant');
+            }
+
             // Close the modal
             ModalSystem.hide('duplicate-combatant');
 
@@ -986,9 +991,9 @@ export class EventCoordinator {
         // Create a copy with reset HP and cleared conditions/effects
         const newName = `${original.name} (copy)`;
 
-        const duplicateData = {
-            ...original,
+        const instanceData = {
             name: newName,
+            initiative: original.initiative,
             currentHP: original.maxHP,
             tempHP: 0,
             deathSaves: [false, false, false],
@@ -1012,8 +1017,8 @@ export class EventCoordinator {
             manualOrder: this.calculateNewManualOrder(original)
         };
 
-        // Add the new combatant
-        const newCombatant = DataServices.combatantManager.addCombatant(duplicateData);
+        // Add the new combatant using creatureId and instanceData
+        const newCombatant = DataServices.combatantManager.addCombatant(original.creatureId, instanceData);
         return newCombatant;
     }
 
@@ -1021,9 +1026,11 @@ export class EventCoordinator {
         // Create an exact copy preserving all HP, conditions, effects, and auto-roll
         const newName = `${original.name} (copy)`;
 
-        const duplicateData = {
-            ...original,
+        const instanceData = {
             name: newName,
+            initiative: original.initiative,
+            currentHP: original.currentHP,
+            tempHP: original.tempHP,
             status: {
                 ...original.status,
                 isActive: false  // Don't make the duplicate active
@@ -1043,8 +1050,8 @@ export class EventCoordinator {
             manualOrder: this.calculateNewManualOrder(original)
         };
 
-        // Add the new combatant
-        const newCombatant = DataServices.combatantManager.addCombatant(duplicateData);
+        // Add the new combatant using creatureId and instanceData
+        const newCombatant = DataServices.combatantManager.addCombatant(original.creatureId, instanceData);
         return newCombatant;
     }
 
@@ -1059,9 +1066,9 @@ export class EventCoordinator {
         DataServices.combatantManager.updateCombatant(original.id, 'currentHP', halfCurrentHP);
         DataServices.combatantManager.updateCombatant(original.id, 'tempHP', 0);
 
-        const duplicateData = {
-            ...original,
+        const instanceData = {
             name: newName,
+            initiative: original.initiative,
             maxHP: halfMaxHP,
             currentHP: halfCurrentHP,
             tempHP: 0,
@@ -1083,8 +1090,8 @@ export class EventCoordinator {
             manualOrder: this.calculateNewManualOrder(original)
         };
 
-        // Add the new combatant
-        const newCombatant = DataServices.combatantManager.addCombatant(duplicateData);
+        // Add the new combatant using creatureId and instanceData
+        const newCombatant = DataServices.combatantManager.addCombatant(original.creatureId, instanceData);
 
         // Show info toast about the split
         ToastSystem.show(`${original.name} split! Both creatures now have ${halfMaxHP} max HP and ${halfCurrentHP} current HP`, 'info', TIMING.TOAST_EXTRA_LONG);
