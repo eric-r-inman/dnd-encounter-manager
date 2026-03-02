@@ -34,7 +34,7 @@ import { DataServices } from '../data-services.js';
 import { buildStatBlockHTML } from '../renderers/stat-block-renderer.js';
 import { escapeHtml } from '../renderers/html-utils.js';
 import { STORAGE_KEYS, MODAL_NAMES, TIMING } from '../constants.js';
-import { returnToCompendiumAfterCancel } from '../utils/modal-utils.js';
+import { returnToCompendiumAfterCancel } from '../utils/modal-helpers.js';
 import { StatBlockParser } from '../parsers/stat-block-parser.js';
 import { CreatureService } from '../services/creature-service.js';
 import { validateCreatureSelected, validateCombatantsSelected, validateRequired, validateDiceFormula } from '../utils/validators.js';
