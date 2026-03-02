@@ -21,7 +21,7 @@ export class CombatantCard {
         // Base creature data (from database)
         this.id = `combatant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         this.creatureId = creatureData.id;
-        this.name = creatureData.name;
+        this.name = instanceData.name || creatureData.name; // Allow instanceData to override name
         this.type = creatureData.type; // player, enemy, npc
         this.ac = creatureData.ac;
         this.maxHP = creatureData.maxHP;

@@ -1087,7 +1087,8 @@ export class EventCoordinator {
             damageHistory: [],
             healHistory: [],
             tempHPHistory: [],
-            manualOrder: this.calculateNewManualOrder(original)
+            // For ooze split, place new creature ABOVE (before) the original
+            manualOrder: this.calculateNewManualOrderBefore(original)
         };
 
         // Add the new combatant using creatureId and instanceData
@@ -1131,6 +1132,40 @@ export class EventCoordinator {
 
         // Return manual order that places duplicate right after original
         return originalIndex + 0.5;
+    }
+
+    static calculateNewManualOrderBefore(original) {
+        // Place the duplicate right before the original in turn order (for ooze splits)
+        // Get all combatants to find the position
+        const allCombatants = DataServices.combatantManager.getAllCombatants();
+
+        // If original has manual order, subtract 0.5 to place it right before
+        if (original.manualOrder !== null) {
+            return original.manualOrder - 0.5;
+        }
+
+        // If no manual order, we need to assign manual orders to maintain position
+        // Sort combatants by current display order
+        const sortedCombatants = allCombatants.sort((a, b) => {
+            if (a.manualOrder !== null && b.manualOrder !== null) {
+                return a.manualOrder - b.manualOrder;
+            }
+            if (a.manualOrder !== null) return -1;
+            if (b.manualOrder !== null) return 1;
+            if (b.initiative !== a.initiative) {
+                return b.initiative - a.initiative;
+            }
+            return a.name.localeCompare(b.name);
+        });
+
+        // Find the original's index
+        const originalIndex = sortedCombatants.findIndex(c => c.id === original.id);
+        if (originalIndex === -1) {
+            return null; // Shouldn't happen, but fallback
+        }
+
+        // Return manual order that places duplicate right before original
+        return originalIndex - 0.5;
     }
 
     static handleHPModification(target, actionType) {
