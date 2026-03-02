@@ -68,12 +68,14 @@ export class ModalLoader {
         const templatePath = `/src/templates/modals/${modalName}.html`;
 
         try {
+            console.log(`🔍 Fetching modal template: ${templatePath}`);
             const response = await fetch(templatePath);
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                throw new Error(`HTTP ${response.status}: ${response.statusText} for ${templatePath}`);
             }
 
             const html = await response.text();
+            console.log(`✅ Fetched ${html.length} characters for ${modalName}`);
 
             // Create a temporary container to parse HTML
             const temp = document.createElement('div');
@@ -87,7 +89,9 @@ export class ModalLoader {
 
             // Inject into DOM
             this.modalContainer.appendChild(modalElement);
+            console.log(`✅ Injected modal ${modalName} into DOM`);
         } catch (error) {
+            console.error(`❌ Failed to load modal ${modalName}:`, error);
             throw new Error(`Failed to fetch modal template: ${error.message}`);
         }
     }
