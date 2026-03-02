@@ -103,8 +103,8 @@ class DnDEncounterManager {
         // Initialize toast notification system
         ToastSystem.init();
         
-        // Initialize modal system
-        ModalSystem.init();
+        // Initialize modal system with lazy loading enabled
+        ModalSystem.init({ lazyLoading: true });
         
         console.log('✅ UI components initialized');
     }
