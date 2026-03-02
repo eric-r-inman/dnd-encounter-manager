@@ -119,7 +119,31 @@ export class CombatEvents {
         });
 
         // Set new active combatant
-        const newActiveCombatant = sortedCombatants[currentIndex];
+        let newActiveCombatant = sortedCombatants[currentIndex];
+
+        // WHY: Skip dead creatures (all 3 death saves failed)
+        // Dead creatures cannot take turns in D&D 5e combat
+        let skippedCount = 0;
+        const maxSkips = sortedCombatants.length; // Prevent infinite loop
+
+        while (newActiveCombatant.deathSaves &&
+               newActiveCombatant.deathSaves.every(save => save === true) &&
+               skippedCount < maxSkips) {
+            ToastSystem.show(`Skipping ${newActiveCombatant.name} (dead)`, 'info', 2000);
+
+            // Move to next combatant
+            currentIndex++;
+            skippedCount++;
+
+            // Loop back to start if we reach the end
+            if (currentIndex >= sortedCombatants.length) {
+                currentIndex = 0;
+                this.incrementRound();
+            }
+
+            newActiveCombatant = sortedCombatants[currentIndex];
+        }
+
         DataServices.combatantManager.updateCombatant(newActiveCombatant.id, 'status.isActive', true);
 
         // WHY: Process turn-based effects AFTER setting the new active combatant

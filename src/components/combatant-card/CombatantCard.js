@@ -80,16 +80,27 @@ export class CombatantCard {
         this.update = this.update.bind(this);
         this.destroy = this.destroy.bind(this);
     }
-    
+
+    /**
+     * Check if creature is dead (all 3 death saves failed)
+     * @returns {boolean} True if all 3 death saves are failed
+     */
+    isDead() {
+        return this.deathSaves.every(save => save === true);
+    }
+
     /**
      * Get current health state
      * @returns {string} 'healthy', 'bloodied', 'unconscious', or 'dead'
      */
     getHealthState() {
         if (this.currentHP <= 0) {
-            // Check if has unconscious condition or is at exactly 0
-            const hasUnconsciousCondition = this.conditions.some(c => c.name === 'Unconscious');
-            return hasUnconsciousCondition || this.currentHP === 0 ? 'unconscious' : 'dead';
+            // If all 3 death saves failed, creature is dead
+            if (this.isDead()) {
+                return 'dead';
+            }
+            // Otherwise, creature is unconscious at 0 HP
+            return 'unconscious';
         } else if (this.currentHP <= this.maxHP / 2) {
             return 'bloodied';
         }
@@ -225,8 +236,10 @@ export class CombatantCard {
 
         // Determine status emoji
         let statusEmoji = '😠'; // Default combat ready
-        if (healthState === 'unconscious' || healthState === 'dead') {
-            statusEmoji = '😞'; // Dead/unconscious takes priority
+        if (healthState === 'dead') {
+            statusEmoji = '💀'; // Dead takes priority
+        } else if (healthState === 'unconscious') {
+            statusEmoji = '😞'; // Unconscious
         } else if (this.status.surprised) {
             statusEmoji = '😲'; // Surprised
         } else if (this.status.holdAction) {
