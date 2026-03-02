@@ -1,0 +1,66 @@
+<!-- Auto-Roll Modal -->
+<div class="modal-overlay" style="display: none;"
+    data-modal="auto-roll"
+    data-modal-type="form"
+    data-modal-category="combat">
+    <div class="modal" style="max-width: 400px;">
+        <div class="modal-header">
+            <h2>Auto-Roll for <span data-target-name>Combatant</span></h2>
+            <button class="modal-close" aria-label="Close modal" data-modal-close>&times;</button>
+        </div>
+        <form class="modal-body"
+            data-modal-form="auto-roll"
+            data-form-type="auto-roll"
+            novalidate>
+
+            <div class="form-group">
+                <label for="auto-roll-formula">Dice Formula:</label>
+                <input type="text"
+                    id="auto-roll-formula"
+                    name="formula"
+                    placeholder="e.g., 1d20+5, 2d6-2"
+                    required
+                    pattern="^\d+d\d+([+-]\d+)?$"
+                    title="Enter dice notation like 1d20+5"
+                    style="width: 100%; padding: 8px; font-family: monospace;">
+                <small style="color: var(--color-text-muted);">
+                    Format: XdY+Z (e.g., 1d20+5, 2d6-2, 1d8)
+                </small>
+            </div>
+
+            <div class="form-group">
+                <label>When to Roll:</label>
+                <div style="display: flex; gap: 15px;">
+                    <label style="display: flex; align-items: center; gap: 5px;">
+                        <input type="radio" name="trigger" value="start" checked>
+                        <span>Start of turn</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 5px;">
+                        <input type="radio" name="trigger" value="end">
+                        <span>End of turn</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Hidden field to track combatant -->
+            <input type="hidden" name="combatantId" id="auto-roll-combatant-id" value="">
+
+            <div class="modal-footer-actions">
+                <button type="button" class="btn btn-secondary" data-modal-close>
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    Set Auto-Roll
+                </button>
+                <!-- Batch apply button (hidden by default) -->
+                <button type="button"
+                        class="btn btn-primary"
+                        id="auto-roll-batch-apply-btn"
+                        style="display: none;"
+                        data-action="batch-auto-roll">
+                    Apply to Selected (<span id="auto-roll-batch-count">0</span>)
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

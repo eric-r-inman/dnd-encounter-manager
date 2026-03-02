@@ -1,0 +1,109 @@
+<!-- Add Combatant Modal -->
+<div class="modal-overlay" style="display: none;"
+    data-modal="add-combatant"
+    data-modal-type="form"
+    data-modal-category="encounter"
+    data-modal-purpose="combatant-creation">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>Add Combatant</h2>
+            <button class="modal-close" aria-label="Close modal" data-modal-close>&times;</button>
+        </div>
+        <form class="modal-body"
+              data-modal-form="add-combatant"
+              data-form-type="combatant-creation"
+              data-form-validation="required"
+              novalidate>
+
+            <!-- Creature Selection Dropdown -->
+            <div class="form-group">
+                <label for="creature-select">Select Creature *</label>
+                <select id="creature-select"
+                        name="creatureId"
+                        required
+                        data-field-type="selection"
+                        data-validation="required">
+                    <option value="" disabled selected>Choose a creature...</option>
+                    <!-- Options will be populated dynamically -->
+                </select>
+            </div>
+
+            <!-- Initiative Input -->
+            <div class="form-group">
+                <label for="combatant-initiative">Initiative *</label>
+                <input type="number"
+                       id="combatant-initiative"
+                       name="initiative"
+                       placeholder="Roll or enter initiative"
+                       value="1"
+                       required
+                       min="-10"
+                       max="40"
+                       data-field-type="numeric"
+                       data-validation="required,range"
+                       data-range-min="-10"
+                       data-range-max="40">
+            </div>
+
+            <!-- Name Note (optional) -->
+            <div class="form-group">
+                <label for="combatant-name-note">Name Note (optional, max 20 characters)</label>
+                <input type="text"
+                    id="combatant-name-note"
+                    name="nameNote"
+                    placeholder="e.g., 'Leader', 'Archer #2'"
+                    maxlength="20"
+                    data-field-type="text"
+                    data-validation="maxlength">
+                <small style="color: var(--color-text-muted);">Appears next to the creature's name</small>
+            </div>
+
+            <!-- Current HP Override (optional) -->
+            <div class="form-group">
+                <div class="hp-label-container">
+                    <label for="combatant-current-hp">Current HP (optional)</label>
+                    <div class="hp-percentage-buttons">
+                        <button type="button" class="hp-percentage-btn" data-percentage="100">100%</button>
+                        <button type="button" class="hp-percentage-btn" data-percentage="50">50%</button>
+                        <button type="button" class="hp-percentage-btn" data-percentage="25">25%</button>
+                    </div>
+                </div>
+                <input type="number"
+                       id="combatant-current-hp"
+                       name="currentHP"
+                       placeholder="Leave blank for max HP"
+                       min="0"
+                       max="999"
+                       data-field-type="numeric"
+                       data-validation="range"
+                       data-range-min="0"
+                       data-range-max="999">
+                <small style="color: var(--color-text-muted);">Defaults to creature's max HP if not specified</small>
+            </div>
+
+            <!-- Starting Conditions Section -->
+            <div class="form-group">
+                <label>Starting Conditions (optional)</label>
+                <div class="condition-quick-select">
+                    <label class="condition-checkbox">
+                        <input type="checkbox" name="startingSurprised" value="true">
+                        <span>Surprised</span>
+                    </label>
+                    <label class="condition-checkbox">
+                        <input type="checkbox" name="startingHiding" value="true">
+                        <span>Hiding</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="modal-footer-actions">
+                <button type="button" class="btn btn-secondary" data-modal-close data-action="cancel-form">
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    Add to Encounter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

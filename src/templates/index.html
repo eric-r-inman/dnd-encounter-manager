@@ -479,35 +479,7 @@
 <!-- Modal containers will be inserted here by JavaScript -->
 <div id="modal-container">
     <!-- Creature Database Modal -->
-    <div class="modal-overlay" style="display: none;" 
-        data-modal="creature-database" 
-        data-modal-type="database" 
-        data-modal-category="reference">
-        <div class="modal modal-large">
-            <div class="modal-header">
-                <h2>📚 Compendium</h2>
-                <button class="modal-close" aria-label="Close modal" data-modal-close>&times;</button>
-            </div>
-            <div class="modal-body modal-database-body">
-                <!-- File Status and Import/Export Controls -->
-                <div class="database-file-controls" style="display: flex; align-items: center; gap: var(--spacing-md); padding: var(--spacing-md); background: var(--color-bg-secondary); border-radius: var(--border-radius); margin-bottom: var(--spacing-md);">
-                    <span style="font-weight: var(--font-weight-bold); color: var(--color-text-secondary);">File:</span>
-                    <span id="creature-database-filename" style="color: var(--color-text-primary);">creature-database.json</span>
-                    <span id="creature-database-unsaved-indicator"
-                          style="display: none; color: var(--color-danger); font-size: var(--font-size-lg); cursor: help;"
-                          title="New compendium not exported.">❗</span>
-                    <div style="margin-left: auto; display: flex; gap: var(--spacing-sm);">
-                        <button class="btn btn-sm btn-primary" data-action="import-creature-database" title="Import creature database from JSON file">
-                            📥 Import Database
-                        </button>
-                        <button class="btn btn-sm btn-primary" data-action="export-creature-database" title="Export creature database to JSON file">
-                            📤 Export Database
-                        </button>
-                        <button class="btn btn-sm btn-secondary" data-action="reset-creature-database" title="Reset to the original base database">
-                            ↺ Reset to Base
-                        </button>
-                    </div>
-                </div>
+        <!-- Creature Database Modal - Lazy loaded from /src/templates/modals/creature-database.html -->
 
                 <!-- Search and Filter Bar -->
                 <div class="database-controls">
@@ -637,74 +609,10 @@
     </div>
 
     <!-- Creature Type Selection Modal -->
-    <div class="modal-overlay" style="display: none;"
-        data-modal="creature-type-selection"
-        data-modal-type="form"
-        data-modal-category="database">
-        <div class="modal modal-small">
-            <div class="modal-header">
-                <h2>What type of creature?</h2>
-                <button class="modal-close" aria-label="Close modal" data-action="cancel-creature-type-selection">&times;</button>
-            </div>
-            <div class="modal-body" style="padding: var(--spacing-lg);">
-                <form id="creature-type-selection-form" data-form-type="creature-type-selection">
-                    <div style="display: flex; flex-direction: column; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
-                        <label class="creature-type-option" style="display: flex; align-items: center; justify-content: flex-start; padding: var(--spacing-lg); background: var(--color-bg-secondary); border: 2px solid var(--color-border-muted); border-radius: var(--border-radius); cursor: pointer; transition: all 0.2s ease;">
-                            <input type="radio" name="creature-type" value="enemy" id="type-enemy" checked style="width: 20px; height: 20px; margin: 0; margin-right: var(--spacing-md); cursor: pointer; flex-shrink: 0;">
-                            <span style="font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); color: var(--color-text-primary);">Enemy/NPC</span>
-                        </label>
-                        <label class="creature-type-option" style="display: flex; align-items: center; justify-content: flex-start; padding: var(--spacing-lg); background: var(--color-bg-secondary); border: 2px solid var(--color-border-muted); border-radius: var(--border-radius); cursor: pointer; transition: all 0.2s ease;">
-                            <input type="radio" name="creature-type" value="player" id="type-player" style="width: 20px; height: 20px; margin: 0; margin-right: var(--spacing-md); cursor: pointer; flex-shrink: 0;">
-                            <span style="font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); color: var(--color-text-primary);">Player</span>
-                        </label>
-                    </div>
-                    <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: var(--spacing-md); padding-top: var(--spacing-md); border-top: 1px solid var(--color-border-muted);">
-                        <button type="button" class="btn btn-secondary" data-action="cancel-creature-type-selection">Cancel</button>
-                        <button type="submit" class="btn btn-primary" data-action="confirm-creature-type">Continue</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+        <!-- Creature Type Selection Modal - Lazy loaded from /src/templates/modals/creature-type-selection.html -->
 
     <!-- Add/Edit Player Character Modal -->
-    <div class="modal-overlay" style="display: none;"
-        data-modal="player-form"
-        data-modal-type="form"
-        data-modal-category="database">
-        <div class="modal modal-large" style="max-height: 85vh;">
-            <div class="modal-header">
-                <h2 id="player-form-title">Add Player Character</h2>
-                <button class="modal-close" aria-label="Close modal" data-action="cancel-player-form">&times;</button>
-            </div>
-            <form class="modal-body"
-                id="player-form"
-                data-modal-form="player"
-                data-form-type="player"
-                novalidate
-                style="overflow-y: auto; max-height: calc(85vh - 180px);">
-
-                <!-- Hidden ID field for edit mode -->
-                <input type="hidden" id="player-form-id" name="id" value="">
-
-                <!-- ==================== BASIC INFORMATION ==================== -->
-                <h3 class="form-section-title">Basic Information</h3>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="player-form-name">Character Name *</label>
-                        <input type="text"
-                            id="player-form-name"
-                            name="name"
-                            required
-                            placeholder="e.g., Thorin Ironforge">
-                    </div>
-                    <div class="form-group">
-                        <label>Type *</label>
-                        <div id="player-form-type-display">Player</div>
-                        <input type="hidden" id="player-form-type" name="type" value="player">
-                    </div>
-                </div>
+        <!-- Add/Edit Player Character Modal - Lazy loaded from /src/templates/modals/player-form.html -->
 
                 <div class="form-row">
                     <div class="form-group">
@@ -1147,48 +1055,8 @@
     </div>
 
     <!-- Add/Edit Creature Modal -->
-    <div class="modal-overlay" style="display: none;"
-        data-modal="creature-form"
-        data-modal-type="form"
-        data-modal-category="database">
-        <div class="modal modal-large" style="max-height: 85vh;">
-            <div class="modal-header">
-                <h2 id="creature-form-title">Add New Creature</h2>
-                <button class="modal-close" aria-label="Close modal" data-action="cancel-creature-form">&times;</button>
-            </div>
-            <form class="modal-body"
-                id="creature-form"
-                data-modal-form="creature"
-                data-form-type="creature"
-                novalidate
-                style="overflow-y: auto; max-height: calc(85vh - 180px);">
-                
-                <!-- ==================== BASIC INFORMATION ==================== -->
-                <h3 class="form-section-title">Basic Information</h3>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="creature-form-name">Name *</label>
-                        <input type="text"
-                            id="creature-form-name"
-                            name="name"
-                            required
-                            placeholder="e.g., Ancient Red Dragon">
-                    </div>
-                    <div class="form-group">
-                        <label for="creature-form-type">Type *</label>
-                        <select id="creature-form-type" name="type">
-                            <option value="enemy">Enemy</option>
-                            <option value="npc">NPC</option>
-                            <option value="player" disabled>Player</option>
-                        </select>
-                        <div id="creature-form-type-readonly" style="display: none; padding: var(--spacing-sm); background-color: var(--color-bg-hover); border-radius: var(--border-radius); color: var(--color-text-primary); text-transform: capitalize;">
-                            Player
-                        </div>
-                        <input type="hidden" id="creature-form-type-hidden" value="">
-                    </div>
-                </div>
-                
+        <!-- Add/Edit Creature Modal - Lazy loaded from /src/templates/modals/creature-form.html -->
+
                 <div class="form-row">
                     <div class="form-group">
                         <label for="creature-form-size">Size</label>
@@ -1565,103 +1433,8 @@
     </div>
     
 <!-- Add Combatant Modal - Updated Version -->
-<div class="modal-overlay" style="display: none;" 
-     data-modal="add-combatant" 
-     data-modal-type="form" 
-     data-modal-category="encounter"
-     data-modal-purpose="combatant-creation">
-    <div class="modal">
-        <div class="modal-header">
-            <h2>Add Combatant</h2>
-            <button class="modal-close" aria-label="Close modal" data-modal-close>&times;</button>
-        </div>
-        <form class="modal-body" 
-              data-modal-form="add-combatant" 
-              data-form-type="combatant-creation"
-              data-form-validation="required"
-              novalidate>
-            
-            <!-- Creature Selection Dropdown -->
-            <div class="form-group">
-                <label for="creature-select">Select Creature *</label>
-                <select id="creature-select" 
-                        name="creatureId"
-                        required
-                        data-field-type="selection"
-                        data-validation="required">
-                    <option value="" disabled selected>Choose a creature...</option>
-                    <!-- Options will be populated dynamically -->
-                </select>
-            </div>
-            
-            <!-- Initiative Input -->
-            <div class="form-group">
-                <label for="combatant-initiative">Initiative *</label>
-                <input type="number" 
-                       id="combatant-initiative" 
-                       name="initiative" 
-                       placeholder="Roll or enter initiative" 
-                       value="1"
-                       required
-                       min="-10"
-                       max="40"
-                       data-field-type="numeric"
-                       data-validation="required,range"
-                       data-range-min="-10"
-                       data-range-max="40">
-            </div>
+    <!-- Add Combatant Modal - Lazy loaded from /src/templates/modals/add-combatant.html -->
 
-            <!-- Name Note (optional) -->
-            <div class="form-group">
-                <label for="combatant-name-note">Name Note (optional, max 20 characters)</label>
-                <input type="text" 
-                    id="combatant-name-note" 
-                    name="nameNote" 
-                    placeholder="e.g., 'Leader', 'Archer #2'"
-                    maxlength="20"
-                    data-field-type="text"
-                    data-validation="maxlength">
-                <small style="color: var(--color-text-muted);">Appears next to the creature's name</small>
-            </div>
-            
-            <!-- Current HP Override (optional) -->
-            <div class="form-group">
-                <div class="hp-label-container">
-                    <label for="combatant-current-hp">Current HP (optional)</label>
-                    <div class="hp-percentage-buttons">
-                        <button type="button" class="hp-percentage-btn" data-percentage="100">100%</button>
-                        <button type="button" class="hp-percentage-btn" data-percentage="50">50%</button>
-                        <button type="button" class="hp-percentage-btn" data-percentage="25">25%</button>
-                    </div>
-                </div>
-                <input type="number"
-                       id="combatant-current-hp"
-                       name="currentHP"
-                       placeholder="Leave blank for max HP"
-                       min="0"
-                       max="999"
-                       data-field-type="numeric"
-                       data-validation="range"
-                       data-range-min="0"
-                       data-range-max="999">
-                <small style="color: var(--color-text-muted);">Defaults to creature's max HP if not specified</small>
-            </div>
-            
-            <!-- Starting Conditions Section -->
-            <div class="form-group">
-                <label>Starting Conditions (optional)</label>
-                <div class="condition-quick-select">
-                    <label class="condition-checkbox">
-                        <input type="checkbox" name="startingSurprised" value="true">
-                        <span>Surprised</span>
-                    </label>
-                    <label class="condition-checkbox">
-                        <input type="checkbox" name="startingHiding" value="true">
-                        <span>Hiding</span>
-                    </label>
-                </div>
-            </div>
-            
             <div class="modal-footer-actions">
                 <button type="button" class="btn btn-secondary" data-modal-close data-action="cancel-form">
                     Cancel
@@ -1675,85 +1448,7 @@
 </div>
 
     <!-- Initiative Modal -->
-    <div class="modal-overlay" style="display: none;"
-         data-modal="quick-initiative"
-         data-modal-type="form"
-         data-modal-category="combat"
-         data-modal-purpose="initiative-management">
-        <div class="modal modal-medium">
-            <div class="modal-header">
-                <h2>⚡ Initiative Manager</h2>
-                <button class="modal-close" aria-label="Close modal" data-modal-close>&times;</button>
-            </div>
-            <div class="modal-body initiative-modal-body">
-                <!-- Quick Sort Button -->
-                <div class="initiative-section">
-                    <button type="button"
-                            class="btn btn-primary btn-block"
-                            data-action="quick-sort-encounter"
-                            style="margin-bottom: var(--spacing-md);">
-                        🔄 Quick Sort Encounter
-                    </button>
-                    <p class="help-text" style="margin: 0 0 var(--spacing-lg) 0; text-align: center; font-size: var(--font-size-sm); color: var(--color-text-muted);">
-                        Sort all creatures by their current initiative values
-                    </p>
-                </div>
-
-                <!-- Auto-Roll Buttons -->
-                <div class="initiative-section">
-                    <h3 class="section-heading">Auto-Roll Initiative</h3>
-                    <div class="button-group-vertical">
-                        <button type="button"
-                                class="btn btn-success btn-block"
-                                data-action="roll-init-single"
-                                id="roll-init-single-btn">
-                            🎲 Roll Initiative & Sort
-                        </button>
-                        <button type="button"
-                                class="btn btn-success btn-block"
-                                data-action="roll-init-all">
-                            🎲 Roll Initiative & Sort: All
-                        </button>
-                        <button type="button"
-                                class="btn btn-success btn-block"
-                                data-action="roll-init-selected"
-                                id="roll-init-selected-btn">
-                            🎲 Roll Initiative & Sort: Selected (<span id="init-selected-count">0</span>)
-                        </button>
-                    </div>
-                    <p class="help-text" style="margin: var(--spacing-sm) 0 0 0; font-size: var(--font-size-xs); color: var(--color-text-muted);">
-                        Rolls 1d20 + creature's initiative bonus from stat block
-                    </p>
-                </div>
-
-                <!-- Custom Initiative Entry -->
-                <div class="initiative-section">
-                    <h3 class="section-heading">Custom Initiative</h3>
-                    <div class="form-group" style="margin-bottom: var(--spacing-sm);">
-                        <label for="custom-initiative-value">Initiative Value:</label>
-                        <input type="number"
-                               id="custom-initiative-value"
-                               name="customInitiative"
-                               placeholder="Enter 1-99"
-                               min="0"
-                               max="99"
-                               style="width: 120px;">
-                    </div>
-                    <div class="button-group-vertical">
-                        <button type="button"
-                                class="btn btn-info btn-block"
-                                data-action="apply-custom-init-single"
-                                id="apply-custom-init-single-btn">
-                            ✓ Apply and Sort
-                        </button>
-                        <button type="button"
-                                class="btn btn-info btn-block"
-                                data-action="apply-custom-init-selected"
-                                id="apply-custom-init-selected-btn">
-                            ✓ Apply to Selected (<span id="init-custom-selected-count">0</span>) and Sort
-                        </button>
-                    </div>
-                </div>
+        <!-- Initiative Modal - Lazy loaded from /src/templates/modals/quick-initiative.html -->
 
                 <!-- Hidden field to track current combatant -->
                 <input type="hidden" id="quick-init-combatant-id" name="combatantId">
@@ -1765,41 +1460,8 @@
     </div>
 
     <!-- Set Condition Modal -->
-    <div class="modal-overlay" style="display: none;"
-         data-modal="condition"
-         data-modal-type="form"
-         data-modal-category="status"
-         data-modal-purpose="condition-application">
-        <div class="modal">
-            <div class="modal-header">
-                <h2>Set Condition for <span data-target-name>Thorin Ironforge</span></h2>
-                <button class="modal-close" aria-label="Close modal" data-modal-close>&times;</button>
-            </div>
-            <form class="modal-body" 
-                  data-modal-form="condition" 
-                  data-form-type="condition-application"
-                  data-form-validation="conditional"
-                  novalidate>
-                <div class="form-group">
-                    <label for="condition-turns">Set Counter (turns):</label>
-                    <div class="duration-input-group">
-                    <button type="button" 
-                            class="infinity-btn" 
-                            title="Set infinite duration" 
-                            data-action="toggle-infinity"
-                            data-toggle-target="condition-turns"
-                            data-infinity-state="false">∞</button>
-                        <input type="number"
-                               id="condition-turns"
-                               name="turns"
-                               placeholder="Enter number of turns"
-                               min="0"
-                               max="100"
-                               value="1"
-                               data-field-type="duration"
-                               data-can-be-infinite="true">
-                    </div>
-                </div>
+        <!-- Set Condition Modal - Lazy loaded from /src/templates/modals/condition.html -->
+
                 <div class="form-group">
                     <label for="condition-note">Note (optional, max 14 chars):</label>
                     <input type="text"
@@ -1904,34 +1566,8 @@
     </div>
 
     <!-- Set Effect Modal -->
-    <div class="modal-overlay" style="display: none;" 
-         data-modal="effect" 
-         data-modal-type="form" 
-         data-modal-category="status">
-        <div class="modal">
-            <div class="modal-header">
-                <h2>Set Effect for <span data-target-name>Thorin Ironforge</span></h2>
-                <button class="modal-close" aria-label="Close modal" data-modal-close>&times;</button>
-            </div>
-            <form class="modal-body" data-modal-form="effect" data-form-type="effect-application">
-                <div class="form-group">
-                    <label for="effect-turns">Set Counter (turns):</label>
-                    <div class="duration-input-group">
-                        <button type="button" 
-                                class="infinity-btn" 
-                                title="Set infinite duration" 
-                                data-action="toggle-infinity"
-                                data-toggle-target="effect-turns"
-                                data-infinity-state="false">∞</button>
-                        <input type="number"
-                            id="effect-turns"
-                            name="turns"
-                            placeholder="Enter number of turns"
-                            min="0"
-                            max="100"
-                            value="1">
-                    </div>
-                </div>
+        <!-- Set Effect Modal - Lazy loaded from /src/templates/modals/effect.html -->
+
                 <div class="form-group">
                     <label for="custom-effect">Enter Effect (max 14 chars):</label>
                     <input type="text" id="custom-effect" name="custom-effect" maxlength="14" placeholder="Enter effect name..." class="custom-effect-field" list="recent-effects-list" autocomplete="off">
@@ -1975,31 +1611,8 @@
     </div>
 
     <!-- Placeholder Timer Modal -->
-    <div class="modal-overlay" style="display: none;" data-modal="placeholder-timer" data-modal-type="dialog">
-        <div class="modal modal-small">
-            <div class="modal-header">
-                <h2>Set Timer for <span data-target-name>Placeholder</span></h2>
-                <button class="modal-close" aria-label="Close modal" data-modal-close>&times;</button>
-            </div>
-            <form class="modal-body" data-form-type="placeholder-timer">
-                <div class="form-group">
-                    <label for="timer-turns">Set Counter (turns):</label>
-                    <div class="form-input-group">
-                        <button type="button"
-                                class="infinity-toggle-button"
-                                title="Toggle infinite duration"
-                                data-action="toggle-infinity"
-                                data-toggle-target="timer-turns"
-                                data-infinity-state="false">∞</button>
-                        <input type="number"
-                            id="timer-turns"
-                            name="turns"
-                            placeholder="Enter number of turns"
-                            min="0"
-                            max="100"
-                            value="1">
-                    </div>
-                </div>
+        <!-- Placeholder Timer Modal - Lazy loaded from /src/templates/modals/placeholder-timer.html -->
+
                 <div class="form-group">
                     <label for="timer-note">Note (optional, max 14 chars):</label>
                     <input type="text" id="timer-note" name="note" maxlength="14" placeholder="Short description">
@@ -2016,310 +1629,7 @@
         </div>
     </div>
 
-    <!-- HP Modification Modal -->
-    <div class="modal-overlay" style="display: none;" 
-        data-modal="hp-modification" 
-        data-modal-type="form" 
-        data-modal-category="combat">
-        <div class="modal" style="max-width: 400px;">
-            <div class="modal-header">
-                <h2><span id="hp-action-type">Damage</span> <span data-target-name>Thorin Ironforge</span></h2>
-                <button class="modal-close" aria-label="Close modal" data-modal-close>&times;</button>
-            </div>
-            <form class="modal-body" 
-                data-modal-form="hp-modification" 
-                data-form-type="hp-modification"
-                novalidate>
-                <div class="form-group">
-                    <label for="hp-amount"><span id="hp-action-label">Damage</span> Amount:</label>
-                    <input type="number" 
-                        id="hp-amount" 
-                        name="amount" 
-                        placeholder="Enter amount" 
-                        min="0"
-                        max="999"
-                        required
-                        autofocus>
-                    <small id="hp-help-text" style="color: var(--color-text-muted);">
-                        Current HP: <span id="current-hp-display">24</span> / <span id="max-hp-display">40</span>
-                        <span id="temp-hp-display" style="display: none;"> (Temp: <span id="temp-hp-value">0</span>)</span>
-                    </small>
-                </div>
-
-                <!-- Auto-Save Feature -->
-                <div class="form-group" id="auto-save-section" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--color-border-muted);">
-                    <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-                        <!-- Roll Save Toggle -->
-                        <label style="display: flex; align-items: center; gap: 8px; margin: 0;">
-                            <input type="checkbox" id="roll-save-toggle" name="rollSave" style="width: 18px; height: 18px;">
-                            <span style="font-weight: 500;">Roll Save</span>
-                        </label>
-
-                        <!-- Save Configuration Fields (hidden by default) -->
-                        <div id="save-config-fields" style="display: none; flex: 1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                            <!-- Ability Select -->
-                            <div style="display: flex; align-items: center; gap: 5px;">
-                                <label for="save-ability" style="margin: 0; font-size: 0.9em;">Ability:</label>
-                                <select id="save-ability" name="saveAbility" style="padding: 4px 8px; font-size: 0.9em;">
-                                    <option value="con" selected>Con</option>
-                                    <option value="dex">Dex</option>
-                                    <option value="str">Str</option>
-                                    <option value="wis">Wis</option>
-                                    <option value="int">Int</option>
-                                    <option value="cha">Cha</option>
-                                </select>
-                            </div>
-
-                            <!-- Modifier Display/Input -->
-                            <div style="display: flex; align-items: center; gap: 5px;">
-                                <label for="save-modifier" style="margin: 0; font-size: 0.9em;">Mod:</label>
-                                <input type="text"
-                                       id="save-modifier"
-                                       name="saveModifier"
-                                       value="+0"
-                                       style="width: 45px; padding: 4px; text-align: center; font-size: 0.9em;"
-                                       pattern="[+-]?\d+"
-                                       title="Enter modifier (e.g., +2, -1, 0)">
-                            </div>
-
-                            <!-- DC Input -->
-                            <div style="display: flex; align-items: center; gap: 5px;">
-                                <label for="save-dc" style="margin: 0; font-size: 0.9em;">DC:</label>
-                                <input type="number"
-                                       id="save-dc"
-                                       name="saveDC"
-                                       value="13"
-                                       min="1"
-                                       max="30"
-                                       style="width: 50px; padding: 4px; text-align: center; font-size: 0.9em;">
-                            </div>
-
-                            <!-- Damage Reduction Select -->
-                            <div style="display: flex; align-items: center; gap: 5px;">
-                                <label for="damage-reduction" style="margin: 0; font-size: 0.9em;">On Save:</label>
-                                <select id="damage-reduction" name="damageReduction" style="padding: 4px 8px; font-size: 0.9em;">
-                                    <option value="0.25">25% avoided</option>
-                                    <option value="0.5" selected>50% avoided</option>
-                                    <option value="0.75">75% avoided</option>
-                                    <option value="1">100% avoided</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Hidden fields to track action type and combatant -->
-                <input type="hidden" name="actionType" id="hp-action-type-field" value="damage">
-                <input type="hidden" name="combatantId" id="hp-combatant-id" value="">
-
-                <div class="modal-footer-actions">
-                    <button type="button" class="btn btn-secondary" data-modal-close>
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn" id="hp-submit-btn">
-                        Apply
-                    </button>
-                    <!-- Batch apply button (hidden by default) -->
-                    <button type="button"
-                            class="btn"
-                            id="hp-batch-apply-btn"
-                            style="display: none;"
-                            data-action="batch-hp-modification">
-                        Apply to Selected (<span id="batch-count">0</span>)
-                    </button>
-                </div>
-                
-                <!-- HP History Section -->
-                <div class="hp-history-section" id="hp-history-section">
-                    <h4 class="hp-history-title" id="hp-history-title">Damage History</h4>
-                    <div class="hp-history-list" id="hp-history-list">
-                        <!-- History entries will be populated here -->
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Auto-Roll Modal -->
-    <div class="modal-overlay" style="display: none;"
-        data-modal="auto-roll"
-        data-modal-type="form"
-        data-modal-category="combat">
-        <div class="modal" style="max-width: 400px;">
-            <div class="modal-header">
-                <h2>Auto-Roll for <span data-target-name>Combatant</span></h2>
-                <button class="modal-close" aria-label="Close modal" data-modal-close>&times;</button>
-            </div>
-            <form class="modal-body"
-                data-modal-form="auto-roll"
-                data-form-type="auto-roll"
-                novalidate>
-
-                <div class="form-group">
-                    <label for="auto-roll-formula">Dice Formula:</label>
-                    <input type="text"
-                        id="auto-roll-formula"
-                        name="formula"
-                        placeholder="e.g., 1d20+5, 2d6-2"
-                        required
-                        pattern="^\d+d\d+([+-]\d+)?$"
-                        title="Enter dice notation like 1d20+5"
-                        style="width: 100%; padding: 8px; font-family: monospace;">
-                    <small style="color: var(--color-text-muted);">
-                        Format: XdY+Z (e.g., 1d20+5, 2d6-2, 1d8)
-                    </small>
-                </div>
-
-                <div class="form-group">
-                    <label>When to Roll:</label>
-                    <div style="display: flex; gap: 15px;">
-                        <label style="display: flex; align-items: center; gap: 5px;">
-                            <input type="radio" name="trigger" value="start" checked>
-                            <span>Start of turn</span>
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 5px;">
-                            <input type="radio" name="trigger" value="end">
-                            <span>End of turn</span>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Hidden field to track combatant -->
-                <input type="hidden" name="combatantId" id="auto-roll-combatant-id" value="">
-
-                <div class="modal-footer-actions">
-                    <button type="button" class="btn btn-secondary" data-modal-close>
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        Set Auto-Roll
-                    </button>
-                    <!-- Batch apply button (hidden by default) -->
-                    <button type="button"
-                            class="btn btn-primary"
-                            id="auto-roll-batch-apply-btn"
-                            style="display: none;"
-                            data-action="batch-auto-roll">
-                        Apply to Selected (<span id="auto-roll-batch-count">0</span>)
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Combatant Note Modal - Lazy loaded from /src/templates/modals/combatant-note.html -->
-
-    <!-- Duplicate Combatant Modal -->
-    <div class="modal-overlay" style="display: none;"
-        data-modal="duplicate-combatant"
-        data-modal-type="action"
-        data-modal-category="management">
-        <div class="modal" style="max-width: 500px;">
-            <div class="modal-header">
-                <h2>Duplicate <span id="duplicate-combatant-name">Combatant</span></h2>
-                <button class="modal-close" aria-label="Close modal" data-modal-close>&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="duplicate-options">
-                    <button class="btn btn-block btn-success duplicate-option-btn"
-                            data-action="duplicate-fresh"
-                            style="margin-bottom: var(--spacing-sm);">
-                        Reset all statuses, conditions, and HP for new creature
-                    </button>
-
-                    <button class="btn btn-block btn-success duplicate-option-btn"
-                            data-action="duplicate-preserve"
-                            style="margin-bottom: var(--spacing-sm);">
-                        Preserve all statuses, conditions, and HP for new creature
-                    </button>
-
-                    <button class="btn btn-block btn-success duplicate-option-btn"
-                            data-action="duplicate-ooze-split">
-                        (Oozes) Divide current HP, and retain all status/conditions
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Stat Block Parser Modal -->
-        <div class="modal-overlay" style="display: none;" 
-            data-modal="stat-block-parser" 
-            data-modal-type="parser" 
-            data-modal-category="import">
-            <div class="modal modal-large" style="max-width: 1000px;">
-                <div class="modal-header">
-                    <h2>Import from Stat Block</h2>
-                    <button class="modal-close" aria-label="Close modal" data-action="cancel-stat-block-parser">&times;</button>
-                </div>
-                <div class="modal-body" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg); max-height: 80vh; overflow-y: auto;">
-                    <!-- Left side: Input -->
-                    <div class="stat-block-input-section">
-                        <h3 style="margin-bottom: var(--spacing-md);">Paste Stat Block</h3>
-                        <div class="form-group">
-                            <label for="stat-block-text">
-                                Paste your stat block text below (supports D&D Beyond, Roll20, or book formats)
-                            </label>
-                            <textarea id="stat-block-text" 
-                                    rows="20" 
-                                    placeholder="Example:&#10;&#10;Ancient Red Dragon&#10;Gargantuan dragon, chaotic evil&#10;&#10;Armor Class 22 (natural armor)&#10;Hit Points 546 (28d20 + 252)&#10;Speed 40 ft., climb 40 ft., fly 80 ft.&#10;&#10;STR 30 (+10) DEX 10 (+0) CON 29 (+9)..."
-                                    style="font-family: var(--font-family-mono); font-size: var(--font-size-sm);"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label for="stat-block-source">Source Format</label>
-                            <select id="stat-block-source">
-                                <option value="auto">Auto-detect</option>
-                                <option value="dndbeyond">D&D Beyond</option>
-                                <option value="roll20">Roll20</option>
-                                <option value="book">Book/PDF</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="stat-block-creature-type">Creature Type</label>
-                            <select id="stat-block-creature-type">
-                                <option value="enemy">Enemy</option>
-                                <option value="npc">NPC</option>
-                                <option value="player" disabled style="color: var(--color-text-muted); opacity: 0.5;">Player (Coming Soon)</option>
-                            </select>
-                        </div>
-                        <button class="btn btn-primary" data-action="parse-stat-block">
-                            🔍 Parse Stat Block
-                        </button>
-                    </div>
-                    
-                    <!-- Right side: Preview -->
-<div class="stat-block-preview-section">
-    <h3 style="margin-bottom: var(--spacing-md);">Preview</h3>
-    <div id="stat-block-preview" style="
-        background-color: var(--color-bg-tertiary); 
-        border-radius: var(--border-radius); 
-        padding: var(--spacing-lg); 
-        min-height: 400px;
-        max-height: 600px;
-        overflow-y: auto;
-        overflow-x: hidden;
-    ">
-        <div class="empty-state" style="text-align: center; color: var(--color-text-muted);">
-            <p>Paste a stat block and click "Parse Stat Block" to see a preview</p>
-        </div>
-    </div>
-    <div id="stat-block-errors" style="margin-top: var(--spacing-md); display: none;">
-        <!-- ... rest of the error section ... -->
-    </div>
-</div>
-                </div>
-                <div class="modal-footer-actions">
-                    <button type="button" class="btn btn-secondary" data-action="cancel-stat-block-parser">
-                        Cancel
-                    </button>
-                    <button type="button" class="btn btn-success" id="import-parsed-creature" style="display: none;" data-action="import-parsed-creature">
-                        ✅ Import Creature
-                    </button>
-                </div>
-            </div>
-        </div>
-
-</div>
+    <!-- HP Modification Modal - Lazy loaded from /src/templates/modals/hp-modification.html -->
 
 <!-- Keyboard shortcuts hint -->
 <div class="keyboard-shortcuts-hint">
