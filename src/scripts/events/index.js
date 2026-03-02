@@ -1057,7 +1057,7 @@ export class EventCoordinator {
 
     static duplicateCombatantOozeSplit(original) {
         // For ooze splits: divide max HP and current HP, remove temp HP, preserve conditions
-        const newName = `${original.name} (copy)`;
+        const newName = `${original.name} (split)`;
         const halfMaxHP = Math.floor(original.maxHP / 2);
         const halfCurrentHP = Math.floor(original.currentHP / 2);
 
