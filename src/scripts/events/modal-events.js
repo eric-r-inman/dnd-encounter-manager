@@ -55,9 +55,16 @@ export class ModalEvents {
      * @param {string} modalType - Type of modal to show
      * @param {HTMLElement} trigger - Element that triggered the modal
      */
-    static handleModalShow(modalType, trigger) {
+    static async handleModalShow(modalType, trigger) {
+        // Show the modal first (this will lazy-load if needed)
+        await ModalSystem.show(modalType);
+
+        // Now query for the modal (it should exist after show())
         const modal = document.querySelector(`[data-modal="${modalType}"]`);
-        if (!modal) return;
+        if (!modal) {
+            console.error(`Modal ${modalType} not found even after show()`);
+            return;
+        }
 
         // Get target combatant ID if specified
         const targetId = trigger.getAttribute('data-modal-target');
@@ -81,9 +88,6 @@ export class ModalEvents {
 
         // Update batch buttons for applicable modals
         this.updateBatchButtons(modalType, modal);
-
-        // Show the modal
-        ModalSystem.show(modalType);
     }
 
     /**
