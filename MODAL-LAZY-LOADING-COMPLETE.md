@@ -107,17 +107,17 @@ Test each modal to ensure it works correctly:
 - [X] **combatant-note**: Click combatant menu → "📝 Add Note"
 - [X] **duplicate-combatant**: Click "⎘" duplicate button on combatant card
 - [X] **auto-roll**: Click combatant menu → "🔄 Auto-Roll"
-- [ ] **hp-modification**: Click HP damage/heal buttons on combatant card
-- [ ] **placeholder-timer**: Click timer badge to edit existing timer
-- [ ] **effect**: Click effect badge to edit existing effect
-- [ ] **condition**: Click condition badge to edit existing condition
-- [ ] **quick-initiative**: Click "⚡" initiative button on combatant card
-- [ ] **add-combatant**: Press 'A' key or click "➕ Add Combatant" button
-- [ ] **stat-block-parser**: Compendium → "📋 Paste"
-- [ ] **creature-database**: Click "📚 Compendium" button
-- [ ] **creature-type-selection**: Compendium → "➕ New Creature"
-- [ ] **player-form**: Select "Player" in creature type modal
-- [ ] **creature-form**: Select "Enemy/NPC" in creature type modal
+- [X] **hp-modification**: Click HP damage/heal buttons on combatant card
+- [X] **timer**: Click timer badge to edit existing timer
+- [X] **effect**: Click effect badge to edit existing effect
+- [X] **condition**: Click condition badge to edit existing condition
+- [X] **quick-initiative**: Click "⚡" initiative button on combatant card
+- [X] **add-combatant**: Press 'A' key or click "➕ Add Combatant" button
+- [X] **stat-block-parser**: Compendium → "📋 Paste"
+- [X] **creature-database**: Click "📚 Compendium" button
+- [X] **creature-type-selection**: Compendium → "➕ New Creature"
+- [X] **player-form**: Select "Player" in creature type modal
+- [X] **creature-form**: Select "Enemy/NPC" in creature type modal
 
 ### Console Verification
 

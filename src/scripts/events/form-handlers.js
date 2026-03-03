@@ -108,8 +108,19 @@ export class FormHandlers {
             conditionObj.skipNextEndDecrement = true;
         }
 
-        // Check if condition already exists
-        const existingIndex = combatant.conditions.findIndex(c => c.name === condition);
+        // Check if we're in editing mode
+        const isEditingMode = modal?.getAttribute('data-editing-mode') === 'true';
+        const originalName = modal?.getAttribute('data-editing-original-name');
+
+        let existingIndex = -1;
+        if (isEditingMode && originalName) {
+            // Find the condition we're editing by original name
+            existingIndex = combatant.conditions.findIndex(c => c.name === originalName);
+        } else {
+            // Check if condition with the new name already exists
+            existingIndex = combatant.conditions.findIndex(c => c.name === condition);
+        }
+
         if (existingIndex !== -1) {
             // Update existing condition
             combatant.conditions[existingIndex] = conditionObj;
@@ -118,6 +129,12 @@ export class FormHandlers {
             // Add new condition
             combatant.conditions.push(conditionObj);
             ToastSystem.show(`Applied ${condition} to ${combatant.name}`, 'success', 2000);
+        }
+
+        // Clear editing mode flags
+        if (isEditingMode) {
+            modal.removeAttribute('data-editing-mode');
+            modal.removeAttribute('data-editing-original-name');
         }
 
         // Update the combatant
@@ -185,8 +202,19 @@ export class FormHandlers {
             effectObj.skipNextEndDecrement = true;
         }
 
-        // Check if effect already exists
-        const existingIndex = combatant.effects.findIndex(e => e.name === effectName);
+        // Check if we're in editing mode
+        const isEditingMode = modal?.getAttribute('data-editing-mode') === 'true';
+        const originalName = modal?.getAttribute('data-editing-original-name');
+
+        let existingIndex = -1;
+        if (isEditingMode && originalName) {
+            // Find the effect we're editing by original name
+            existingIndex = combatant.effects.findIndex(e => e.name === originalName);
+        } else {
+            // Check if effect with the new name already exists
+            existingIndex = combatant.effects.findIndex(e => e.name === effectName);
+        }
+
         if (existingIndex !== -1) {
             // Update existing effect
             combatant.effects[existingIndex] = effectObj;
@@ -195,6 +223,12 @@ export class FormHandlers {
             // Add new effect
             combatant.effects.push(effectObj);
             ToastSystem.show(`Applied ${effectName} to ${combatant.name}`, 'success', 2000);
+        }
+
+        // Clear editing mode flags
+        if (isEditingMode) {
+            modal.removeAttribute('data-editing-mode');
+            modal.removeAttribute('data-editing-original-name');
         }
 
         // Add to recent effects for future use (both new and updated effects)
@@ -221,6 +255,7 @@ export class FormHandlers {
 
         const turns = formData.get('turns');
         const note = formData.get('note')?.trim() || '';
+        const expiresAt = formData.get('expiresAt') || 'start'; // 'start' or 'end'
 
         // Get target from modal
         const modal = form.closest('.modal-overlay');
@@ -239,16 +274,11 @@ export class FormHandlers {
             return;
         }
 
-        // Only allow timers on placeholders
-        if (!combatant.isPlaceholder) {
-            ToastSystem.show('Timers can only be set on placeholders', 'error', 2000);
-            return;
-        }
-
         // Create timer object
         const timerObj = {
             duration: turns === 'infinite' ? 'infinite' : parseInt(turns) || 1,
-            note: note
+            note: note,
+            expiresAt: expiresAt // 'start' = beginning of turn, 'end' = end of turn
         };
 
         // Set the timer on the combatant

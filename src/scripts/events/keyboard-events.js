@@ -13,6 +13,7 @@
 import { ModalSystem } from '../../components/modals/ModalSystem.js';
 import { ToastSystem } from '../../components/toast/ToastSystem.js';
 import { CombatEvents } from './combat-events.js';
+import { ModalEvents } from './modal-events.js';
 
 export class KeyboardEvents {
     /**
@@ -67,10 +68,8 @@ export class KeyboardEvents {
     static handleAddCombatant() {
         // Create a temporary trigger element to properly initialize modal
         const trigger = document.createElement('div');
-        // Import ModalEvents to handle the modal
-        import('./modal-events.js').then(({ ModalEvents }) => {
-            ModalEvents.handleModalShow('add-combatant', trigger);
-        });
+        // Show the add combatant modal
+        ModalEvents.handleModalShow('add-combatant', trigger);
     }
 
     /**
@@ -188,7 +187,8 @@ export class KeyboardEvents {
      * @param {HTMLElement} target - The toggle button
      */
     static handleInfinityToggle(target) {
-        const input = target.previousElementSibling;
+        // The input is the next sibling (button comes before input in HTML)
+        const input = target.nextElementSibling;
         if (!input || input.tagName !== 'INPUT') return;
 
         const isInfinite = target.classList.contains('active');
@@ -196,15 +196,17 @@ export class KeyboardEvents {
         if (isInfinite) {
             // Switch to finite
             target.classList.remove('active');
-            target.textContent = '∞';
-            input.disabled = false;
+            target.setAttribute('data-infinity-state', 'false');
+            input.type = 'number';  // Restore number input
+            input.readOnly = false;
             input.value = '1';
             input.focus();
         } else {
             // Switch to infinite
             target.classList.add('active');
-            target.textContent = '∞';
-            input.disabled = true;
+            target.setAttribute('data-infinity-state', 'true');
+            input.type = 'text';  // Change to text to allow "infinite" string
+            input.readOnly = true;
             input.value = 'infinite';
         }
     }

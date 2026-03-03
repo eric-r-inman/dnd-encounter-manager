@@ -1062,6 +1062,39 @@ export class EventCoordinator {
         const halfMaxHP = Math.floor(original.maxHP / 2);
         const halfCurrentHP = Math.floor(original.currentHP / 2);
 
+        // Get all combatants and sort them by current display order
+        const allCombatants = DataServices.combatantManager.getAllCombatants();
+        const sortedCombatants = allCombatants.sort((a, b) => {
+            if (a.manualOrder !== null && b.manualOrder !== null) {
+                return a.manualOrder - b.manualOrder;
+            }
+            if (a.manualOrder !== null) return -1;
+            if (b.manualOrder !== null) return 1;
+            if (b.initiative !== a.initiative) {
+                return b.initiative - a.initiative;
+            }
+            return a.name.localeCompare(b.name);
+        });
+
+        // Find the original's current position
+        const originalIndex = sortedCombatants.findIndex(c => c.id === original.id);
+
+        // Assign manual orders to ALL combatants if any don't have them
+        // This ensures stable positioning
+        const needsManualOrders = sortedCombatants.some(c => c.manualOrder === null);
+        if (needsManualOrders) {
+            sortedCombatants.forEach((combatant, index) => {
+                if (combatant.manualOrder === null) {
+                    DataServices.combatantManager.updateCombatant(combatant.id, 'manualOrder', index);
+                }
+            });
+        }
+
+        // Calculate manual order for new combatant (right before original)
+        // Use the original's position (which is now set) and subtract 0.5
+        const originalManualOrder = original.manualOrder !== null ? original.manualOrder : originalIndex;
+        const newManualOrder = originalManualOrder - 0.5;
+
         // Update the original creature to have half HP and add "(split)" to name
         DataServices.combatantManager.updateCombatant(original.id, 'name', newName);
         DataServices.combatantManager.updateCombatant(original.id, 'maxHP', halfMaxHP);
@@ -1090,7 +1123,7 @@ export class EventCoordinator {
             healHistory: [],
             tempHPHistory: [],
             // For ooze split, place new creature ABOVE (before) the original
-            manualOrder: this.calculateNewManualOrderBefore(original)
+            manualOrder: newManualOrder
         };
 
         // Add the new combatant using creatureId and instanceData
@@ -1146,8 +1179,8 @@ export class EventCoordinator {
             return original.manualOrder - 0.5;
         }
 
-        // If no manual order, we need to assign manual orders to maintain position
-        // Sort combatants by current display order
+        // If no manual order exists, we need to create one based on current position
+        // Sort combatants by current display order (same logic as CombatantManager)
         const sortedCombatants = allCombatants.sort((a, b) => {
             if (a.manualOrder !== null && b.manualOrder !== null) {
                 return a.manualOrder - b.manualOrder;
@@ -1166,7 +1199,10 @@ export class EventCoordinator {
             return null; // Shouldn't happen, but fallback
         }
 
-        // Return manual order that places duplicate right before original
+        // Assign manual orders to all combatants to establish the current order
+        // Then place the duplicate right before the original
+        // Use index-based manual orders (0, 1, 2, etc.) for clean spacing
+        // The duplicate will get originalIndex - 0.5 to appear before original
         return originalIndex - 0.5;
     }
 
@@ -1834,6 +1870,11 @@ export class EventCoordinator {
         if (modal) {
             // Set the target combatant
             modal.setAttribute('data-current-target', combatantId);
+
+            // Set editing mode - track the original condition name
+            modal.setAttribute('data-editing-mode', 'true');
+            modal.setAttribute('data-editing-original-name', conditionData.name);
+
             const targetNameEl = modal.querySelector('[data-target-name]');
             if (targetNameEl) {
                 targetNameEl.textContent = combatant.name;
@@ -1882,6 +1923,11 @@ export class EventCoordinator {
         if (modal) {
             // Set the target combatant
             modal.setAttribute('data-current-target', combatantId);
+
+            // Set editing mode - track the original effect name
+            modal.setAttribute('data-editing-mode', 'true');
+            modal.setAttribute('data-editing-original-name', effectData.name);
+
             const targetNameEl = modal.querySelector('[data-target-name]');
             if (targetNameEl) {
                 targetNameEl.textContent = combatant.name;
@@ -1931,6 +1977,7 @@ export class EventCoordinator {
             const turnsInput = modal.querySelector('#timer-turns');
             const noteInput = modal.querySelector('#timer-note');
             const infinityBtn = modal.querySelector('[data-toggle-target="timer-turns"]');
+            const expiresAtRadios = modal.querySelectorAll('input[name="expiresAt"]');
 
             if (combatant.timer.duration === 'infinite') {
                 if (infinityBtn) {
@@ -1938,18 +1985,31 @@ export class EventCoordinator {
                     infinityBtn.setAttribute('data-infinity-state', 'true');
                 }
                 if (turnsInput) {
+                    turnsInput.type = 'text';  // Change to text to allow "infinite" string
                     turnsInput.value = 'infinite';
-                    turnsInput.disabled = true;
+                    turnsInput.readOnly = true;
                 }
             } else {
+                if (infinityBtn) {
+                    infinityBtn.classList.remove('active');
+                    infinityBtn.setAttribute('data-infinity-state', 'false');
+                }
                 if (turnsInput) {
+                    turnsInput.type = 'number';  // Restore number input
                     turnsInput.value = combatant.timer.duration;
+                    turnsInput.readOnly = false;
                 }
             }
 
             if (noteInput) {
                 noteInput.value = combatant.timer.note || '';
             }
+
+            // Set the expiresAt radio button (default to 'start' for legacy timers)
+            const expiresAt = combatant.timer.expiresAt || 'start';
+            expiresAtRadios.forEach(radio => {
+                radio.checked = (radio.value === expiresAt);
+            });
 
             console.log(`✏️ Editing timer for ${combatant.name}`);
         }

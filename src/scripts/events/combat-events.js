@@ -589,9 +589,12 @@ export class CombatEvents {
             return true;
         });
 
-        // Process timer for placeholders (decrement on turn start)
-        if (combatant.isPlaceholder && combatant.timer) {
-            if (combatant.timer.duration !== 'infinite' && combatant.timer.duration > 0) {
+        // Process timer that decrements on turn start
+        if (combatant.timer) {
+            // Only decrement timers that expire at start of turn (or legacy timers without expiresAt)
+            const expiresAtStart = !combatant.timer.expiresAt || combatant.timer.expiresAt === 'start';
+
+            if (expiresAtStart && combatant.timer.duration !== 'infinite' && combatant.timer.duration > 0) {
                 combatant.timer.duration--;
                 hasChanges = true;
 
@@ -607,9 +610,7 @@ export class CombatEvents {
         if (hasChanges) {
             DataServices.combatantManager.updateCombatant(combatant.id, 'conditions', combatant.conditions);
             DataServices.combatantManager.updateCombatant(combatant.id, 'effects', combatant.effects);
-            if (combatant.isPlaceholder) {
-                DataServices.combatantManager.updateCombatant(combatant.id, 'timer', combatant.timer);
-            }
+            DataServices.combatantManager.updateCombatant(combatant.id, 'timer', combatant.timer);
         }
     }
 
@@ -676,10 +677,28 @@ export class CombatEvents {
             return true;
         });
 
+        // Process timer that decrements at end of turn
+        if (combatant.timer) {
+            // Only process timers that expire at end of turn
+            const expiresAtEnd = combatant.timer.expiresAt === 'end';
+
+            if (expiresAtEnd && combatant.timer.duration !== 'infinite' && combatant.timer.duration > 0) {
+                combatant.timer.duration--;
+                hasChanges = true;
+
+                // Remove timer if duration reaches 0
+                if (combatant.timer.duration === 0) {
+                    ToastSystem.show(`Timer ended on ${combatant.name}`, 'info', 2000);
+                    combatant.timer = null;
+                }
+            }
+        }
+
         // Update combatant if there were changes
         if (hasChanges) {
             DataServices.combatantManager.updateCombatant(combatant.id, 'conditions', combatant.conditions);
             DataServices.combatantManager.updateCombatant(combatant.id, 'effects', combatant.effects);
+            DataServices.combatantManager.updateCombatant(combatant.id, 'timer', combatant.timer);
         }
     }
 

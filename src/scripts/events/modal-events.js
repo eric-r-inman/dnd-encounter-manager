@@ -21,11 +21,18 @@ import { FormHandlers } from './form-handlers.js';
 import { CreatureModalEvents } from './creature-modal-events.js';
 
 export class ModalEvents {
+    static initialized = false;
+
     /**
      * Initialize modal event handlers
      */
     static init() {
+        if (this.initialized) {
+            console.log('⚠️ ModalEvents already initialized, skipping');
+            return;
+        }
         this.setupModalHandlers();
+        this.initialized = true;
     }
 
     /**
@@ -41,13 +48,8 @@ export class ModalEvents {
             }
         });
 
-        // Handle modal close on overlay click
-        document.addEventListener('click', (event) => {
-            if (event.target.classList.contains('modal-overlay')) {
-                event.preventDefault();
-                ModalSystem.hideAll();
-            }
-        });
+        // Note: Modal close on overlay click is handled by ModalSystem.setupEventListeners()
+        // No need to duplicate that handler here
     }
 
     /**
@@ -230,8 +232,13 @@ export class ModalEvents {
         const creatureSelect = modal.querySelector('#creature-select');
 
         percentageButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const percentage = parseInt(button.getAttribute('data-percentage'));
+            // Remove existing listeners to prevent duplicates
+            const newButton = button.cloneNode(true);
+            button.parentNode.replaceChild(newButton, button);
+
+            // Add fresh event listener
+            newButton.addEventListener('click', () => {
+                const percentage = parseInt(newButton.getAttribute('data-percentage'));
                 const selectedCreatureId = creatureSelect.value;
 
                 if (!selectedCreatureId) {
@@ -1173,19 +1180,25 @@ export class ModalEvents {
         const infinityBtn = modal.querySelector('[data-toggle-target="condition-turns"]');
 
         if (conditionData.duration === 'infinite') {
-            if (turnsInput) turnsInput.value = '';
+            if (turnsInput) {
+                turnsInput.type = 'text';  // Change to text to allow "infinite" string
+                turnsInput.value = 'infinite';
+                turnsInput.readOnly = true;
+            }
             if (infinityBtn) {
                 infinityBtn.classList.add('active');
                 infinityBtn.setAttribute('data-infinity-state', 'true');
             }
-            if (turnsInput) turnsInput.disabled = true;
         } else {
-            if (turnsInput) turnsInput.value = conditionData.duration;
+            if (turnsInput) {
+                turnsInput.type = 'number';  // Restore number input
+                turnsInput.value = conditionData.duration;
+                turnsInput.readOnly = false;
+            }
             if (infinityBtn) {
                 infinityBtn.classList.remove('active');
                 infinityBtn.setAttribute('data-infinity-state', 'false');
             }
-            if (turnsInput) turnsInput.disabled = false;
         }
 
         // Set note
@@ -1225,19 +1238,25 @@ export class ModalEvents {
         const infinityBtn = modal.querySelector('[data-toggle-target="effect-turns"]');
 
         if (effectData.duration === 'infinite') {
-            if (turnsInput) turnsInput.value = '';
+            if (turnsInput) {
+                turnsInput.type = 'text';  // Change to text to allow "infinite" string
+                turnsInput.value = 'infinite';
+                turnsInput.readOnly = true;
+            }
             if (infinityBtn) {
                 infinityBtn.classList.add('active');
                 infinityBtn.setAttribute('data-infinity-state', 'true');
             }
-            if (turnsInput) turnsInput.disabled = true;
         } else {
-            if (turnsInput) turnsInput.value = effectData.duration;
+            if (turnsInput) {
+                turnsInput.type = 'number';  // Restore number input
+                turnsInput.value = effectData.duration;
+                turnsInput.readOnly = false;
+            }
             if (infinityBtn) {
                 infinityBtn.classList.remove('active');
                 infinityBtn.setAttribute('data-infinity-state', 'false');
             }
-            if (turnsInput) turnsInput.disabled = false;
         }
 
         // Set effect name

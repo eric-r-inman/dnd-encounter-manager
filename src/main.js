@@ -184,51 +184,13 @@ class DnDEncounterManager {
 
     /**
      * Bind global keyboard shortcuts
+     * NOTE: Keyboard shortcuts are now handled by KeyboardEvents module
+     * This method is kept for backwards compatibility but no longer registers handlers
      */
     bindKeyboardShortcuts() {
-        document.addEventListener('keydown', (e) => {
-            // Don't trigger shortcuts when typing in inputs
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-                return;
-            }
-
-            switch (e.key.toLowerCase()) {
-                case 'a':
-                    e.preventDefault();
-                    ModalSystem.show('add-combatant');
-                    break;
-                case 'n':
-                    e.preventDefault();
-                    this.appCore.advanceToNextTurn();
-                    break;
-                case 'r':
-                    e.preventDefault();
-                    this.appCore.resetCombat();
-                    break;
-                case 'escape':
-                    ModalSystem.hideAll();
-                    break;
-                case 'd':
-                    // Debug: Show application state
-                    if (e.ctrlKey || e.metaKey) {
-                        e.preventDefault();
-                        console.group('🐛 Application Debug State');
-                        console.log('State Manager:', StateManager.getState());
-                        console.log('App Core:', this.appCore);
-                        console.groupEnd();
-                    }
-                    break;
-                case 'c':
-                    if (e.ctrlKey || e.metaKey) {
-                        // Ctrl+C is copy, don't interfere
-                        return;
-                    }
-                    e.preventDefault();
-                    // Use EventCoordinator to handle the clear encounter action
-                    EventCoordinator.handleAction('clear-encounter', null, e);
-                    break;
-            }
-        });
+        console.log('⌨️ Keyboard shortcuts handled by KeyboardEvents module');
+        // All keyboard shortcuts have been migrated to keyboard-events.js
+        // Kept this method to avoid breaking the initialization flow
     }
 
     /**

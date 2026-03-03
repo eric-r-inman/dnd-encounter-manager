@@ -291,6 +291,9 @@ export class CombatantCard {
             <span class="combatant-timer-badge">
                 <span class="timer-name-text"
                       data-action="edit-timer"
+                      data-timer-duration="${this.timer.duration}"
+                      data-timer-note="${this.timer.note || ''}"
+                      data-timer-expires-at="${this.timer.expiresAt || 'start'}"
                       title="Click to edit timer">
                     ⏱️ Timer
                 </span>
