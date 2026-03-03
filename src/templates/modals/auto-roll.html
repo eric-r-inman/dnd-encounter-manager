@@ -28,6 +28,24 @@
                 </small>
             </div>
 
+            <div class="form-group" id="auto-roll-advantage-group">
+                <label>Roll Type (1d20 only):</label>
+                <div style="display: flex; gap: 15px;">
+                    <label style="display: flex; align-items: center; gap: 5px;">
+                        <input type="radio" name="rollType" value="normal" checked id="auto-roll-normal">
+                        <span>Normal</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 5px;">
+                        <input type="radio" name="rollType" value="advantage" id="auto-roll-advantage">
+                        <span>Advantage</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 5px;">
+                        <input type="radio" name="rollType" value="disadvantage" id="auto-roll-disadvantage">
+                        <span>Disadvantage</span>
+                    </label>
+                </div>
+            </div>
+
             <div class="form-group">
                 <label>When to Roll:</label>
                 <div style="display: flex; gap: 15px;">

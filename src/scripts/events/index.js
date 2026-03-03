@@ -1412,6 +1412,7 @@ export class EventCoordinator {
 
         const formula = formData.get('formula');
         const trigger = formData.get('trigger');
+        const rollType = formData.get('rollType') || 'normal';
 
         // Validate formula
         if (!validateDiceFormula(formula)) return;
@@ -1425,23 +1426,24 @@ export class EventCoordinator {
         const selectedCombatants = this.getSelectedCombatants();
         if (selectedCombatants.length === 0) {
             ToastSystem.show('No combatants selected', 'warning', TIMING.TOAST_SHORT);
-                return;
-            }
+            return;
+        }
 
-            // Apply auto-roll to all selected combatants
-            let successCount = 0;
-            selectedCombatants.forEach(combatant => {
-                combatant.autoRoll = {
-                    formula: formula,
-                    trigger: trigger,
-                    lastResult: null
-                };
-                combatant.update();
-                successCount++;
-            });
+        // Apply auto-roll to all selected combatants
+        let successCount = 0;
+        selectedCombatants.forEach(combatant => {
+            combatant.autoRoll = {
+                formula: formula,
+                trigger: trigger,
+                rollType: rollType,
+                lastResult: null
+            };
+            combatant.update();
+            successCount++;
+        });
 
-            // Close modal
-            ModalSystem.hideAll();
+        // Close modal
+        ModalSystem.hideAll();
 
         // Show success message
         ToastSystem.show(`Applied auto-roll to ${successCount} combatant${successCount !== 1 ? 's' : ''}`, 'success', TIMING.TOAST_LONG);
