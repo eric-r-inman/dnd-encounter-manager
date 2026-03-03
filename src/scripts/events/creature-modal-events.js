@@ -2116,13 +2116,13 @@ export class CreatureModalEvents {
     }
 
     /**
-     * Helper method to set a field value
+     * Helper method to get an element by ID with fallback for inconsistent ID patterns
      * Handles inconsistent ID patterns in edit-creature.html where basic fields use
      * 'edit-creature-form-*' but statBlock fields use 'edit-creature-*'
      * @param {string} fieldId - Field ID
-     * @param {*} value - Value to set
+     * @returns {HTMLElement|null} The element or null if not found
      */
-    static _setFieldValue(fieldId, value) {
+    static _getFieldById(fieldId) {
         let field = document.getElementById(fieldId);
 
         // If not found and fieldId contains '-form-', try without '-form-'
@@ -2136,6 +2136,17 @@ export class CreatureModalEvents {
             const altFieldId = fieldId.replace(/^(edit-creature)(-)/,  '$1-form$2');
             field = document.getElementById(altFieldId);
         }
+
+        return field;
+    }
+
+    /**
+     * Helper method to set a field value
+     * @param {string} fieldId - Field ID
+     * @param {*} value - Value to set
+     */
+    static _setFieldValue(fieldId, value) {
+        const field = this._getFieldById(fieldId);
 
         if (field) {
             field.value = value;
@@ -2151,8 +2162,11 @@ export class CreatureModalEvents {
      * @param {Array} traits - Array of traits
      */
     static _populateTraitsList(formIdPrefix, traits) {
-        const container = document.getElementById(`${formIdPrefix}-traits-list`);
-        if (!container) return;
+        const container = this._getFieldById(`${formIdPrefix}-traits-list`);
+        if (!container) {
+            console.warn(`Traits list container not found: ${formIdPrefix}-traits-list`);
+            return;
+        }
 
         // Clear existing
         container.innerHTML = '';
@@ -2193,8 +2207,11 @@ export class CreatureModalEvents {
      * @param {Array} actions - Array of actions
      */
     static _populateActionsList(formIdPrefix, actions) {
-        const container = document.getElementById(`${formIdPrefix}-actions-list`);
-        if (!container) return;
+        const container = this._getFieldById(`${formIdPrefix}-actions-list`);
+        if (!container) {
+            console.warn(`Actions list container not found: ${formIdPrefix}-actions-list`);
+            return;
+        }
 
         // Clear existing
         container.innerHTML = '';
@@ -2235,8 +2252,11 @@ export class CreatureModalEvents {
      * @param {Array} reactions - Array of reactions
      */
     static _populateReactionsList(formIdPrefix, reactions) {
-        const container = document.getElementById(`${formIdPrefix}-reactions-list`);
-        if (!container) return;
+        const container = this._getFieldById(`${formIdPrefix}-reactions-list`);
+        if (!container) {
+            console.warn(`Reactions list container not found: ${formIdPrefix}-reactions-list`);
+            return;
+        }
 
         // Clear existing
         container.innerHTML = '';
@@ -2277,8 +2297,11 @@ export class CreatureModalEvents {
      * @param {Array} legendaryActions - Array of legendary actions
      */
     static _populateLegendaryActionsList(formIdPrefix, legendaryActions) {
-        const container = document.getElementById(`${formIdPrefix}-legendary-actions-list`);
-        if (!container) return;
+        const container = this._getFieldById(`${formIdPrefix}-legendary-actions-list`);
+        if (!container) {
+            console.warn(`Legendary actions list container not found: ${formIdPrefix}-legendary-actions-list`);
+            return;
+        }
 
         // Clear existing
         container.innerHTML = '';
@@ -2325,8 +2348,11 @@ export class CreatureModalEvents {
      * @param {Object} skills - Skills object with skill names as keys and bonuses as values
      */
     static _populateSkillsList(formIdPrefix, skills) {
-        const container = document.getElementById(`${formIdPrefix}-skills-list`);
-        if (!container) return;
+        const container = this._getFieldById(`${formIdPrefix}-skills-list`);
+        if (!container) {
+            console.warn(`Skills list container not found: ${formIdPrefix}-skills-list`);
+            return;
+        }
 
         // Clear existing
         container.innerHTML = '';
