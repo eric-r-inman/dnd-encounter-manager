@@ -1932,7 +1932,7 @@ export class CreatureModalEvents {
         this.populateCreatureForm(creature, 'edit-creature-form');
 
         // Setup ability score auto-calculation
-        this.setupAbilityScoreCalculation('edit-creature-form');
+        this.setupAbilityScoreCalculation('edit-creature');
     }
 
     /**
@@ -2117,13 +2117,31 @@ export class CreatureModalEvents {
 
     /**
      * Helper method to set a field value
+     * Handles inconsistent ID patterns in edit-creature.html where basic fields use
+     * 'edit-creature-form-*' but statBlock fields use 'edit-creature-*'
      * @param {string} fieldId - Field ID
      * @param {*} value - Value to set
      */
     static _setFieldValue(fieldId, value) {
-        const field = document.getElementById(fieldId);
+        let field = document.getElementById(fieldId);
+
+        // If not found and fieldId contains '-form-', try without '-form-'
+        if (!field && fieldId.includes('-form-')) {
+            const altFieldId = fieldId.replace('-form-', '-');
+            field = document.getElementById(altFieldId);
+        }
+
+        // If not found and fieldId doesn't contain '-form-', try with '-form-'
+        if (!field && !fieldId.includes('-form-')) {
+            const altFieldId = fieldId.replace(/^(edit-creature)(-)/,  '$1-form$2');
+            field = document.getElementById(altFieldId);
+        }
+
         if (field) {
             field.value = value;
+        } else {
+            // Silent fail - field might not exist in this form
+            console.debug(`Field not found: ${fieldId}`);
         }
     }
 
