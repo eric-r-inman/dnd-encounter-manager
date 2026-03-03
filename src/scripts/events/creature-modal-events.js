@@ -1928,9 +1928,11 @@ export class CreatureModalEvents {
     static setupEditCreatureModal(creature) {
         console.log('📝 Setting up EDIT creature modal for:', creature.name);
 
-        // Just call the existing setup method but with edit-creature IDs
-        // We need to temporarily modify IDs or create a new implementation
+        // Populate the form with creature data
         this.populateCreatureForm(creature, 'edit-creature-form');
+
+        // Setup ability score auto-calculation
+        this.setupAbilityScoreCalculation('edit-creature-form');
     }
 
     /**
@@ -1959,30 +1961,589 @@ export class CreatureModalEvents {
             if (idField) idField.value = creature.id;
 
             // Populate basic fields
-            const fields = {
-                name: creature.name || '',
-                type: creature.type || 'enemy',
-                size: creature.size || 'Medium',
-                race: creature.race || '',
-                subrace: creature.subrace || '',
-                alignment: creature.alignment || '',
-                cr: creature.cr || '',
-                source: creature.source || '',
-                description: creature.description || '',
-                ac: creature.ac || 10,
-                maxHP: creature.maxHP || 1,
-                initiative: creature.initiative || 0
-            };
+            this._setFieldValue(`${formIdPrefix}-name`, creature.name || '');
+            this._setFieldValue(`${formIdPrefix}-type`, creature.type || 'enemy');
+            this._setFieldValue(`${formIdPrefix}-size`, creature.size || 'Medium');
+            this._setFieldValue(`${formIdPrefix}-race`, creature.race || '');
+            this._setFieldValue(`${formIdPrefix}-subrace`, creature.subrace || '');
+            this._setFieldValue(`${formIdPrefix}-alignment`, creature.alignment || '');
+            this._setFieldValue(`${formIdPrefix}-cr`, creature.cr || '');
+            this._setFieldValue(`${formIdPrefix}-source`, creature.source || '');
+            this._setFieldValue(`${formIdPrefix}-description`, creature.description || '');
+            this._setFieldValue(`${formIdPrefix}-ac`, creature.ac || 10);
+            this._setFieldValue(`${formIdPrefix}-hp`, creature.maxHP || 1);
 
-            for (const [fieldName, value] of Object.entries(fields)) {
-                const field = document.getElementById(`${formIdPrefix}-${fieldName}`);
-                if (field) field.value = value;
+            // Get statBlock data
+            const statBlock = creature.statBlock || {};
+
+            // Populate AC Type
+            if (statBlock.armorClass) {
+                this._setFieldValue(`${formIdPrefix}-ac-type`, statBlock.armorClass.type || '');
+            }
+
+            // Populate HP Formula
+            if (statBlock.hitPoints) {
+                this._setFieldValue(`${formIdPrefix}-hp-formula`, statBlock.hitPoints.formula || '');
+            }
+
+            // Populate Initiative
+            if (statBlock.initiative) {
+                this._setFieldValue(`${formIdPrefix}-initiative-mod`, statBlock.initiative.modifier || 0);
+                this._setFieldValue(`${formIdPrefix}-initiative-total`, statBlock.initiative.total || 0);
+            }
+
+            // Populate Proficiency Bonus
+            if (statBlock.proficiencyBonus) {
+                this._setFieldValue(`${formIdPrefix}-proficiency`, statBlock.proficiencyBonus);
+            } else if (statBlock.challengeRating && statBlock.challengeRating.proficiencyBonus) {
+                this._setFieldValue(`${formIdPrefix}-proficiency`, statBlock.challengeRating.proficiencyBonus);
+            }
+
+            // Populate Speed
+            if (statBlock.speed) {
+                this._setFieldValue(`${formIdPrefix}-speed-walk`, statBlock.speed.walk || '');
+                this._setFieldValue(`${formIdPrefix}-speed-fly`, statBlock.speed.fly || '');
+                this._setFieldValue(`${formIdPrefix}-speed-swim`, statBlock.speed.swim || '');
+                this._setFieldValue(`${formIdPrefix}-speed-climb`, statBlock.speed.climb || '');
+                this._setFieldValue(`${formIdPrefix}-speed-burrow`, statBlock.speed.burrow || '');
+            }
+
+            // Populate Ability Scores
+            if (statBlock.abilities) {
+                const abilities = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+                abilities.forEach(ability => {
+                    if (statBlock.abilities[ability]) {
+                        this._setFieldValue(`${formIdPrefix}-${ability}-score`, statBlock.abilities[ability].score || '');
+                        this._setFieldValue(`${formIdPrefix}-${ability}-modifier`, statBlock.abilities[ability].modifier || '');
+                    }
+                });
+            }
+
+            // Populate Saving Throws
+            if (statBlock.savingThrows) {
+                const abilities = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+                abilities.forEach(ability => {
+                    if (statBlock.savingThrows[ability] !== undefined) {
+                        this._setFieldValue(`${formIdPrefix}-${ability}-save`, statBlock.savingThrows[ability]);
+                    }
+                });
+            }
+
+            // Populate Skills (dynamic list)
+            if (statBlock.skills && typeof statBlock.skills === 'object') {
+                this._populateSkillsList(formIdPrefix, statBlock.skills);
+            }
+
+            // Populate Resistances & Immunities
+            if (statBlock.damageVulnerabilities && Array.isArray(statBlock.damageVulnerabilities)) {
+                this._setFieldValue(`${formIdPrefix}-damage-vulnerabilities`, statBlock.damageVulnerabilities.join(', '));
+            }
+            if (statBlock.damageResistances && Array.isArray(statBlock.damageResistances)) {
+                this._setFieldValue(`${formIdPrefix}-damage-resistances`, statBlock.damageResistances.join(', '));
+            }
+            if (statBlock.damageImmunities && Array.isArray(statBlock.damageImmunities)) {
+                this._setFieldValue(`${formIdPrefix}-damage-immunities`, statBlock.damageImmunities.join(', '));
+            }
+            if (statBlock.conditionImmunities && Array.isArray(statBlock.conditionImmunities)) {
+                this._setFieldValue(`${formIdPrefix}-condition-immunities`, statBlock.conditionImmunities.join(', '));
+            }
+
+            // Populate Senses
+            if (statBlock.senses) {
+                this._setFieldValue(`${formIdPrefix}-blindsight`, statBlock.senses.blindsight || '');
+                this._setFieldValue(`${formIdPrefix}-darkvision`, statBlock.senses.darkvision || '');
+                this._setFieldValue(`${formIdPrefix}-tremorsense`, statBlock.senses.tremorsense || '');
+                this._setFieldValue(`${formIdPrefix}-truesight`, statBlock.senses.truesight || '');
+                this._setFieldValue(`${formIdPrefix}-passive-perception`, statBlock.senses.passivePerception || '');
+            }
+
+            // Populate Languages
+            if (statBlock.languages && Array.isArray(statBlock.languages)) {
+                this._setFieldValue(`${formIdPrefix}-languages`, statBlock.languages.join(', '));
+            }
+
+            // Populate Challenge Rating Details
+            if (statBlock.challengeRating) {
+                this._setFieldValue(`${formIdPrefix}-xp`, statBlock.challengeRating.xp || '');
+                this._setFieldValue(`${formIdPrefix}-xp-lair`, statBlock.challengeRating.xpInLair || '');
+            }
+
+            // Populate Traits (dynamic list)
+            if (statBlock.traits && Array.isArray(statBlock.traits)) {
+                this._populateTraitsList(formIdPrefix, statBlock.traits);
+            }
+
+            // Populate Actions (dynamic list)
+            if (statBlock.actions && Array.isArray(statBlock.actions)) {
+                this._populateActionsList(formIdPrefix, statBlock.actions);
+            }
+
+            // Populate Reactions (dynamic list)
+            if (statBlock.reactions && Array.isArray(statBlock.reactions)) {
+                this._populateReactionsList(formIdPrefix, statBlock.reactions);
+            }
+
+            // Populate Legendary Actions
+            if (statBlock.legendaryActions) {
+                this._setFieldValue(`${formIdPrefix}-legendary-uses`, statBlock.legendaryActions.uses || '');
+                this._setFieldValue(`${formIdPrefix}-legendary-uses-lair`, statBlock.legendaryActions.usesInLair || '');
+                this._setFieldValue(`${formIdPrefix}-legendary-description`, statBlock.legendaryActions.description || '');
+                if (statBlock.legendaryActions.options && Array.isArray(statBlock.legendaryActions.options)) {
+                    this._populateLegendaryActionsList(formIdPrefix, statBlock.legendaryActions.options);
+                }
+            }
+
+            // Populate Spellcasting
+            if (statBlock.spellcasting) {
+                this._setFieldValue(`${formIdPrefix}-spellcasting-ability`, statBlock.spellcasting.ability || '');
+                this._setFieldValue(`${formIdPrefix}-spell-attack`, statBlock.spellcasting.spellAttackBonus || '');
+                this._setFieldValue(`${formIdPrefix}-spell-dc`, statBlock.spellcasting.spellSaveDC || '');
+                this._setFieldValue(`${formIdPrefix}-spellcasting-desc`, statBlock.spellcasting.description || '');
+
+                // Convert spell list array to string if present
+                if (statBlock.spellcasting.spells && Array.isArray(statBlock.spellcasting.spells)) {
+                    this._setFieldValue(`${formIdPrefix}-spell-list`, statBlock.spellcasting.spells.join('\n'));
+                } else if (statBlock.spellcasting.spellList) {
+                    // Handle alternative spell list format
+                    this._setFieldValue(`${formIdPrefix}-spell-list`, statBlock.spellcasting.spellList);
+                }
             }
 
             console.log(`✅ Populated ${formIdPrefix} for: ${creature.name}`);
         } catch (error) {
             console.error(`❌ Error populating ${formIdPrefix}:`, error);
         }
+    }
+
+    /**
+     * Helper method to set a field value
+     * @param {string} fieldId - Field ID
+     * @param {*} value - Value to set
+     */
+    static _setFieldValue(fieldId, value) {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.value = value;
+        }
+    }
+
+    /**
+     * Populate traits dynamic list
+     * @param {string} formIdPrefix - Form ID prefix
+     * @param {Array} traits - Array of traits
+     */
+    static _populateTraitsList(formIdPrefix, traits) {
+        const container = document.getElementById(`${formIdPrefix}-traits-list`);
+        if (!container) return;
+
+        // Clear existing
+        container.innerHTML = '';
+
+        // Add each trait
+        traits.forEach((trait, index) => {
+            const traitDiv = this._createTraitElement(trait, index);
+            container.appendChild(traitDiv);
+        });
+    }
+
+    /**
+     * Create a trait element
+     * @param {Object} trait - Trait data
+     * @param {number} index - Trait index
+     * @returns {HTMLElement} Trait element
+     */
+    static _createTraitElement(trait, index) {
+        const div = document.createElement('div');
+        div.className = 'dynamic-list-item';
+        div.innerHTML = `
+            <div class="form-group">
+                <label>Trait Name</label>
+                <input type="text" name="trait-name-${index}" value="${this._escapeHtml(trait.name || '')}" placeholder="e.g., Mucus Cloud">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea name="trait-description-${index}" rows="3" placeholder="Trait description...">${this._escapeHtml(trait.description || '')}</textarea>
+            </div>
+            <button type="button" class="btn btn-sm btn-danger" data-action="remove-trait" data-index="${index}">Remove</button>
+        `;
+        return div;
+    }
+
+    /**
+     * Populate actions dynamic list
+     * @param {string} formIdPrefix - Form ID prefix
+     * @param {Array} actions - Array of actions
+     */
+    static _populateActionsList(formIdPrefix, actions) {
+        const container = document.getElementById(`${formIdPrefix}-actions-list`);
+        if (!container) return;
+
+        // Clear existing
+        container.innerHTML = '';
+
+        // Add each action
+        actions.forEach((action, index) => {
+            const actionDiv = this._createActionElement(action, index);
+            container.appendChild(actionDiv);
+        });
+    }
+
+    /**
+     * Create an action element
+     * @param {Object} action - Action data
+     * @param {number} index - Action index
+     * @returns {HTMLElement} Action element
+     */
+    static _createActionElement(action, index) {
+        const div = document.createElement('div');
+        div.className = 'dynamic-list-item';
+        div.innerHTML = `
+            <div class="form-group">
+                <label>Action Name</label>
+                <input type="text" name="action-name-${index}" value="${this._escapeHtml(action.name || '')}" placeholder="e.g., Tentacle">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea name="action-description-${index}" rows="3" placeholder="Action description...">${this._escapeHtml(action.description || '')}</textarea>
+            </div>
+            <button type="button" class="btn btn-sm btn-danger" data-action="remove-action" data-index="${index}">Remove</button>
+        `;
+        return div;
+    }
+
+    /**
+     * Populate reactions dynamic list
+     * @param {string} formIdPrefix - Form ID prefix
+     * @param {Array} reactions - Array of reactions
+     */
+    static _populateReactionsList(formIdPrefix, reactions) {
+        const container = document.getElementById(`${formIdPrefix}-reactions-list`);
+        if (!container) return;
+
+        // Clear existing
+        container.innerHTML = '';
+
+        // Add each reaction
+        reactions.forEach((reaction, index) => {
+            const reactionDiv = this._createReactionElement(reaction, index);
+            container.appendChild(reactionDiv);
+        });
+    }
+
+    /**
+     * Create a reaction element
+     * @param {Object} reaction - Reaction data
+     * @param {number} index - Reaction index
+     * @returns {HTMLElement} Reaction element
+     */
+    static _createReactionElement(reaction, index) {
+        const div = document.createElement('div');
+        div.className = 'dynamic-list-item';
+        div.innerHTML = `
+            <div class="form-group">
+                <label>Reaction Name</label>
+                <input type="text" name="reaction-name-${index}" value="${this._escapeHtml(reaction.name || '')}" placeholder="e.g., Parry">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea name="reaction-description-${index}" rows="3" placeholder="Reaction description...">${this._escapeHtml(reaction.description || '')}</textarea>
+            </div>
+            <button type="button" class="btn btn-sm btn-danger" data-action="remove-reaction" data-index="${index}">Remove</button>
+        `;
+        return div;
+    }
+
+    /**
+     * Populate legendary actions dynamic list
+     * @param {string} formIdPrefix - Form ID prefix
+     * @param {Array} legendaryActions - Array of legendary actions
+     */
+    static _populateLegendaryActionsList(formIdPrefix, legendaryActions) {
+        const container = document.getElementById(`${formIdPrefix}-legendary-actions-list`);
+        if (!container) return;
+
+        // Clear existing
+        container.innerHTML = '';
+
+        // Add each legendary action
+        legendaryActions.forEach((action, index) => {
+            const actionDiv = this._createLegendaryActionElement(action, index);
+            container.appendChild(actionDiv);
+        });
+    }
+
+    /**
+     * Create a legendary action element
+     * @param {Object} action - Legendary action data
+     * @param {number} index - Action index
+     * @returns {HTMLElement} Legendary action element
+     */
+    static _createLegendaryActionElement(action, index) {
+        const div = document.createElement('div');
+        div.className = 'dynamic-list-item';
+        div.innerHTML = `
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" name="legendary-action-name-${index}" value="${this._escapeHtml(action.name || '')}" placeholder="e.g., Lash">
+                </div>
+                <div class="form-group">
+                    <label>Cost</label>
+                    <input type="number" name="legendary-action-cost-${index}" value="${action.cost || 1}" min="1" max="3">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea name="legendary-action-description-${index}" rows="2" placeholder="Description...">${this._escapeHtml(action.description || '')}</textarea>
+            </div>
+            <button type="button" class="btn btn-sm btn-danger" data-action="remove-legendary-action" data-index="${index}">Remove</button>
+        `;
+        return div;
+    }
+
+    /**
+     * Populate skills dynamic list
+     * @param {string} formIdPrefix - Form ID prefix
+     * @param {Object} skills - Skills object with skill names as keys and bonuses as values
+     */
+    static _populateSkillsList(formIdPrefix, skills) {
+        const container = document.getElementById(`${formIdPrefix}-skills-list`);
+        if (!container) return;
+
+        // Clear existing
+        container.innerHTML = '';
+
+        // Add each skill
+        let index = 0;
+        for (const [skillName, bonus] of Object.entries(skills)) {
+            const skillDiv = this._createSkillElement({ name: skillName, bonus: bonus }, index);
+            container.appendChild(skillDiv);
+            index++;
+        }
+    }
+
+    /**
+     * Create a skill element
+     * @param {Object} skill - Skill data with name and bonus
+     * @param {number} index - Skill index
+     * @returns {HTMLElement} Skill element
+     */
+    static _createSkillElement(skill, index) {
+        const div = document.createElement('div');
+        div.className = 'dynamic-list-item';
+
+        // Capitalize skill name for display
+        const displayName = skill.name ? skill.name.charAt(0).toUpperCase() + skill.name.slice(1) : '';
+
+        div.innerHTML = `
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Skill Name</label>
+                    <input type="text" name="skill-name-${index}" value="${this._escapeHtml(displayName)}" placeholder="e.g., Perception">
+                </div>
+                <div class="form-group">
+                    <label>Bonus</label>
+                    <input type="number" name="skill-bonus-${index}" value="${skill.bonus || 0}" placeholder="+10">
+                </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-danger" data-action="remove-skill" data-index="${index}">Remove</button>
+        `;
+        return div;
+    }
+
+    /**
+     * Escape HTML to prevent XSS
+     * @param {string} text - Text to escape
+     * @returns {string} Escaped text
+     */
+    static _escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // ==================== DYNAMIC LIST HANDLERS ====================
+
+    /**
+     * Handle adding a new trait to the traits list
+     * @param {HTMLElement} target - Button that was clicked
+     */
+    static handleAddTrait(target) {
+        const container = target.closest('#edit-creature-traits-container');
+        if (!container) return;
+
+        const listContainer = container.querySelector('#edit-creature-traits-list');
+        if (!listContainer) return;
+
+        // Get the next index
+        const existingItems = listContainer.querySelectorAll('.dynamic-list-item');
+        const nextIndex = existingItems.length;
+
+        // Create and append new trait element
+        const newTrait = this._createTraitElement({ name: '', description: '' }, nextIndex);
+        listContainer.appendChild(newTrait);
+    }
+
+    /**
+     * Handle removing a trait from the traits list
+     * @param {HTMLElement} target - Remove button that was clicked
+     */
+    static handleRemoveTrait(target) {
+        const item = target.closest('.dynamic-list-item');
+        if (item) {
+            item.remove();
+        }
+    }
+
+    /**
+     * Handle adding a new skill to the skills list
+     * @param {HTMLElement} target - Button that was clicked
+     */
+    static handleAddSkill(target) {
+        const container = target.closest('#edit-creature-skills-container');
+        if (!container) return;
+
+        const listContainer = container.querySelector('#edit-creature-skills-list');
+        if (!listContainer) return;
+
+        // Get the next index
+        const existingItems = listContainer.querySelectorAll('.dynamic-list-item');
+        const nextIndex = existingItems.length;
+
+        // Create and append new skill element
+        const newSkill = this._createSkillElement({ name: '', bonus: 0 }, nextIndex);
+        listContainer.appendChild(newSkill);
+    }
+
+    /**
+     * Handle removing a skill from the skills list
+     * @param {HTMLElement} target - Remove button that was clicked
+     */
+    static handleRemoveSkill(target) {
+        const item = target.closest('.dynamic-list-item');
+        if (item) {
+            item.remove();
+        }
+    }
+
+    /**
+     * Handle adding a new action to the actions list
+     * @param {HTMLElement} target - Button that was clicked
+     */
+    static handleAddAction(target) {
+        const container = target.closest('#edit-creature-actions-container');
+        if (!container) return;
+
+        const listContainer = container.querySelector('#edit-creature-actions-list');
+        if (!listContainer) return;
+
+        // Get the next index
+        const existingItems = listContainer.querySelectorAll('.dynamic-list-item');
+        const nextIndex = existingItems.length;
+
+        // Create and append new action element
+        const newAction = this._createActionElement({ name: '', description: '' }, nextIndex);
+        listContainer.appendChild(newAction);
+    }
+
+    /**
+     * Handle removing an action from the actions list
+     * @param {HTMLElement} target - Remove button that was clicked
+     */
+    static handleRemoveAction(target) {
+        const item = target.closest('.dynamic-list-item');
+        if (item) {
+            item.remove();
+        }
+    }
+
+    /**
+     * Handle adding a new reaction to the reactions list
+     * @param {HTMLElement} target - Button that was clicked
+     */
+    static handleAddReaction(target) {
+        const container = target.closest('#edit-creature-reactions-container');
+        if (!container) return;
+
+        const listContainer = container.querySelector('#edit-creature-reactions-list');
+        if (!listContainer) return;
+
+        // Get the next index
+        const existingItems = listContainer.querySelectorAll('.dynamic-list-item');
+        const nextIndex = existingItems.length;
+
+        // Create and append new reaction element
+        const newReaction = this._createReactionElement({ name: '', description: '' }, nextIndex);
+        listContainer.appendChild(newReaction);
+    }
+
+    /**
+     * Handle removing a reaction from the reactions list
+     * @param {HTMLElement} target - Remove button that was clicked
+     */
+    static handleRemoveReaction(target) {
+        const item = target.closest('.dynamic-list-item');
+        if (item) {
+            item.remove();
+        }
+    }
+
+    /**
+     * Handle adding a new legendary action to the legendary actions list
+     * @param {HTMLElement} target - Button that was clicked
+     */
+    static handleAddLegendaryAction(target) {
+        const container = target.closest('#edit-creature-legendary-actions-container');
+        if (!container) return;
+
+        const listContainer = container.querySelector('#edit-creature-legendary-actions-list');
+        if (!listContainer) return;
+
+        // Get the next index
+        const existingItems = listContainer.querySelectorAll('.dynamic-list-item');
+        const nextIndex = existingItems.length;
+
+        // Create and append new legendary action element
+        const newAction = this._createLegendaryActionElement({ name: '', description: '', cost: 1 }, nextIndex);
+        listContainer.appendChild(newAction);
+    }
+
+    /**
+     * Handle removing a legendary action from the legendary actions list
+     * @param {HTMLElement} target - Remove button that was clicked
+     */
+    static handleRemoveLegendaryAction(target) {
+        const item = target.closest('.dynamic-list-item');
+        if (item) {
+            item.remove();
+        }
+    }
+
+    /**
+     * Setup ability score auto-calculation for a form
+     * Sets up input listeners on all ability score fields to auto-calculate modifiers
+     * @param {string} formIdPrefix - Form ID prefix (e.g., 'edit-creature')
+     */
+    static setupAbilityScoreCalculation(formIdPrefix) {
+        const abilities = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+
+        abilities.forEach(ability => {
+            const scoreField = document.getElementById(`${formIdPrefix}-${ability}-score`);
+            const modifierField = document.getElementById(`${formIdPrefix}-${ability}-modifier`);
+
+            if (scoreField && modifierField) {
+                scoreField.addEventListener('input', () => {
+                    const score = parseInt(scoreField.value);
+                    if (!isNaN(score)) {
+                        const modifier = Math.floor((score - 10) / 2);
+                        modifierField.value = modifier >= 0 ? `+${modifier}` : modifier;
+                    } else {
+                        modifierField.value = '';
+                    }
+                });
+            }
+        });
     }
 
     /**

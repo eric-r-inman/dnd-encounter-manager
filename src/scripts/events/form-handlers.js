@@ -616,13 +616,30 @@ export class FormHandlers {
                 }
             });
 
-            // Parse Skills (dynamic array)
-            const skillNames = formData.getAll('skillName[]');
-            const skillBonuses = formData.getAll('skillBonus[]');
-            for (let i = 0; i < skillNames.length; i++) {
-                if (skillNames[i] && skillBonuses[i]) {
-                    const skillKey = skillNames[i].toLowerCase().replace(/\s+/g, '');
-                    creatureData.statBlock.skills[skillKey] = parseInt(skillBonuses[i]);
+            // Parse Skills (dynamic list with indexed names)
+            // Check for both old array format and new indexed format
+            let skillNames = formData.getAll('skillName[]');
+            let skillBonuses = formData.getAll('skillBonus[]');
+
+            // If using new indexed format
+            if (skillNames.length === 0) {
+                let skillIndex = 0;
+                while (formData.has(`skill-name-${skillIndex}`)) {
+                    const name = formData.get(`skill-name-${skillIndex}`)?.trim();
+                    const bonus = formData.get(`skill-bonus-${skillIndex}`);
+                    if (name && bonus) {
+                        const skillKey = name.toLowerCase().replace(/\s+/g, '');
+                        creatureData.statBlock.skills[skillKey] = parseInt(bonus);
+                    }
+                    skillIndex++;
+                }
+            } else {
+                // Old format
+                for (let i = 0; i < skillNames.length; i++) {
+                    if (skillNames[i] && skillBonuses[i]) {
+                        const skillKey = skillNames[i].toLowerCase().replace(/\s+/g, '');
+                        creatureData.statBlock.skills[skillKey] = parseInt(skillBonuses[i]);
+                    }
                 }
             }
 
@@ -666,48 +683,131 @@ export class FormHandlers {
                 creatureData.statBlock.conditionImmunities = conditionImm.split(',').map(c => c.trim()).filter(c => c);
             }
 
-            // Parse Traits (dynamic array)
-            const traitNames = formData.getAll('traitName[]');
-            const traitDescriptions = formData.getAll('traitDescription[]');
-            for (let i = 0; i < traitNames.length; i++) {
-                if (traitNames[i] && traitDescriptions[i]) {
-                    creatureData.statBlock.traits.push({
-                        name: traitNames[i],
-                        description: traitDescriptions[i]
-                    });
-                }
-            }
+            // Parse Traits (dynamic list with indexed names)
+            // Check for both old array format and new indexed format
+            let traitNames = formData.getAll('traitName[]');
+            let traitDescriptions = formData.getAll('traitDescription[]');
 
-            // Parse Actions (dynamic array)
-            const actionNames = formData.getAll('actionName[]');
-            const actionDescriptions = formData.getAll('actionDescription[]');
-            for (let i = 0; i < actionNames.length; i++) {
-                if (actionNames[i] && actionDescriptions[i]) {
-                    creatureData.statBlock.actions.push({
-                        name: actionNames[i],
-                        description: actionDescriptions[i]
-                    });
+            // If using new indexed format
+            if (traitNames.length === 0) {
+                let traitIndex = 0;
+                while (formData.has(`trait-name-${traitIndex}`)) {
+                    const name = formData.get(`trait-name-${traitIndex}`)?.trim();
+                    const description = formData.get(`trait-description-${traitIndex}`)?.trim();
+                    if (name && description) {
+                        creatureData.statBlock.traits.push({
+                            name: name,
+                            description: description,
+                            usage: null
+                        });
+                    }
+                    traitIndex++;
                 }
-            }
-
-            // Parse Legendary Actions (dynamic array)
-            const legendaryNames = formData.getAll('legendaryActionName[]');
-            const legendaryCosts = formData.getAll('legendaryActionCost[]');
-            const legendaryDescriptions = formData.getAll('legendaryActionDescription[]');
-            if (legendaryNames.length > 0) {
-                creatureData.statBlock.legendaryActions = {
-                    uses: 3,
-                    options: []
-                };
-                for (let i = 0; i < legendaryNames.length; i++) {
-                    if (legendaryNames[i] && legendaryDescriptions[i]) {
-                        creatureData.statBlock.legendaryActions.options.push({
-                            name: legendaryNames[i],
-                            cost: parseInt(legendaryCosts[i]) || 1,
-                            description: legendaryDescriptions[i]
+            } else {
+                // Old format
+                for (let i = 0; i < traitNames.length; i++) {
+                    if (traitNames[i] && traitDescriptions[i]) {
+                        creatureData.statBlock.traits.push({
+                            name: traitNames[i],
+                            description: traitDescriptions[i],
+                            usage: null
                         });
                     }
                 }
+            }
+
+            // Parse Actions (dynamic list with indexed names)
+            let actionNames = formData.getAll('actionName[]');
+            let actionDescriptions = formData.getAll('actionDescription[]');
+
+            // If using new indexed format
+            if (actionNames.length === 0) {
+                let actionIndex = 0;
+                while (formData.has(`action-name-${actionIndex}`)) {
+                    const name = formData.get(`action-name-${actionIndex}`)?.trim();
+                    const description = formData.get(`action-description-${actionIndex}`)?.trim();
+                    if (name && description) {
+                        creatureData.statBlock.actions.push({
+                            name: name,
+                            description: description
+                        });
+                    }
+                    actionIndex++;
+                }
+            } else {
+                // Old format
+                for (let i = 0; i < actionNames.length; i++) {
+                    if (actionNames[i] && actionDescriptions[i]) {
+                        creatureData.statBlock.actions.push({
+                            name: actionNames[i],
+                            description: actionDescriptions[i]
+                        });
+                    }
+                }
+            }
+
+            // Parse Reactions (dynamic list with indexed names)
+            let reactionIndex = 0;
+            while (formData.has(`reaction-name-${reactionIndex}`)) {
+                const name = formData.get(`reaction-name-${reactionIndex}`)?.trim();
+                const description = formData.get(`reaction-description-${reactionIndex}`)?.trim();
+                if (name && description) {
+                    creatureData.statBlock.reactions.push({
+                        name: name,
+                        description: description
+                    });
+                }
+                reactionIndex++;
+            }
+
+            // Parse Legendary Actions with metadata
+            const legendaryUses = parseInt(formData.get('legendaryUses'));
+            const legendaryUsesInLair = parseInt(formData.get('legendaryUsesInLair'));
+            const legendaryDescription = formData.get('legendaryDescription')?.trim();
+
+            // Check for legendary action options with indexed names
+            let legendaryIndex = 0;
+            const legendaryOptions = [];
+            while (formData.has(`legendary-action-name-${legendaryIndex}`)) {
+                const name = formData.get(`legendary-action-name-${legendaryIndex}`)?.trim();
+                const cost = parseInt(formData.get(`legendary-action-cost-${legendaryIndex}`));
+                const description = formData.get(`legendary-action-description-${legendaryIndex}`)?.trim();
+                if (name && description) {
+                    legendaryOptions.push({
+                        name: name,
+                        cost: !isNaN(cost) ? cost : 1,
+                        description: description
+                    });
+                }
+                legendaryIndex++;
+            }
+
+            // Only create legendaryActions object if we have options or metadata
+            if (legendaryOptions.length > 0 || !isNaN(legendaryUses) || legendaryDescription) {
+                creatureData.statBlock.legendaryActions = {
+                    uses: !isNaN(legendaryUses) ? legendaryUses : 3,
+                    usesInLair: !isNaN(legendaryUsesInLair) ? legendaryUsesInLair : null,
+                    description: legendaryDescription || '',
+                    options: legendaryOptions
+                };
+            }
+
+            // Parse Spellcasting
+            const spellcastingAbility = formData.get('spellcastingAbility')?.trim();
+            const spellAttackBonus = parseInt(formData.get('spellAttackBonus'));
+            const spellSaveDC = parseInt(formData.get('spellSaveDC'));
+            const spellcastingDesc = formData.get('spellcastingDescription')?.trim();
+            const spellListRaw = formData.get('spellList')?.trim();
+
+            // Only create spellcasting object if we have any spellcasting data
+            if (spellcastingAbility || !isNaN(spellAttackBonus) || !isNaN(spellSaveDC) || spellcastingDesc || spellListRaw) {
+                creatureData.statBlock.spellcasting = {
+                    ability: spellcastingAbility || null,
+                    spellAttackBonus: !isNaN(spellAttackBonus) ? spellAttackBonus : null,
+                    spellSaveDC: !isNaN(spellSaveDC) ? spellSaveDC : null,
+                    description: spellcastingDesc || '',
+                    spells: spellListRaw ? spellListRaw.split('\n').map(s => s.trim()).filter(s => s) : []
+                };
             }
 
             // Parse Challenge Rating XP

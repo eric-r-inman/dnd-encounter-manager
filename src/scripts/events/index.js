@@ -428,6 +428,36 @@ export class EventCoordinator {
             case 'add-custom-section':
                 CreatureModalEvents.addCustomSectionRowWithData();
                 break;
+            case 'add-trait':
+                CreatureModalEvents.handleAddTrait(target);
+                break;
+            case 'remove-trait':
+                CreatureModalEvents.handleRemoveTrait(target);
+                break;
+            case 'add-skill':
+                CreatureModalEvents.handleAddSkill(target);
+                break;
+            case 'remove-skill':
+                CreatureModalEvents.handleRemoveSkill(target);
+                break;
+            case 'add-action':
+                CreatureModalEvents.handleAddAction(target);
+                break;
+            case 'remove-action':
+                CreatureModalEvents.handleRemoveAction(target);
+                break;
+            case 'add-reaction':
+                CreatureModalEvents.handleAddReaction(target);
+                break;
+            case 'remove-reaction':
+                CreatureModalEvents.handleRemoveReaction(target);
+                break;
+            case 'add-legendary-action':
+                CreatureModalEvents.handleAddLegendaryAction(target);
+                break;
+            case 'remove-legendary-action':
+                CreatureModalEvents.handleRemoveLegendaryAction(target);
+                break;
             case 'open-creature-window':
                 const creatureId = target.getAttribute('data-creature-id');
                 if (creatureId) {

@@ -208,35 +208,35 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>STR</label>
-                        <input type="number" name="strScore" placeholder="Score">
-                        <input type="number" name="strModifier" placeholder="Modifier">
+                        <input type="number" id="edit-creature-str-score" name="strScore" placeholder="Score" min="1" max="30">
+                        <input type="number" id="edit-creature-str-modifier" name="strModifier" placeholder="Mod" readonly style="background-color: var(--color-bg-hover);">
                     </div>
                     <div class="form-group">
                         <label>DEX</label>
-                        <input type="number" name="dexScore" placeholder="Score">
-                        <input type="number" name="dexModifier" placeholder="Modifier">
+                        <input type="number" id="edit-creature-dex-score" name="dexScore" placeholder="Score" min="1" max="30">
+                        <input type="number" id="edit-creature-dex-modifier" name="dexModifier" placeholder="Mod" readonly style="background-color: var(--color-bg-hover);">
                     </div>
                     <div class="form-group">
                         <label>CON</label>
-                        <input type="number" name="conScore" placeholder="Score">
-                        <input type="number" name="conModifier" placeholder="Modifier">
+                        <input type="number" id="edit-creature-con-score" name="conScore" placeholder="Score" min="1" max="30">
+                        <input type="number" id="edit-creature-con-modifier" name="conModifier" placeholder="Mod" readonly style="background-color: var(--color-bg-hover);">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>INT</label>
-                        <input type="number" name="intScore" placeholder="Score">
-                        <input type="number" name="intModifier" placeholder="Modifier">
+                        <input type="number" id="edit-creature-int-score" name="intScore" placeholder="Score" min="1" max="30">
+                        <input type="number" id="edit-creature-int-modifier" name="intModifier" placeholder="Mod" readonly style="background-color: var(--color-bg-hover);">
                     </div>
                     <div class="form-group">
                         <label>WIS</label>
-                        <input type="number" name="wisScore" placeholder="Score">
-                        <input type="number" name="wisModifier" placeholder="Modifier">
+                        <input type="number" id="edit-creature-wis-score" name="wisScore" placeholder="Score" min="1" max="30">
+                        <input type="number" id="edit-creature-wis-modifier" name="wisModifier" placeholder="Mod" readonly style="background-color: var(--color-bg-hover);">
                     </div>
                     <div class="form-group">
                         <label>CHA</label>
-                        <input type="number" name="chaScore" placeholder="Score">
-                        <input type="number" name="chaModifier" placeholder="Modifier">
+                        <input type="number" id="edit-creature-cha-score" name="chaScore" placeholder="Score" min="1" max="30">
+                        <input type="number" id="edit-creature-cha-modifier" name="chaModifier" placeholder="Mod" readonly style="background-color: var(--color-bg-hover);">
                     </div>
                 </div>
                 
@@ -246,37 +246,38 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>STR Save</label>
-                        <input type="number" name="strSave" placeholder="+10">
+                        <input type="number" id="edit-creature-str-save" name="strSave" placeholder="+10">
                     </div>
                     <div class="form-group">
                         <label>DEX Save</label>
-                        <input type="number" name="dexSave" placeholder="+7">
+                        <input type="number" id="edit-creature-dex-save" name="dexSave" placeholder="+7">
                     </div>
                     <div class="form-group">
                         <label>CON Save</label>
-                        <input type="number" name="conSave" placeholder="+9">
+                        <input type="number" id="edit-creature-con-save" name="conSave" placeholder="+9">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>INT Save</label>
-                        <input type="number" name="intSave" placeholder="+4">
+                        <input type="number" id="edit-creature-int-save" name="intSave" placeholder="+4">
                     </div>
                     <div class="form-group">
                         <label>WIS Save</label>
-                        <input type="number" name="wisSave" placeholder="+9">
+                        <input type="number" id="edit-creature-wis-save" name="wisSave" placeholder="+9">
                     </div>
                     <div class="form-group">
                         <label>CHA Save</label>
-                        <input type="number" name="chaSave" placeholder="+8">
+                        <input type="number" id="edit-creature-cha-save" name="chaSave" placeholder="+8">
                     </div>
                 </div>
                 
                 <!-- ==================== SKILLS ==================== -->
                 <h3 class="form-section-title">Skills</h3>
-                
-                <div id="skills-container">
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="addSkillRow()">
+
+                <div id="edit-creature-skills-container">
+                    <div id="edit-creature-skills-list" class="dynamic-list"></div>
+                    <button type="button" class="btn btn-sm btn-secondary" data-action="add-skill">
                         + Add Skill
                     </button>
                 </div>
@@ -286,22 +287,22 @@
                 
                 <div class="form-group">
                     <label>Damage Vulnerabilities</label>
-                    <input type="text" name="damageVulnerabilities" placeholder="e.g., Cold (comma-separated)">
+                    <input type="text" id="edit-creature-damage-vulnerabilities" name="damageVulnerabilities" placeholder="e.g., Cold (comma-separated)">
                 </div>
-                
+
                 <div class="form-group">
                     <label>Damage Resistances</label>
-                    <input type="text" name="damageResistances" placeholder="e.g., Bludgeoning, Piercing (comma-separated)">
+                    <input type="text" id="edit-creature-damage-resistances" name="damageResistances" placeholder="e.g., Bludgeoning, Piercing (comma-separated)">
                 </div>
-                
+
                 <div class="form-group">
                     <label>Damage Immunities</label>
-                    <input type="text" name="damageImmunities" placeholder="e.g., Fire, Poison (comma-separated)">
+                    <input type="text" id="edit-creature-damage-immunities" name="damageImmunities" placeholder="e.g., Fire, Poison (comma-separated)">
                 </div>
-                
+
                 <div class="form-group">
                     <label>Condition Immunities</label>
-                    <input type="text" name="conditionImmunities" placeholder="e.g., Charmed, Frightened (comma-separated)">
+                    <input type="text" id="edit-creature-condition-immunities" name="conditionImmunities" placeholder="e.g., Charmed, Frightened (comma-separated)">
                 </div>
                 
                 <!-- ==================== SENSES ==================== -->
@@ -310,31 +311,31 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>Blindsight</label>
-                        <input type="number" name="blindsight" placeholder="ft">
+                        <input type="number" id="edit-creature-blindsight" name="blindsight" placeholder="ft">
                     </div>
                     <div class="form-group">
                         <label>Darkvision</label>
-                        <input type="number" name="darkvision" placeholder="ft">
+                        <input type="number" id="edit-creature-darkvision" name="darkvision" placeholder="ft">
                     </div>
                     <div class="form-group">
                         <label>Tremorsense</label>
-                        <input type="number" name="tremorsense" placeholder="ft">
+                        <input type="number" id="edit-creature-tremorsense" name="tremorsense" placeholder="ft">
                     </div>
                     <div class="form-group">
                         <label>Truesight</label>
-                        <input type="number" name="truesight" placeholder="ft">
+                        <input type="number" id="edit-creature-truesight" name="truesight" placeholder="ft">
                     </div>
                     <div class="form-group">
                         <label>Passive Perception</label>
-                        <input type="number" name="passivePerception" placeholder="26">
+                        <input type="number" id="edit-creature-passive-perception" name="passivePerception" placeholder="26">
                     </div>
                 </div>
-                
+
                 <!-- ==================== LANGUAGES ==================== -->
                 <h3 class="form-section-title">Languages</h3>
-                
+
                 <div class="form-group">
-                    <input type="text" name="languages" placeholder="e.g., Common, Draconic (comma-separated)">
+                    <input type="text" id="edit-creature-languages" name="languages" placeholder="e.g., Common, Draconic (comma-separated)">
                 </div>
                 
                 <!-- ==================== CHALLENGE RATING DETAILS ==================== -->
@@ -343,61 +344,105 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>XP</label>
-                        <input type="number" name="xp" placeholder="62000">
+                        <input type="number" id="edit-creature-xp" name="xp" placeholder="62000">
                     </div>
                     <div class="form-group">
                         <label>XP in Lair</label>
-                        <input type="number" name="xpInLair" placeholder="75000">
+                        <input type="number" id="edit-creature-xp-lair" name="xpInLair" placeholder="75000">
                     </div>
                 </div>
                 
                 <!-- ==================== TRAITS ==================== -->
-                <h3 class="form-section-title">Traits</h3>
-                
-                <div id="traits-container">
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="addTraitRow()">
+                <h3 class="form-section-title">Traits & Special Abilities</h3>
+
+                <div id="edit-creature-traits-container">
+                    <div id="edit-creature-traits-list" class="dynamic-list"></div>
+                    <button type="button" class="btn btn-sm btn-secondary" data-action="add-trait">
                         + Add Trait
                     </button>
                 </div>
-                
+
                 <!-- ==================== ACTIONS ==================== -->
                 <h3 class="form-section-title">Actions</h3>
-                
-                <div id="actions-container">
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="addActionRow()">
+
+                <div id="edit-creature-actions-container">
+                    <div id="edit-creature-actions-list" class="dynamic-list"></div>
+                    <button type="button" class="btn btn-sm btn-secondary" data-action="add-action">
                         + Add Action
                     </button>
                 </div>
-                
+
+                <!-- ==================== REACTIONS ==================== -->
+                <h3 class="form-section-title">Reactions</h3>
+
+                <div id="edit-creature-reactions-container">
+                    <div id="edit-creature-reactions-list" class="dynamic-list"></div>
+                    <button type="button" class="btn btn-sm btn-secondary" data-action="add-reaction">
+                        + Add Reaction
+                    </button>
+                </div>
+
                 <!-- ==================== LEGENDARY ACTIONS ==================== -->
                 <h3 class="form-section-title">Legendary Actions</h3>
 
-                <div id="legendary-actions-container">
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="addLegendaryActionRow()">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Legendary Action Uses</label>
+                        <input type="number" id="edit-creature-legendary-uses" name="legendaryUses" placeholder="3" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Uses in Lair</label>
+                        <input type="number" id="edit-creature-legendary-uses-lair" name="legendaryUsesInLair" placeholder="4" min="1">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Legendary Actions Description</label>
+                    <textarea id="edit-creature-legendary-description" name="legendaryDescription" rows="2" placeholder="e.g., The creature can take 3 legendary actions..."></textarea>
+                </div>
+
+                <div id="edit-creature-legendary-actions-container">
+                    <div id="edit-creature-legendary-actions-list" class="dynamic-list"></div>
+                    <button type="button" class="btn btn-sm btn-secondary" data-action="add-legendary-action">
                         + Add Legendary Action
                     </button>
                 </div>
                 
                 <!-- ==================== SPELLCASTING ==================== -->
-                <h3 class="form-section-title">Spellcasting</h3>
+                <details class="form-section-expandable">
+                    <summary class="form-section-title-expandable">Spellcasting (Optional)</summary>
+                    <div class="form-section-content">
+                        <div class="form-group">
+                            <label>Spellcasting Ability</label>
+                            <select id="edit-creature-spellcasting-ability" name="spellcastingAbility">
+                                <option value="">None</option>
+                                <option value="int">Intelligence</option>
+                                <option value="wis">Wisdom</option>
+                                <option value="cha">Charisma</option>
+                            </select>
+                        </div>
 
-                <div id="spells-container">
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="addSpellRow()">
-                        + Add Spell
-                    </button>
-                </div>
+                        <div class="form-group">
+                            <label>Spell Attack Bonus</label>
+                            <input type="number" id="edit-creature-spell-attack" name="spellAttackBonus" placeholder="+10">
+                        </div>
 
-                <!-- ==================== CUSTOM SECTIONS ==================== -->
-                <h3 class="form-section-title">Custom Sections</h3>
-                <p style="font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: var(--spacing-md);">
-                    Add custom sections like Habitat, Lair Actions, Regional Effects, Treasure, etc.
-                </p>
+                        <div class="form-group">
+                            <label>Spell Save DC</label>
+                            <input type="number" id="edit-creature-spell-dc" name="spellSaveDC" placeholder="18">
+                        </div>
 
-                <div id="custom-sections-container">
-                    <button type="button" class="btn btn-sm btn-secondary" data-action="add-custom-section">
-                        + Add Custom Section
-                    </button>
-                </div>
+                        <div class="form-group">
+                            <label>Spellcasting Description</label>
+                            <textarea id="edit-creature-spellcasting-desc" name="spellcastingDescription" rows="2" placeholder="e.g., The creature is a 17th-level spellcaster..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Spell List</label>
+                            <textarea id="edit-creature-spell-list" name="spellList" rows="4" placeholder="List spells by level (one per line or comma-separated)"></textarea>
+                        </div>
+                    </div>
+                </details>
 
                 <!-- Hidden field for creature ID when editing -->
                 <input type="hidden" id="edit-creature-form-id" name="id">
