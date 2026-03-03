@@ -1061,23 +1061,29 @@ export class CreatureModalEvents {
 
             // Get the form element
             const form = document.getElementById('creature-form');
-            if (form) {
-                // Mark form as in edit mode
-                form.setAttribute('data-editing-mode', 'true');
-
-                // Remove 'required' attribute from all fields in edit mode
-                const requiredFields = form.querySelectorAll('[required]');
-                requiredFields.forEach(field => {
-                    field.removeAttribute('required');
-                    // Store original required state for restoration later
-                    field.setAttribute('data-was-required', 'true');
-                });
+            if (!form) {
+                console.error('❌ Form element not found!');
+                return;
             }
+
+            console.log('✅ Form found, marking as edit mode');
+            // Mark form as in edit mode
+            form.setAttribute('data-editing-mode', 'true');
+
+            // Remove 'required' attribute from all fields in edit mode
+            const requiredFields = form.querySelectorAll('[required]');
+            console.log(`📋 Found ${requiredFields.length} required fields, removing 'required' attribute`);
+            requiredFields.forEach(field => {
+                field.removeAttribute('required');
+                // Store original required state for restoration later
+                field.setAttribute('data-was-required', 'true');
+            });
 
             // Update modal title
             const titleElement = document.getElementById('creature-form-title');
             if (titleElement) {
                 titleElement.textContent = 'Edit Creature';
+                console.log('✅ Updated modal title to "Edit Creature"');
             } else {
                 console.warn('⚠️ Title element not found');
             }
@@ -1086,6 +1092,9 @@ export class CreatureModalEvents {
             const submitTextElement = document.getElementById('creature-form-submit-text');
             if (submitTextElement) {
                 submitTextElement.textContent = 'Commit Changes';
+                console.log('✅ Updated submit button to "Commit Changes"');
+            } else {
+                console.warn('⚠️ Submit text element not found');
             }
 
             // Store creature ID for update
@@ -1908,6 +1917,108 @@ export class CreatureModalEvents {
                     filenameElement.textContent = `creature-database-${lastUpdated}.json`;
                 }
             }
+        }
+    }
+
+    /**
+     * Setup the edit creature modal with creature data
+     * This is for the SEPARATE edit modal (edit-creature.html)
+     * @param {Object} creature - Creature data to populate
+     */
+    static setupEditCreatureModal(creature) {
+        console.log('📝 Setting up EDIT creature modal for:', creature.name);
+
+        // Just call the existing setup method but with edit-creature IDs
+        // We need to temporarily modify IDs or create a new implementation
+        this.populateCreatureForm(creature, 'edit-creature-form');
+    }
+
+    /**
+     * Setup the edit player modal with player data
+     * This is for the SEPARATE edit modal (edit-player.html)
+     * @param {Object} creature - Player data to populate
+     */
+    static setupEditPlayerModal(creature) {
+        console.log('📝 Setting up EDIT player modal for:', creature.name);
+
+        // Just call the existing setup method but with edit-player IDs
+        this.populatePlayerForm(creature, 'edit-player-form');
+    }
+
+    /**
+     * Generic method to populate creature form fields
+     * @param {Object} creature - Creature data
+     * @param {string} formIdPrefix - Form ID prefix (either 'creature-form' or 'edit-creature-form')
+     */
+    static populateCreatureForm(creature, formIdPrefix) {
+        try {
+            console.log(`Populating ${formIdPrefix} with creature:`, creature.name);
+
+            // Store creature ID for update
+            const idField = document.getElementById(`${formIdPrefix}-id`);
+            if (idField) idField.value = creature.id;
+
+            // Populate basic fields
+            const fields = {
+                name: creature.name || '',
+                type: creature.type || 'enemy',
+                size: creature.size || 'Medium',
+                race: creature.race || '',
+                subrace: creature.subrace || '',
+                alignment: creature.alignment || '',
+                cr: creature.cr || '',
+                source: creature.source || '',
+                description: creature.description || '',
+                ac: creature.ac || 10,
+                maxHP: creature.maxHP || 1,
+                initiative: creature.initiative || 0
+            };
+
+            for (const [fieldName, value] of Object.entries(fields)) {
+                const field = document.getElementById(`${formIdPrefix}-${fieldName}`);
+                if (field) field.value = value;
+            }
+
+            console.log(`✅ Populated ${formIdPrefix} for: ${creature.name}`);
+        } catch (error) {
+            console.error(`❌ Error populating ${formIdPrefix}:`, error);
+        }
+    }
+
+    /**
+     * Generic method to populate player form fields
+     * @param {Object} creature - Player data
+     * @param {string} formIdPrefix - Form ID prefix (either 'player-form' or 'edit-player-form')
+     */
+    static populatePlayerForm(creature, formIdPrefix) {
+        try {
+            console.log(`Populating ${formIdPrefix} with player:`, creature.name);
+
+            // Store creature ID for update
+            const idField = document.getElementById(`${formIdPrefix}-id`);
+            if (idField) idField.value = creature.id;
+
+            // Populate basic fields
+            const fields = {
+                name: creature.name || '',
+                playerName: creature.playerName || '',
+                class: creature.class || '',
+                level: creature.level || 1,
+                race: creature.race || '',
+                subrace: creature.subrace || '',
+                ac: creature.ac || 10,
+                maxHP: creature.maxHP || 1,
+                initiative: creature.initiative || 0
+            };
+
+            for (const [fieldName, value] of Object.entries(fields)) {
+                const field = document.getElementById(`${formIdPrefix}-${fieldName}`);
+                if (field) field.value = value;
+            }
+
+            console.log(`✅ Populated ${formIdPrefix} for: ${creature.name}`);
+        } catch (error) {
+            console.error(`❌ Error populating ${formIdPrefix}:`, error);
         }
     }
 }

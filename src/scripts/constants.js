@@ -40,6 +40,8 @@ export const MODAL_NAMES = {
     CREATURE_DATABASE: 'creature-database',
     CREATURE_FORM: 'creature-form',
     CREATURE_TYPE_SELECTION: 'creature-type-selection',
+    EDIT_CREATURE: 'edit-creature',
+    EDIT_PLAYER: 'edit-player',
     EFFECT: 'effect',
     HP_MODIFICATION: 'hp-modification',
     PLACEHOLDER_TIMER: 'placeholder-timer',

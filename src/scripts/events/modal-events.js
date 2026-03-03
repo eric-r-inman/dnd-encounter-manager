@@ -108,10 +108,18 @@ export class ModalEvents {
                 CreatureModalEvents.setupCreatureDatabaseModal(modal, trigger);
                 break;
             case 'creature-form':
-                CreatureModalEvents.setupCreatureFormForAdd();
+                // Only setup for add if not already in edit mode
+                const creatureForm = document.getElementById('creature-form');
+                if (!creatureForm || !creatureForm.hasAttribute('data-editing-mode')) {
+                    CreatureModalEvents.setupCreatureFormForAdd();
+                }
                 break;
             case 'player-form':
-                CreatureModalEvents.setupPlayerFormForAdd();
+                // Only setup for add if not already in edit mode
+                const playerForm = document.getElementById('player-form');
+                if (!playerForm || !playerForm.hasAttribute('data-editing-mode')) {
+                    CreatureModalEvents.setupPlayerFormForAdd();
+                }
                 break;
             case 'combatant-note':
                 this.setupNoteModal(modal, targetCombatant, trigger);

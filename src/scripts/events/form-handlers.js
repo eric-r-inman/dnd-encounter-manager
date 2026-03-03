@@ -438,11 +438,20 @@ export class FormHandlers {
 
         console.log('🐛 Form submission - Type received:', type);
 
-        // Validate required fields
-        if (!name || !type || isNaN(ac) || isNaN(maxHP)) {
-            this._submittingCreatureForm = false;
-            ToastSystem.show('Please fill in all required fields (Name, Type, AC, HP)', 'error', 3000);
-            return;
+        // Validate required fields (only for NEW creatures, not edits)
+        if (!isEdit) {
+            if (!name || !type || isNaN(ac) || isNaN(maxHP)) {
+                this._submittingCreatureForm = false;
+                ToastSystem.show('Please fill in all required fields (Name, Type, AC, HP)', 'error', 3000);
+                return;
+            }
+        } else {
+            // For edits, at least validate that we have the ID
+            if (!existingId) {
+                this._submittingCreatureForm = false;
+                ToastSystem.show('Cannot update creature: missing ID', 'error', 3000);
+                return;
+            }
         }
 
         // WHY: Generate a unique ID for the creature
@@ -452,27 +461,59 @@ export class FormHandlers {
         const id = isEdit ? existingId : CreatureService.generateCreatureId(name);
 
         // Build creature data structure
-        const creatureData = {
-            id: id,
-            name: name,
-            type: type,
-            ac: ac,
-            maxHP: maxHP,
-            cr: formData.get('cr') || '0',
-            size: formData.get('size') || 'Medium',
-            race: formData.get('race') || '',
-            subrace: formData.get('subrace') || '',
-            alignment: formData.get('alignment') || '',
-            description: formData.get('description') || '',
-            source: formData.get('source') || 'Custom',
-            hasFullStatBlock: false, // For now, just basic stats
-            statBlock: {} // Initialize statBlock for all creatures
-        };
+        // For edits, only include fields that have values (partial update)
+        // For new creatures, include all fields with defaults
+        const creatureData = { id: id };
+
+        if (isEdit) {
+            // Partial update - only include fields that have values
+            if (name) creatureData.name = name;
+            if (type) creatureData.type = type;
+            if (!isNaN(ac)) creatureData.ac = ac;
+            if (!isNaN(maxHP)) creatureData.maxHP = maxHP;
+
+            const cr = formData.get('cr')?.trim();
+            if (cr) creatureData.cr = cr;
+
+            const size = formData.get('size');
+            if (size) creatureData.size = size;
+
+            const race = formData.get('race')?.trim();
+            if (race) creatureData.race = race;
+
+            const subrace = formData.get('subrace')?.trim();
+            if (subrace) creatureData.subrace = subrace;
+
+            const alignment = formData.get('alignment')?.trim();
+            if (alignment) creatureData.alignment = alignment;
+
+            const description = formData.get('description')?.trim();
+            if (description) creatureData.description = description;
+
+            const source = formData.get('source')?.trim();
+            if (source) creatureData.source = source;
+        } else {
+            // Complete data for new creature with defaults
+            creatureData.name = name;
+            creatureData.type = type;
+            creatureData.ac = ac;
+            creatureData.maxHP = maxHP;
+            creatureData.cr = formData.get('cr') || '0';
+            creatureData.size = formData.get('size') || 'Medium';
+            creatureData.race = formData.get('race') || '';
+            creatureData.subrace = formData.get('subrace') || '';
+            creatureData.alignment = formData.get('alignment') || '';
+            creatureData.description = formData.get('description') || '';
+            creatureData.source = formData.get('source') || 'Custom';
+            creatureData.hasFullStatBlock = false; // For now, just basic stats
+            creatureData.statBlock = {}; // Initialize statBlock for all creatures
+        }
 
         // Check for initiative values (always save if provided)
         const initiativeModifier = parseInt(formData.get('initiativeModifier'));
         const initiativeTotal = parseInt(formData.get('initiativeTotal'));
         if (!isNaN(initiativeModifier) || !isNaN(initiativeTotal)) {
+            if (!creatureData.statBlock) creatureData.statBlock = {};
             creatureData.statBlock.initiative = {
                 modifier: !isNaN(initiativeModifier) ? initiativeModifier : 0,
                 total: !isNaN(initiativeTotal) ? initiativeTotal : null
@@ -717,6 +758,19 @@ export class FormHandlers {
             // Add timestamp
             if (!isEdit) {
                 creatureData.createdAt = Date.now();
+            } else {
+                // For edits: Get existing creature and merge with partial updates
+                // This preserves fields that weren't changed
+                const existingCreature = await CreatureService.getCreature(id);
+                if (existingCreature) {
+                    // Deep merge: preserve existing statBlock if we're not updating it
+                    if (creatureData.statBlock && existingCreature.statBlock) {
+                        creatureData.statBlock = {
+                            ...existingCreature.statBlock,
+                            ...creatureData.statBlock
+                        };
+                    }
+                }
             }
 
             let success;
@@ -724,8 +778,8 @@ export class FormHandlers {
                 // Update existing creature using CreatureService
                 success = await CreatureService.updateCreature(id, creatureData);
                 if (success) {
-                    ToastSystem.show(`Updated: ${name}`, 'success', 2000);
-                    console.log(`✅ Updated creature: ${name} (${id})`);
+                    ToastSystem.show(`Updated: ${name || 'Creature'}`, 'success', 2000);
+                    console.log(`✅ Updated creature: ${name || id} (${id})`);
                 }
             } else {
                 // Create new creature using CreatureService
@@ -793,23 +847,31 @@ export class FormHandlers {
         const ac = parseInt(formData.get('ac'));
         const maxHP = parseInt(formData.get('maxHP'));
 
-        // Validate required fields
-        if (!name || !characterClass || isNaN(level) || !race || isNaN(ac) || isNaN(maxHP)) {
-            ToastSystem.show('Please fill in all required fields (Name, Class, Level, Race, AC, Max HP)', 'error', 3000);
-            return;
-        }
+        // Validate required fields (only for NEW players, not edits)
+        if (!isEdit) {
+            if (!name || !characterClass || isNaN(level) || !race || isNaN(ac) || isNaN(maxHP)) {
+                ToastSystem.show('Please fill in all required fields (Name, Class, Level, Race, AC, Max HP)', 'error', 3000);
+                return;
+            }
 
-        // Validate ability scores
-        const str = parseInt(formData.get('str'));
-        const dex = parseInt(formData.get('dex'));
-        const con = parseInt(formData.get('con'));
-        const int = parseInt(formData.get('int'));
-        const wis = parseInt(formData.get('wis'));
-        const cha = parseInt(formData.get('cha'));
+            // Validate ability scores (only for new players)
+            const str = parseInt(formData.get('str'));
+            const dex = parseInt(formData.get('dex'));
+            const con = parseInt(formData.get('con'));
+            const int = parseInt(formData.get('int'));
+            const wis = parseInt(formData.get('wis'));
+            const cha = parseInt(formData.get('cha'));
 
-        if (isNaN(str) || isNaN(dex) || isNaN(con) || isNaN(int) || isNaN(wis) || isNaN(cha)) {
-            ToastSystem.show('Please fill in all ability scores', 'error', 3000);
-            return;
+            if (isNaN(str) || isNaN(dex) || isNaN(con) || isNaN(int) || isNaN(wis) || isNaN(cha)) {
+                ToastSystem.show('Please fill in all ability scores', 'error', 3000);
+                return;
+            }
+        } else {
+            // For edits, at least validate that we have the ID
+            if (!existingId) {
+                ToastSystem.show('Cannot update player: missing ID', 'error', 3000);
+                return;
+            }
         }
 
         // Generate a unique ID for the player (use existing ID if editing)
@@ -827,27 +889,114 @@ export class FormHandlers {
         // Helper function to calculate ability modifier
         const calcModifier = (score) => Math.floor((score - 10) / 2);
 
+        // Get ability scores (needed for calcModifier)
+        const str = parseInt(formData.get('str'));
+        const dex = parseInt(formData.get('dex'));
+        const con = parseInt(formData.get('con'));
+        const int = parseInt(formData.get('int'));
+        const wis = parseInt(formData.get('wis'));
+        const cha = parseInt(formData.get('cha'));
+
         // Build player character data structure
-        const playerData = {
-            id: id,
-            name: name,
-            type: 'player', // Mark as player type
-            ac: ac,
-            maxHP: maxHP,
-            cr: '0', // Players don't have CR
-            size: 'Medium',
-            race: race,
-            subrace: formData.get('background') || '',
-            alignment: '',
-            description: `${characterClass} - Level ${level}`,
-            source: 'Custom',
-            isCustom: true,
-            hasFullStatBlock: true,
-            // Player-specific fields
-            playerClass: characterClass,
-            playerLevel: level,
-            playerBackground: formData.get('background') || '',
-            statBlock: {
+        // For edits, only include fields that have values (partial update)
+        // For new players, include all fields with defaults
+        const playerData = { id: id };
+
+        if (isEdit) {
+            // Partial update - only include fields that have values
+            if (name) playerData.name = name;
+            if (characterClass) playerData.playerClass = characterClass;
+            if (!isNaN(level)) playerData.playerLevel = level;
+            if (race) playerData.race = race;
+            if (!isNaN(ac)) playerData.ac = ac;
+            if (!isNaN(maxHP)) playerData.maxHP = maxHP;
+
+            const background = formData.get('background')?.trim();
+            if (background) {
+                playerData.playerBackground = background;
+                playerData.subrace = background; // Also set subrace for compatibility
+            }
+
+            // Update description if we have the required fields
+            if (characterClass && level) {
+                playerData.description = `${characterClass} - Level ${level}`;
+            }
+
+            // Build partial statBlock
+            playerData.statBlock = {};
+
+            // Update fullType if we have the info
+            if (level && race && characterClass) {
+                playerData.statBlock.fullType = `Level ${level} ${race} ${characterClass}`;
+            }
+
+            // Update armor class if provided
+            if (!isNaN(ac)) {
+                playerData.statBlock.armorClass = {
+                    value: ac,
+                    type: 'Armor'
+                };
+            }
+
+            // Update hit points if provided
+            if (!isNaN(maxHP)) {
+                playerData.statBlock.hitPoints = {
+                    average: maxHP,
+                    formula: ''
+                };
+            }
+
+            // Update initiative bonus if provided
+            const initiativeBonus = parseInt(formData.get('initiativeBonus'));
+            if (!isNaN(initiativeBonus) || !isNaN(dex)) {
+                playerData.statBlock.initiative = {
+                    modifier: !isNaN(initiativeBonus) ? initiativeBonus : (!isNaN(dex) ? calcModifier(dex) : 0),
+                    total: 0
+                };
+            }
+
+            // Update speed if provided
+            const speed = parseInt(formData.get('speed'));
+            if (!isNaN(speed)) {
+                playerData.statBlock.speed = { walk: speed, burrow: null, climb: null, fly: null, swim: null };
+            }
+
+            // Update ability scores if all are provided
+            if (!isNaN(str) && !isNaN(dex) && !isNaN(con) && !isNaN(int) && !isNaN(wis) && !isNaN(cha)) {
+                playerData.statBlock.abilities = {
+                    str: { score: str, modifier: calcModifier(str) },
+                    dex: { score: dex, modifier: calcModifier(dex) },
+                    con: { score: con, modifier: calcModifier(con) },
+                    int: { score: int, modifier: calcModifier(int) },
+                    wis: { score: wis, modifier: calcModifier(wis) },
+                    cha: { score: cha, modifier: calcModifier(cha) }
+                };
+            }
+
+            // Proficiency bonus
+            const profBonus = parseInt(formData.get('proficiencyBonus'));
+            if (!isNaN(profBonus)) {
+                playerData.statBlock.proficiencyBonus = profBonus;
+            }
+        } else {
+            // Complete data for new player with defaults
+            playerData.name = name;
+            playerData.type = 'player';
+            playerData.ac = ac;
+            playerData.maxHP = maxHP;
+            playerData.cr = '0';
+            playerData.size = 'Medium';
+            playerData.race = race;
+            playerData.subrace = formData.get('background') || '';
+            playerData.alignment = '';
+            playerData.description = `${characterClass} - Level ${level}`;
+            playerData.source = 'Custom';
+            playerData.isCustom = true;
+            playerData.hasFullStatBlock = true;
+            playerData.playerClass = characterClass;
+            playerData.playerLevel = level;
+            playerData.playerBackground = formData.get('background') || '';
+            playerData.statBlock = {
                 fullType: `Level ${level} ${race} ${characterClass}`,
                 armorClass: {
                     value: ac,
@@ -911,56 +1060,73 @@ export class FormHandlers {
                 bonusActions: [],
                 legendaryActions: null,
                 challengeRating: null
-            }
-        };
+            };
+        }
 
-        // Parse Saving Throw Proficiencies
+        // Parse Saving Throw Proficiencies and Skills
         const savingThrows = formData.getAll('savingThrows');
-        const profBonus = playerData.statBlock.proficiencyBonus;
-        savingThrows.forEach(ability => {
-            const modifier = calcModifier(playerData.statBlock.abilities[ability].score);
-            playerData.statBlock.savingThrows[ability] = modifier + profBonus;
-        });
+        if (savingThrows.length > 0) {
+            if (!playerData.statBlock) playerData.statBlock = {};
+            if (!playerData.statBlock.savingThrows) playerData.statBlock.savingThrows = {};
+
+            const profBonus = playerData.statBlock.proficiencyBonus || 2;
+            savingThrows.forEach(ability => {
+                const abilityScore = playerData.statBlock.abilities?.[ability]?.score;
+                if (abilityScore !== undefined) {
+                    const modifier = calcModifier(abilityScore);
+                    playerData.statBlock.savingThrows[ability] = modifier + profBonus;
+                }
+            });
+        }
 
         // Parse Skill Proficiencies
         const skills = formData.getAll('skills');
         const skillsExpertise = formData.getAll('skillsExpertise');
 
-        // Map of skill names to their ability scores
-        const skillAbilities = {
-            'acrobatics': 'dex',
-            'animal-handling': 'wis',
-            'arcana': 'int',
-            'athletics': 'str',
-            'deception': 'cha',
-            'history': 'int',
-            'insight': 'wis',
-            'intimidation': 'cha',
-            'investigation': 'int',
-            'medicine': 'wis',
-            'nature': 'int',
-            'perception': 'wis',
-            'performance': 'cha',
-            'persuasion': 'cha',
-            'religion': 'int',
-            'sleight-of-hand': 'dex',
-            'stealth': 'dex',
-            'survival': 'wis'
-        };
+        if (skills.length > 0) {
+            if (!playerData.statBlock) playerData.statBlock = {};
+            if (!playerData.statBlock.skills) playerData.statBlock.skills = {};
 
-        skills.forEach(skill => {
-            const ability = skillAbilities[skill];
-            if (ability) {
-                const modifier = calcModifier(playerData.statBlock.abilities[ability].score);
-                const isExpert = skillsExpertise.includes(skill);
-                const bonus = isExpert ? profBonus * 2 : profBonus;
-                playerData.statBlock.skills[skill.replace(/-/g, '')] = modifier + bonus;
-            }
-        });
+            // Map of skill names to their ability scores
+            const skillAbilities = {
+                'acrobatics': 'dex',
+                'animal-handling': 'wis',
+                'arcana': 'int',
+                'athletics': 'str',
+                'deception': 'cha',
+                'history': 'int',
+                'insight': 'wis',
+                'intimidation': 'cha',
+                'investigation': 'int',
+                'medicine': 'wis',
+                'nature': 'int',
+                'perception': 'wis',
+                'performance': 'cha',
+                'persuasion': 'cha',
+                'religion': 'int',
+                'sleight-of-hand': 'dex',
+                'stealth': 'dex',
+                'survival': 'wis'
+            };
+
+            const profBonus = playerData.statBlock.proficiencyBonus || 2;
+
+            skills.forEach(skill => {
+                const ability = skillAbilities[skill];
+                if (ability && playerData.statBlock.abilities?.[ability]?.score !== undefined) {
+                    const modifier = calcModifier(playerData.statBlock.abilities[ability].score);
+                    const isExpert = skillsExpertise.includes(skill);
+                    const bonus = isExpert ? profBonus * 2 : profBonus;
+                    playerData.statBlock.skills[skill.replace(/-/g, '')] = modifier + bonus;
+                }
+            });
+        }
 
         // Add notes if provided
         const notes = formData.get('notes')?.trim();
         if (notes) {
+            if (!playerData.statBlock) playerData.statBlock = {};
+            if (!playerData.statBlock.traits) playerData.statBlock.traits = [];
             playerData.statBlock.traits.push({
                 name: 'Character Notes',
                 description: notes
@@ -974,6 +1140,19 @@ export class FormHandlers {
             let success = false;
 
             if (isEdit) {
+                // For edits: Get existing player and merge with partial updates
+                // This preserves fields that weren't changed
+                const existingPlayer = await CreatureService.getCreature(id);
+                if (existingPlayer) {
+                    // Deep merge: preserve existing statBlock if we're not updating it
+                    if (playerData.statBlock && existingPlayer.statBlock) {
+                        playerData.statBlock = {
+                            ...existingPlayer.statBlock,
+                            ...playerData.statBlock
+                        };
+                    }
+                }
+
                 // Update existing player using CreatureService
                 success = await CreatureService.updateCreature(id, playerData);
                 if (success) {

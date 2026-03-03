@@ -389,8 +389,14 @@ export class EventCoordinator {
             case 'cancel-creature-form':
                 this.handleCancelCreatureForm();
                 break;
+            case 'cancel-edit-creature':
+                this.handleCancelEditCreature();
+                break;
             case 'cancel-player-form':
                 this.handleCancelPlayerForm();
+                break;
+            case 'cancel-edit-player':
+                this.handleCancelEditPlayer();
                 break;
             case 'cancel-creature-type-selection':
                 this.handleCancelCreatureTypeSelection();
@@ -762,10 +768,24 @@ export class EventCoordinator {
     }
 
     /**
+     * Handle cancel from edit creature modal - return to compendium
+     */
+    static handleCancelEditCreature() {
+        returnToCompendiumAfterCancel(MODAL_NAMES.EDIT_CREATURE, 'edit creature');
+    }
+
+    /**
      * Handle cancel from player form - return to compendium
      */
     static handleCancelPlayerForm() {
         returnToCompendiumAfterCancel(MODAL_NAMES.PLAYER_FORM, 'player form');
+    }
+
+    /**
+     * Handle cancel from edit player modal - return to compendium
+     */
+    static handleCancelEditPlayer() {
+        returnToCompendiumAfterCancel(MODAL_NAMES.EDIT_PLAYER, 'edit player');
     }
 
     /**

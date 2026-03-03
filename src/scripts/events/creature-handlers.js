@@ -212,7 +212,7 @@ export class CreatureHandlers {
      * Handle editing a creature from the database
      * @param {HTMLElement} target - The edit button
      */
-    static handleEditCreature(target) {
+    static async handleEditCreature(target) {
         try {
             const modal = target.closest(`[data-modal="${MODAL_NAMES.CREATURE_DATABASE}"]`);
             if (!modal) {
@@ -245,17 +245,15 @@ export class CreatureHandlers {
 
             // Check if this is a player character
             if (creature.type === CREATURE_TYPES.PLAYER) {
-                // Populate the player form with existing data
-                CreatureModalEvents.setupPlayerFormForEdit(creature);
-
-                // Open the player form modal
-                ModalSystem.show(MODAL_NAMES.PLAYER_FORM);
+                // Open the EDIT player modal
+                await ModalSystem.show(MODAL_NAMES.EDIT_PLAYER);
+                // Populate the form after modal is shown
+                CreatureModalEvents.setupEditPlayerModal(creature);
             } else {
-                // Populate the creature form with existing data
-                CreatureModalEvents.setupCreatureFormForEdit(creature);
-
-                // Open the creature form modal
-                ModalSystem.show(MODAL_NAMES.CREATURE_FORM);
+                // Open the EDIT creature modal
+                await ModalSystem.show(MODAL_NAMES.EDIT_CREATURE);
+                // Populate the form after modal is shown
+                CreatureModalEvents.setupEditCreatureModal(creature);
             }
 
             // Close the creature database modal
