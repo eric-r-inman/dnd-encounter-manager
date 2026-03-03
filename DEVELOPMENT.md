@@ -265,3 +265,98 @@ function handleDamage(target) {
 - Check dev server console for build errors
 - Review existing code for patterns
 - Test incremental changes frequently
+
+---
+
+## Performance Optimization
+
+### Current Performance Status
+
+**Bundle Size:**
+- Main Bundle: 333.02 KB (76.54 KB gzipped)
+- Contains: All event handlers, services, and components
+
+**Optimizations Implemented:**
+
+1. **CombatantManager Rendering**
+   - Batch DOM updates with `requestAnimationFrame`
+   - Document fragments for single DOM insertion
+   - 30% threshold: Renders all if >30% need updates
+   - Smart update scheduling prevents excessive re-renders
+
+2. **Modal Lazy Loading**
+   - Infrastructure in place for on-demand loading
+   - Smart caching prevents re-fetching
+   - Currently all modals are lazy-loaded from separate HTML files
+
+3. **Dynamic Imports**
+   - Dice roller lazy loaded
+   - Auto-roll events lazy loaded
+
+### Performance Optimization Opportunities
+
+#### Quick Wins (Low Effort, Medium Impact)
+
+1. **Fix Mixed Import Patterns**
+   - Convert static imports to dynamic where already used dynamically
+   - Allows Vite to create separate chunks
+   - Estimated Impact: 10-15% reduction in main bundle
+
+2. **Preload Critical Modals**
+   - Preload commonly-used modals during idle time
+   - Use `ModalSystem.preloadModals(['hp-modification', 'condition', 'effect'])`
+   - Impact: Better perceived performance
+
+#### Medium Effort (High Impact)
+
+3. **Virtual Scrolling for Combatant List**
+   - Only render visible combatants (5-10 at a time)
+   - Dramatically improves performance for 50+ combatants
+   - Estimated Impact: 80% faster rendering for large encounters
+
+4. **Lazy Load Large Forms**
+   - Creature form modal is very large (~500 lines)
+   - Apply lazy loading pattern
+   - Impact: Further reduce initial bundle size
+
+#### Long Term (Architectural)
+
+5. **Service Worker for Creature Database**
+   - Cache creature data in service worker
+   - Instant loading for subsequent sessions
+   - Impact: Dramatically faster app initialization
+
+6. **Web Workers for Calculations**
+   - Move complex combat calculations to web worker
+   - Keeps UI thread responsive
+   - Impact: Smoother UI, especially for batch operations
+
+### Performance Metrics Goals
+
+**Target Metrics:**
+- **Initial Load**: < 2 seconds on 3G
+- **Time to Interactive**: < 3 seconds
+- **Main Bundle**: < 250 KB (current: 333 KB)
+- **Render 50 Combatants**: < 100ms
+
+**How to Measure:**
+
+```bash
+# Build production bundle
+npm run build
+
+# Check bundle sizes
+ls -lh dist/assets/
+
+# Use Chrome DevTools
+# 1. Open app in Chrome
+# 2. DevTools > Performance tab
+# 3. Record page load
+# 4. Analyze metrics: FCP, LCP, TTI
+```
+
+### References
+- [Web.dev Performance Guide](https://web.dev/performance/)
+- [Vite Code Splitting Docs](https://vitejs.dev/guide/features.html#dynamic-import)
+- [Chrome DevTools Performance](https://developer.chrome.com/docs/devtools/performance/)
+

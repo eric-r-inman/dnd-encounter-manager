@@ -361,3 +361,88 @@ npm run dev  # Vite dev server with HMR
 - **Plugin System**: Allow third-party feature extensions
 - **Theme System**: Customizable UI themes
 - **Multi-user Support**: Real-time collaboration features
+---
+
+## Comprehensive Feature Analysis
+
+### Application Features Overview
+
+#### Core Combat Management
+1. **Initiative Tracking System**
+   - Automatic turn order management with visual highlighting of active combatant
+   - Round counter with automatic progression
+   - Initiative editing (inline click-to-edit)
+   - Manual reordering with up/down arrows
+   - Hold action support with visual indicators
+
+2. **Health Point Management**
+   - Three-tier HP system: Current HP, Max HP, Temporary HP
+   - Smart damage calculation (temp HP consumed first)
+   - Healing with overflow prevention (capped at max HP)
+   - Batch operations for multiple combatants
+   - Complete history tracking with round numbers
+   - Visual health states: Healthy, Bloodied (<50%), Unconscious (0 HP), Dead
+
+3. **Status & Condition Tracking**
+   - D&D 5e Conditions: Full library of official conditions with tooltips
+   - Custom Effects: User-defined effects with notes
+   - Duration Tracking: Automatic countdown with manual override
+   - Status Flags: Concentration, Hiding, Cover (4 levels), Surprised, Flying
+   - Visual Indicators: Color-coded badges with counters
+
+### Codebase Statistics
+- **Total JavaScript**: ~23,708 lines organized into modular architecture
+- **Event Modules**: 19 specialized modules replacing monolithic handler
+- **Service Layer**: 10+ services for business logic
+- **Component System**: Modal, combatant, and UI components
+
+### Architecture Strengths
+1. **Modular Design Excellence**
+   - Clean separation of concerns with specialized event modules
+   - Service layer pattern for business logic
+   - Component-based UI architecture
+   - Successfully refactored from monolithic to modular system
+
+2. **State Management**
+   - Reactive state system with observer pattern
+   - Immutable state updates
+   - Automatic persistence to localStorage
+   - Clear state shape and boundaries
+
+3. **Event System**
+   - Efficient event delegation pattern
+   - Single document-level listener
+   - Data-action attributes for routing
+   - Performance optimized for 50+ combatants
+
+4. **Code Quality**
+   - Consistent naming conventions
+   - JSDoc documentation throughout
+   - Error handling with user feedback
+   - Input validation at all entry points
+
+### Performance Considerations
+- **Bundle Size**: 23,708 lines could impact initial load
+- **Browser Requirements**: Modern browser features (ES2022)
+- **Scaling**: Tested with 50+ combatants, optimizations available for larger encounters
+
+
+---
+
+## Modal Events Modularization
+
+The modal-events.js system was refactored from a monolithic 2,491-line file into a focused, maintainable system:
+
+### Modularization Results
+- **Original Size:** 2,491 lines
+- **New Size:** 1,148 lines (54% reduction)
+- **New Modules Created:** 3 specialized modules
+- **Breaking Changes:** None (backward compatible)
+
+### New Modules
+1. **recent-items.js** (166 lines) - LocalStorage tracking for recent effects and notes
+2. **creature-modal-events.js** (separate) - Creature form handling
+3. **import-export-handlers.js** (separate) - Import/export operations
+
+For complete modularization details, see archived refactoring logs in `docs/archive/`.
+
