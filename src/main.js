@@ -132,16 +132,13 @@ class DnDEncounterManager {
      */
     async bindEventHandlers() {
         console.log('🔗 Binding event handlers...');
-        
+
         // Initialize global event handling system
         EventCoordinator.init();
 
         // Make EventCoordinator globally available for tooltip events
         window.EventCoordinator = EventCoordinator;
-        
-        // Bind keyboard shortcuts
-        this.bindKeyboardShortcuts();
-        
+
         console.log('✅ Event handlers bound');
     }
 
@@ -180,17 +177,6 @@ class DnDEncounterManager {
         await DataServices.initializeCombatantManager();
 
         console.log('✅ Main template loaded');
-    }
-
-    /**
-     * Bind global keyboard shortcuts
-     * NOTE: Keyboard shortcuts are now handled by KeyboardEvents module
-     * This method is kept for backwards compatibility but no longer registers handlers
-     */
-    bindKeyboardShortcuts() {
-        console.log('⌨️ Keyboard shortcuts handled by KeyboardEvents module');
-        // All keyboard shortcuts have been migrated to keyboard-events.js
-        // Kept this method to avoid breaking the initialization flow
     }
 
     /**

@@ -26,15 +26,15 @@
  * @version 2.0.0
  */
 
-import { DiceRoller } from '../../components/dice-roller/DiceRoller.js';
-
 export class DiceRollerEvents {
     /** @type {boolean} Initialization state */
     static initialized = false;
+    /** @type {Promise|null} DiceRoller module promise for lazy loading */
+    static diceRollerPromise = null;
 
     /**
      * Initialize dice roller event handling
-     * Initializes the underlying DiceRoller component
+     * Note: DiceRoller component is lazy-loaded on first use, not during init
      * @returns {void}
      */
     static init() {
@@ -42,11 +42,22 @@ export class DiceRollerEvents {
 
         console.log('🎲 Dice Roller Events initializing...');
 
-        // Initialize the DiceRoller component
-        DiceRoller.init();
+        // DiceRoller component will be lazy-loaded when first needed
+        // This reduces initial bundle size
 
         this.initialized = true;
         console.log('✅ Dice Roller Events initialized');
+    }
+
+    /**
+     * Lazy load the DiceRoller module
+     * @returns {Promise} Promise that resolves to the DiceRoller module
+     */
+    static async loadDiceRoller() {
+        if (!this.diceRollerPromise) {
+            this.diceRollerPromise = import('../../components/dice-roller/DiceRoller.js');
+        }
+        return this.diceRollerPromise;
     }
 
     /**
@@ -54,7 +65,8 @@ export class DiceRollerEvents {
      * Called when user clicks "Roll" button in Encounter Controls
      * @returns {void}
      */
-    static handleOpenDiceRoller() {
+    static async handleOpenDiceRoller() {
+        const { DiceRoller } = await this.loadDiceRoller();
         DiceRoller.toggle();
     }
 
@@ -63,7 +75,8 @@ export class DiceRollerEvents {
      * Currently unused but available for future use
      * @returns {void}
      */
-    static handleCloseDiceRoller() {
+    static async handleCloseDiceRoller() {
+        const { DiceRoller } = await this.loadDiceRoller();
         DiceRoller.hide();
     }
 

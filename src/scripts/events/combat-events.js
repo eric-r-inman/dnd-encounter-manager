@@ -14,6 +14,7 @@
 import { StateManager } from '../state-manager.js';
 import { ToastSystem } from '../../components/toast/ToastSystem.js';
 import { DataServices } from '../data-services.js';
+import { AutoRollEvents } from './auto-roll-events.js';
 
 export class CombatEvents {
     /**
@@ -100,9 +101,7 @@ export class CombatEvents {
 
             // Trigger end-of-turn auto-roll if configured
             if (currentActiveCombatant.autoRoll && currentActiveCombatant.autoRoll.trigger === 'end') {
-                import('./auto-roll-events.js').then(module => {
-                    module.AutoRollEvents.triggerAutoRoll(currentActiveCombatant, 'end');
-                });
+                AutoRollEvents.triggerAutoRoll(currentActiveCombatant, 'end');
             }
 
             // WHY: D&D 5e rule - Surprised condition lasts until the end of the creature's first turn
@@ -152,9 +151,7 @@ export class CombatEvents {
 
         // Trigger start-of-turn auto-roll if configured
         if (newActiveCombatant.autoRoll && newActiveCombatant.autoRoll.trigger === 'start') {
-            import('./auto-roll-events.js').then(module => {
-                module.AutoRollEvents.triggerAutoRoll(newActiveCombatant, 'start');
-            });
+            AutoRollEvents.triggerAutoRoll(newActiveCombatant, 'start');
         }
 
         // Update combat header

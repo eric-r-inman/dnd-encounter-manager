@@ -10,6 +10,7 @@
 import { DataServices } from '../data-services.js';
 import { ToastSystem } from '../../components/toast/ToastSystem.js';
 import { ModalSystem } from '../../components/modals/ModalSystem.js';
+import { ModalEvents } from './modal-events.js';
 
 export class AutoRollEvents {
     /**
@@ -84,10 +85,8 @@ export class AutoRollEvents {
      * @param {HTMLElement} modal - The modal element
      */
     static updateBatchButtons(modal) {
-        // Import ModalEvents to use shared updateBatchButtons logic
-        import('./modal-events.js').then(module => {
-            module.ModalEvents.updateBatchButtons('auto-roll', modal);
-        });
+        // Use shared updateBatchButtons logic
+        ModalEvents.updateBatchButtons('auto-roll', modal);
     }
 
     /**

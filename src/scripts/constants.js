@@ -62,13 +62,17 @@ export const TIMING = {
     MODAL_TRANSITION_DELAY: 150,
 
     // Toast notification durations
+    TOAST_QUICK: 1500,
     TOAST_SHORT: 2000,
+    TOAST_MEDIUM: 2500,
     TOAST_LONG: 3000,
     TOAST_EXTRA_LONG: 4000,
+    TOAST_VERY_LONG: 5000,
 
     // Animation and debounce delays
     ANIMATION_DURATION: 300,
-    DEBOUNCE_DELAY: 250
+    DEBOUNCE_DELAY: 250,
+    INPUT_DEBOUNCE_DELAY: 500  // Delay for auto-saving input fields after user stops typing
 };
 
 // ============================================================================
@@ -247,4 +251,12 @@ export const FLYING_HEIGHT = {
     MIN: 0,
     MAX: 999,
     INCREMENT: 5
+};
+
+/**
+ * Dice rolling constraints
+ */
+export const DICE_CONSTRAINTS = {
+    MAX_DICE_COUNT: 100,    // Maximum number of dice in a single roll
+    MAX_DICE_SIDES: 1000    // Maximum number of sides on a die
 };

@@ -13,6 +13,9 @@ import { DataServices } from '../data-services.js';
 import { CombatEvents } from './combat-events.js';
 import { RecentItems } from './recent-items.js';
 import { CreatureService } from '../services/creature-service.js';
+import { AutoRollEvents } from './auto-roll-events.js';
+import { CreatureModalEvents } from './creature-modal-events.js';
+import { ModalEvents } from './modal-events.js';
 
 export class FormHandlers {
     // Flag to prevent duplicate creature form submissions
@@ -41,9 +44,7 @@ export class FormHandlers {
                 this.handleNoteForm(form);
                 break;
             case 'auto-roll':
-                import('./auto-roll-events.js').then(module => {
-                    module.AutoRollEvents.handleAutoRollForm(form);
-                });
+                AutoRollEvents.handleAutoRollForm(form);
                 break;
             case 'creature':
                 this.handleCreatureForm(form);
@@ -414,8 +415,7 @@ export class FormHandlers {
      * @param {HTMLFormElement} form - Creature form
      */
     static async handleCreatureForm(form) {
-        // Import CreatureModalEvents dynamically to avoid circular dependency
-        const { CreatureModalEvents } = await import('./creature-modal-events.js');
+        // Use static import - circular dependency resolved by proper module structure
 
         // Prevent duplicate submissions
         if (this._submittingCreatureForm) {
@@ -751,7 +751,6 @@ export class FormHandlers {
             ModalSystem.hide('creature-form');
 
             // Show the compendium modal with proper setup
-            const { ModalEvents } = await import('./modal-events.js');
             setTimeout(() => {
                 // Create trigger element with the creature ID to auto-select
                 const trigger = document.createElement('div');
@@ -778,8 +777,7 @@ export class FormHandlers {
      * @param {HTMLFormElement} form - Player form
      */
     static async handlePlayerForm(form) {
-        // Import CreatureModalEvents dynamically to avoid circular dependency
-        const { CreatureModalEvents } = await import('./creature-modal-events.js');
+        // Use static import - circular dependency resolved by proper module structure
 
         const formData = new FormData(form);
 
@@ -1006,7 +1004,6 @@ export class FormHandlers {
             ModalSystem.hide('player-form');
 
             // Show the compendium modal with proper setup
-            const { ModalEvents } = await import('./modal-events.js');
             setTimeout(() => {
                 // Create trigger element with the player ID to auto-select
                 const trigger = document.createElement('div');

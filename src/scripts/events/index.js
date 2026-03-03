@@ -25,7 +25,6 @@ import { ImportExportHandlers } from './import-export-handlers.js';
 import { RecentItems } from './recent-items.js';
 import { DiceRollerEvents } from './dice-roller-events.js';
 import { AutoRollEvents } from './auto-roll-events.js';
-import { DiceRoller } from '../../components/dice-roller/DiceRoller.js';
 import { DiceLinkConverter } from '../utils/dice-link-converter.js';
 import { StateManager } from '../state-manager.js';
 import { ToastSystem } from '../../components/toast/ToastSystem.js';
@@ -1418,15 +1417,14 @@ export class EventCoordinator {
         if (!validateDiceFormula(formula)) return;
 
         // Additional validation using AutoRollEvents
-        import('./auto-roll-events.js').then(module => {
-            if (!module.AutoRollEvents.validateDiceFormula(formula)) {
-                return;
-            }
+        if (!AutoRollEvents.validateDiceFormula(formula)) {
+            return;
+        }
 
-            // Get selected combatants
-            const selectedCombatants = this.getSelectedCombatants();
-            if (selectedCombatants.length === 0) {
-                ToastSystem.show('No combatants selected', 'warning', TIMING.TOAST_SHORT);
+        // Get selected combatants
+        const selectedCombatants = this.getSelectedCombatants();
+        if (selectedCombatants.length === 0) {
+            ToastSystem.show('No combatants selected', 'warning', TIMING.TOAST_SHORT);
                 return;
             }
 
@@ -1445,9 +1443,8 @@ export class EventCoordinator {
             // Close modal
             ModalSystem.hideAll();
 
-            // Show success message
-            ToastSystem.show(`Applied auto-roll to ${successCount} combatant${successCount !== 1 ? 's' : ''}`, 'success', TIMING.TOAST_LONG);
-        });
+        // Show success message
+        ToastSystem.show(`Applied auto-roll to ${successCount} combatant${successCount !== 1 ? 's' : ''}`, 'success', TIMING.TOAST_LONG);
     }
 
     static handleClearNote(target) {
@@ -2027,8 +2024,10 @@ export class EventCoordinator {
 
             console.log('🎲 Rolling dice from stat block:', rollData);
 
-            // Open dice roller and execute the roll
-            DiceRoller.showAndRoll(rollData);
+            // Open dice roller and execute the roll (lazy loaded)
+            import('../../components/dice-roller/DiceRoller.js').then(module => {
+                module.DiceRoller.showAndRoll(rollData);
+            });
 
             // Show toast notification
             const formula = rollData.formula || `${rollData.multiplier}d${rollData.diceType}`;
