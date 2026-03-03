@@ -99,14 +99,111 @@ class DnDEncounterManager {
      */
     async initializeUIComponents() {
         console.log('🎨 Initializing UI components...');
-        
+
         // Initialize toast notification system
         ToastSystem.init();
-        
+
         // Initialize modal system with lazy loading enabled
         ModalSystem.init({ lazyLoading: true });
-        
+
+        // Force hide any existing modal overlays (fixes lazy-loaded modals that may be visible)
+        this.forceHideAllModals();
+
+        // Set up observer to auto-hide any new modals added to DOM
+        this.setupModalObserver();
+
         console.log('✅ UI components initialized');
+    }
+
+    /**
+     * Force hide all modal overlays in the DOM
+     * This ensures any lazy-loaded modals are completely hidden
+     */
+    forceHideAllModals() {
+        const modals = document.querySelectorAll('.modal-overlay');
+        console.log(`🔍 Looking for modal overlays... found ${modals.length}`);
+
+        if (modals.length > 0) {
+            console.log(`🔧 Force-hiding ${modals.length} modal overlays...`);
+            modals.forEach(modal => {
+                const modalName = modal.getAttribute('data-modal');
+                console.log(`  - Hiding modal: ${modalName}`);
+                this.applyModalHidingStyles(modal);
+            });
+            console.log(`✅ All ${modals.length} modals hidden`);
+        } else {
+            console.log('ℹ️ No modal overlays found in DOM yet');
+        }
+
+        // Also check for any divs with data-modal attribute (in case class is missing)
+        const dataModalElements = document.querySelectorAll('[data-modal]');
+        console.log(`🔍 Found ${dataModalElements.length} elements with data-modal attribute`);
+        if (dataModalElements.length > modals.length) {
+            console.warn(`⚠️ Warning: Found ${dataModalElements.length - modals.length} elements with data-modal but without .modal-overlay class!`);
+            dataModalElements.forEach(el => {
+                if (!el.classList.contains('modal-overlay')) {
+                    console.warn(`  - Element missing .modal-overlay class:`, el.getAttribute('data-modal'), el);
+                    // Apply hiding styles anyway
+                    this.applyModalHidingStyles(el);
+                }
+            });
+        }
+    }
+
+    /**
+     * Apply all hiding styles to a modal element
+     * @param {HTMLElement} modal - The modal element to hide
+     */
+    applyModalHidingStyles(modal) {
+        modal.style.setProperty('display', 'none', 'important');
+        modal.style.setProperty('position', 'fixed', 'important');
+        modal.style.setProperty('visibility', 'hidden', 'important');
+        modal.style.setProperty('opacity', '0', 'important');
+        modal.style.setProperty('width', '0', 'important');
+        modal.style.setProperty('height', '0', 'important');
+        modal.style.setProperty('overflow', 'hidden', 'important');
+        modal.style.setProperty('pointer-events', 'none', 'important');
+        modal.style.setProperty('z-index', '-9999', 'important');
+        modal.style.setProperty('top', '0', 'important');
+        modal.style.setProperty('left', '0', 'important');
+        modal.style.setProperty('right', '0', 'important');
+        modal.style.setProperty('bottom', '0', 'important');
+    }
+
+    /**
+     * Set up MutationObserver to watch for new modal overlays being added to DOM
+     * Automatically hides them as they're added
+     */
+    setupModalObserver() {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    // Check if the added node is a modal overlay
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        if (node.classList && node.classList.contains('modal-overlay')) {
+                            console.log('🔧 New modal detected, applying hiding styles:', node.getAttribute('data-modal'));
+                            this.applyModalHidingStyles(node);
+                        }
+                        // Also check children in case modal was added in a container
+                        const childModals = node.querySelectorAll && node.querySelectorAll('.modal-overlay');
+                        if (childModals && childModals.length > 0) {
+                            childModals.forEach(modal => {
+                                console.log('🔧 New modal detected (child), applying hiding styles:', modal.getAttribute('data-modal'));
+                                this.applyModalHidingStyles(modal);
+                            });
+                        }
+                    }
+                });
+            });
+        });
+
+        // Start observing document.body for added nodes
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        console.log('👁️ Modal observer active - will auto-hide new modals');
     }
 
     /**
@@ -233,6 +330,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (import.meta.env.DEV) {
         window.DnDApp = app;
         console.log('🐛 App instance available at window.DnDApp');
+
+        // Expose debug function to manually fix modals
+        window.debugModals = () => {
+            console.log('🔍 === MODAL DEBUG INFO ===');
+            const modals = document.querySelectorAll('.modal-overlay');
+            const dataModals = document.querySelectorAll('[data-modal]');
+
+            console.log(`Total elements with .modal-overlay: ${modals.length}`);
+            console.log(`Total elements with [data-modal]: ${dataModals.length}`);
+
+            console.log('\n📋 All modal overlays:');
+            modals.forEach((modal, i) => {
+                const name = modal.getAttribute('data-modal');
+                const display = window.getComputedStyle(modal).display;
+                const position = window.getComputedStyle(modal).position;
+                const visibility = window.getComputedStyle(modal).visibility;
+                const opacity = window.getComputedStyle(modal).opacity;
+                console.log(`  ${i + 1}. ${name}: display=${display}, position=${position}, visibility=${visibility}, opacity=${opacity}`);
+            });
+
+            console.log('\n🔧 Applying hiding styles to all modals...');
+            app.forceHideAllModals();
+
+            console.log('\n✅ Debug complete. Run debugModals() again to re-check.');
+        };
+        console.log('🐛 Run debugModals() to inspect and fix modal visibility');
     }
     window.DataServices = DataServices;
     console.log('🐛 DataServices available at window.DataServices');

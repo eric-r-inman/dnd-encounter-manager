@@ -87,9 +87,25 @@ export class ModalLoader {
                 throw new Error(`Modal element with data-modal="${modalName}" not found in template`);
             }
 
+            // Force all hiding styles immediately to prevent visibility issues
+            // This ensures modals are completely hidden when first injected into DOM
+            modalElement.style.setProperty('display', 'none', 'important');
+            modalElement.style.setProperty('position', 'fixed', 'important');
+            modalElement.style.setProperty('visibility', 'hidden', 'important');
+            modalElement.style.setProperty('opacity', '0', 'important');
+            modalElement.style.setProperty('width', '0', 'important');
+            modalElement.style.setProperty('height', '0', 'important');
+            modalElement.style.setProperty('overflow', 'hidden', 'important');
+            modalElement.style.setProperty('pointer-events', 'none', 'important');
+            modalElement.style.setProperty('z-index', '-9999', 'important');
+            modalElement.style.setProperty('top', '0', 'important');
+            modalElement.style.setProperty('left', '0', 'important');
+            modalElement.style.setProperty('right', '0', 'important');
+            modalElement.style.setProperty('bottom', '0', 'important');
+
             // Inject into DOM
             this.modalContainer.appendChild(modalElement);
-            console.log(`✅ Injected modal ${modalName} into DOM`);
+            console.log(`✅ Injected modal ${modalName} into DOM with forced hiding`);
         } catch (error) {
             console.error(`❌ Failed to load modal ${modalName}:`, error);
             throw new Error(`Failed to fetch modal template: ${error.message}`);

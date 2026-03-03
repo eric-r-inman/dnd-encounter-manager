@@ -15,19 +15,25 @@
 
 /* Modal overlay backdrop */
 .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    position: fixed !important; /* Force fixed positioning to remove from document flow */
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
     background-color: rgba(0, 0, 0, 0.8);
     backdrop-filter: blur(5px);
-    display: flex;
+    display: none !important; /* Hidden by default */
     align-items: center;
     justify-content: center;
-    z-index: var(--z-index-modal-backdrop);
+    z-index: -9999; /* Force behind everything when hidden */
     animation: fadeIn var(--animation-duration-medium);
     padding: var(--spacing-lg);
+    pointer-events: none !important; /* Prevent interaction when hidden */
+    visibility: hidden !important; /* Extra layer of hiding */
+    opacity: 0 !important; /* Make completely transparent when hidden */
+    width: 0 !important; /* Collapse when hidden */
+    height: 0 !important; /* Collapse when hidden */
+    overflow: hidden !important; /* Hide any overflow */
 }
 
 /* Modal container */
@@ -327,13 +333,15 @@
     border: 1px solid rgba(255, 235, 59, 0.3);
 }
 
-/* Hidden by default */
-.modal-overlay {
-    display: none;
-}
-
+/* Show state - enable pointer events and visibility */
 .modal-overlay.show {
-    display: flex;
+    display: flex !important;
+    pointer-events: auto !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: auto !important;
+    height: auto !important;
+    z-index: var(--z-index-modal-backdrop) !important;
 }
 
 /* Modal closing animation */

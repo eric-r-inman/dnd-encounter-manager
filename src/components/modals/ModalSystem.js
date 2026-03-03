@@ -98,8 +98,14 @@ export class ModalSystem {
             return;
         }
 
-        // Show the modal
-        modalOverlay.style.display = 'flex';
+        // Show the modal with important flag to override CSS defaults
+        modalOverlay.style.setProperty('display', 'flex', 'important');
+        modalOverlay.style.setProperty('pointer-events', 'auto', 'important');
+        modalOverlay.style.setProperty('visibility', 'visible', 'important');
+        modalOverlay.style.setProperty('opacity', '1', 'important');
+        modalOverlay.style.setProperty('width', 'auto', 'important');
+        modalOverlay.style.setProperty('height', 'auto', 'important');
+        modalOverlay.style.setProperty('z-index', 'var(--z-index-modal-backdrop)', 'important');
         modalOverlay.classList.add('fade-in');
         modalOverlay.classList.remove('modal-closing');
 
@@ -130,12 +136,18 @@ export class ModalSystem {
         
         // Add closing animation
         modalOverlay.classList.add('modal-closing');
-        
+
         // Hide after animation
         setTimeout(() => {
-            modalOverlay.style.display = 'none';
+            modalOverlay.style.setProperty('display', 'none', 'important');
+            modalOverlay.style.setProperty('pointer-events', 'none', 'important');
+            modalOverlay.style.setProperty('visibility', 'hidden', 'important');
+            modalOverlay.style.setProperty('opacity', '0', 'important');
+            modalOverlay.style.setProperty('width', '0', 'important');
+            modalOverlay.style.setProperty('height', '0', 'important');
+            modalOverlay.style.setProperty('z-index', '-9999', 'important');
             modalOverlay.classList.remove('modal-closing');
-            
+
             // Clear active modal if it matches
             if (this.activeModal === modalId) {
                 this.activeModal = null;

@@ -729,10 +729,8 @@ export class EventCoordinator {
             duplicate.isCustom = true;
             duplicate.createdAt = Date.now();
 
-            // Add to custom creatures in localStorage
-            const customCreatures = JSON.parse(localStorage.getItem('dnd-custom-creatures') || '[]');
-            customCreatures.push(duplicate);
-            localStorage.setItem('dnd-custom-creatures', JSON.stringify(customCreatures));
+            // Add creature using CreatureService (which manages the unified database)
+            await CreatureService.addCreature(duplicate);
 
             // Reload the consolidated database
             if (DataServices.combatantManager) {
@@ -742,17 +740,21 @@ export class EventCoordinator {
             ToastSystem.show(`Duplicated: ${duplicate.name}`, 'success', TIMING.TOAST_SHORT);
             console.log(`✅ Duplicated creature: ${creature.name} → ${duplicate.name}`);
 
-            // Refresh the compendium
-            CreatureModalEvents.setupCreatureDatabaseModal(modal);
+            // Refresh the compendium - wait for it to complete
+            await CreatureModalEvents.setupCreatureDatabaseModal(modal);
 
-            // Select the new duplicate
+            // Select the new duplicate with a longer delay to ensure DOM is updated
             setTimeout(() => {
                 const duplicateItem = modal.querySelector(`.creature-list-item[data-creature-id="${duplicate.id}"]`);
                 if (duplicateItem) {
+                    console.log(`🎯 Found duplicate item in DOM, clicking and scrolling to it`);
                     duplicateItem.click();
                     duplicateItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } else {
+                    console.warn(`⚠️ Duplicate item not found in DOM after refresh: ${duplicate.id}`);
+                    console.log(`Available creature IDs:`, Array.from(modal.querySelectorAll('.creature-list-item')).map(el => el.getAttribute('data-creature-id')));
                 }
-            }, 100);
+            }, 300);
 
         } catch (error) {
             console.error('❌ Error duplicating creature:', error);
