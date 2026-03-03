@@ -1,6 +1,6 @@
 {
   "name": "dnd-encounter-manager",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Browser-based D&D Encounter Manager for combat tracking",
   "main": "index.html",
   "type": "module",

@@ -2,7 +2,7 @@
 
 ## System Overview
 
-The D&D Encounter Manager follows a modular, event-driven architecture designed for maintainability and scalability. The system was refactored from a monolithic 6,873-line event handler into focused, decoupled modules.
+The D&D Encounter Manager follows a modular, event-driven architecture designed for maintainability and scalability. The system uses focused, decoupled modules organized into events, services, and components.
 
 ## Core Architecture Principles
 

@@ -2,7 +2,7 @@
 
 A browser-based D&D 5e Encounter Manager for tracking combat initiative, HP, conditions, and effects. Built with vanilla JavaScript and a modular architecture for easy maintenance and development.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![JavaScript](https://img.shields.io/badge/JavaScript-ES2022-yellow.svg)
 
@@ -125,7 +125,7 @@ npm run preview
 ## 🏗️ Architecture
 
 ### Modular Design
-The application follows a modular architecture for maintainability. A comprehensive refactoring in 2024 successfully extracted a 6,873-line monolithic event handler into focused modules, reducing complexity while maintaining full functionality:
+The application follows a modular architecture for maintainability. The codebase uses a clean separation of concerns with specialized event modules, services, and components:
 
 ```
 src/
