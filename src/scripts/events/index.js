@@ -527,11 +527,43 @@ export class EventCoordinator {
 
         // Open the appropriate form
         if (selectedType === 'player') {
-            // TODO: Open player form modal (to be created)
+            // Reset player form for new creature
+            this.resetPlayerFormForNewCreature();
             ModalSystem.show('player-form');
         } else {
             // Open standard creature form for enemy/npc
             ModalSystem.show('creature-form');
+        }
+    }
+
+    /**
+     * Reset player form for creating a new creature
+     * Restores required attributes and resets submit button text
+     */
+    static resetPlayerFormForNewCreature() {
+        const form = document.getElementById('player-form');
+        if (!form) return;
+
+        // Remove edit mode flag
+        form.removeAttribute('data-editing-mode');
+
+        // Restore 'required' attributes that were removed in edit mode
+        const wasRequiredFields = form.querySelectorAll('[data-was-required="true"]');
+        wasRequiredFields.forEach(field => {
+            field.setAttribute('required', '');
+            field.removeAttribute('data-was-required');
+        });
+
+        // Reset submit button text
+        const submitTextElement = document.getElementById('player-form-submit-text');
+        if (submitTextElement) {
+            submitTextElement.textContent = 'Save Player Character';
+        }
+
+        // Reset modal title
+        const titleElement = document.getElementById('player-form-title');
+        if (titleElement) {
+            titleElement.textContent = 'Add Player Character';
         }
     }
 

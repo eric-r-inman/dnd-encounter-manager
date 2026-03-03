@@ -639,6 +639,16 @@ export class CreatureModalEvents {
         // Reset the form completely
         const form = document.getElementById('creature-form');
         if (form) {
+            // Remove edit mode flag
+            form.removeAttribute('data-editing-mode');
+
+            // Restore 'required' attributes that were removed in edit mode
+            const wasRequiredFields = form.querySelectorAll('[data-was-required="true"]');
+            wasRequiredFields.forEach(field => {
+                field.setAttribute('required', '');
+                field.removeAttribute('data-was-required');
+            });
+
             // WHY: Explicitly clear ALL fields to ensure no pre-populated data from previous creatures
             // Don't use form.reset() as it resets to default HTML values which may retain previous data
             const inputs = form.querySelectorAll('input, textarea, select');
@@ -863,10 +873,31 @@ export class CreatureModalEvents {
         try {
             console.log('📝 Setting up player form for edit:', player.name);
 
+            // Get the form element
+            const form = document.getElementById('player-form');
+            if (form) {
+                // Mark form as in edit mode
+                form.setAttribute('data-editing-mode', 'true');
+
+                // Remove 'required' attribute from all fields in edit mode
+                const requiredFields = form.querySelectorAll('[required]');
+                requiredFields.forEach(field => {
+                    field.removeAttribute('required');
+                    // Store original required state for restoration later
+                    field.setAttribute('data-was-required', 'true');
+                });
+            }
+
             // Update modal title
             const titleElement = document.getElementById('player-form-title');
             if (titleElement) {
                 titleElement.textContent = 'Edit Player Character';
+            }
+
+            // Update submit button text to "Commit Changes"
+            const submitTextElement = document.getElementById('player-form-submit-text');
+            if (submitTextElement) {
+                submitTextElement.textContent = 'Commit Changes';
             }
 
             // Store player ID for update
@@ -1028,6 +1059,21 @@ export class CreatureModalEvents {
         try {
             console.log('📝 Setting up creature form for edit:', creature.name);
 
+            // Get the form element
+            const form = document.getElementById('creature-form');
+            if (form) {
+                // Mark form as in edit mode
+                form.setAttribute('data-editing-mode', 'true');
+
+                // Remove 'required' attribute from all fields in edit mode
+                const requiredFields = form.querySelectorAll('[required]');
+                requiredFields.forEach(field => {
+                    field.removeAttribute('required');
+                    // Store original required state for restoration later
+                    field.setAttribute('data-was-required', 'true');
+                });
+            }
+
             // Update modal title
             const titleElement = document.getElementById('creature-form-title');
             if (titleElement) {
@@ -1036,21 +1082,21 @@ export class CreatureModalEvents {
                 console.warn('⚠️ Title element not found');
             }
 
-        // Update submit button text
-        const submitTextElement = document.getElementById('creature-form-submit-text');
-        if (submitTextElement) {
-            submitTextElement.textContent = 'Update Creature';
-        }
+            // Update submit button text to "Commit Changes"
+            const submitTextElement = document.getElementById('creature-form-submit-text');
+            if (submitTextElement) {
+                submitTextElement.textContent = 'Commit Changes';
+            }
 
-        // Store creature ID for update
-        const idField = document.getElementById('creature-form-id');
-        if (idField) {
-            idField.value = creature.id;
-        }
+            // Store creature ID for update
+            const idField = document.getElementById('creature-form-id');
+            if (idField) {
+                idField.value = creature.id;
+            }
 
-        // Populate basic fields
-        const nameField = document.getElementById('creature-form-name');
-        if (nameField) nameField.value = creature.name || '';
+            // Populate basic fields
+            const nameField = document.getElementById('creature-form-name');
+            if (nameField) nameField.value = creature.name || '';
 
         // Handle creature type field - show select for enemy/npc, readonly for player
         const typeField = document.getElementById('creature-form-type');
