@@ -679,8 +679,18 @@ export class EventCoordinator {
                 return;
             }
 
-            // Reload the database
+            // Remove any combatants in the combat queue that reference this creature
             if (DataServices.combatantManager) {
+                const matchingCombatants = [...DataServices.combatantManager.combatants.values()]
+                    .filter(c => c.creatureId === creatureId);
+                for (const combatant of matchingCombatants) {
+                    DataServices.combatantManager.removeCombatant(combatant.id);
+                }
+                if (matchingCombatants.length > 0) {
+                    console.log(`➖ Removed ${matchingCombatants.length} combatant(s) from queue for deleted creature: ${creature.name}`);
+                }
+
+                // Reload the database
                 await DataServices.combatantManager.loadCreatureDatabase();
             }
 
