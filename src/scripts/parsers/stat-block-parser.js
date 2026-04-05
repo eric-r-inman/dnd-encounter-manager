@@ -91,7 +91,7 @@ export class StatBlockParser {
                 continue;
             }
 
-            // AC (D&D Beyond format: "AC 20" or "AC 20    Initiative +12 (22)")
+            // AC (D&D Beyond 2024 format: "AC 20" or "AC 20    Initiative +12 (22)")
             const acMatch = line.match(/^AC\s+(\d+)/i);
             if (acMatch) {
                 creature.ac = parseInt(acMatch[1]);
@@ -110,6 +110,17 @@ export class StatBlockParser {
                 continue;
             }
 
+            // Armor Class (traditional 5e format: "Armor Class 15 (natural armor, shield)")
+            const armorClassMatch = line.match(/^Armor\s+Class\s+(\d+)(?:\s+\(([^)]+)\))?/i);
+            if (armorClassMatch) {
+                creature.ac = parseInt(armorClassMatch[1]);
+                creature.statBlock.armorClass = {
+                    value: creature.ac,
+                    type: armorClassMatch[2] || null
+                };
+                continue;
+            }
+
             // Initiative on its own line (e.g., "Initiative +3" or "Initiative +3 (13)")
             const initLineMatch = line.match(/^Initiative\s+([+-]?\d+)(?:\s+\((\d+)\))?/i);
             if (initLineMatch) {
@@ -120,13 +131,24 @@ export class StatBlockParser {
                 continue;
             }
 
-            // HP (D&D Beyond format: "HP 333 (18d20 + 144)")
+            // HP (D&D Beyond 2024 format: "HP 333 (18d20 + 144)")
             const hpMatch = line.match(/^HP\s+(\d+)(?:\s+\(([^)]+)\))?/i);
             if (hpMatch) {
                 creature.maxHP = parseInt(hpMatch[1]);
                 creature.statBlock.hitPoints = {
                     average: creature.maxHP,
                     formula: hpMatch[2] || null
+                };
+                continue;
+            }
+
+            // Hit Points (traditional 5e format: "Hit Points 13 (3d6 + 3)")
+            const hitPointsMatch = line.match(/^Hit\s+Points\s+(\d+)(?:\s+\(([^)]+)\))?/i);
+            if (hitPointsMatch) {
+                creature.maxHP = parseInt(hitPointsMatch[1]);
+                creature.statBlock.hitPoints = {
+                    average: creature.maxHP,
+                    formula: hitPointsMatch[2] || null
                 };
                 continue;
             }
@@ -153,19 +175,30 @@ export class StatBlockParser {
 
             // D&D Beyond multi-line ability format (ability name on one line, values on next lines)
             const abilityNameMatch = line.match(/^(STR|DEX|CON|INT|WIS|CHA)$/i);
-            if (abilityNameMatch && i + 3 < lines.length) {
+            if (abilityNameMatch && i + 1 < lines.length) {
                 const ability = abilityNameMatch[1].toLowerCase();
                 const scoreLine = lines[i + 1];
-                const modLine = lines[i + 2];
-                const saveLine = lines[i + 3];
 
-                // Check if next lines are numbers
-                if (scoreLine.match(/^\d+$/) && modLine.match(/^[+-]?\d+$/) && saveLine.match(/^[+-]?\d+$/)) {
-                    abilityData[ability] = parseInt(scoreLine);
-                    abilityMods[ability] = parseInt(modLine);
-                    savingThrows[ability] = parseInt(saveLine);
-                    i += 3; // Skip the next 3 lines since we've processed them
+                // Traditional 5e format: "15 (+2)" - score with modifier in parentheses
+                const scoreModMatch = scoreLine.match(/^(\d+)\s+\(([+-]?\d+)\)$/);
+                if (scoreModMatch) {
+                    abilityData[ability] = parseInt(scoreModMatch[1]);
+                    abilityMods[ability] = parseInt(scoreModMatch[2]);
+                    i += 1;
                     continue;
+                }
+
+                // D&D Beyond 2024 format: 3 separate lines (score, modifier, save)
+                if (i + 3 < lines.length) {
+                    const modLine = lines[i + 2];
+                    const saveLine = lines[i + 3];
+                    if (scoreLine.match(/^\d+$/) && modLine.match(/^[+-]?\d+$/) && saveLine.match(/^[+-]?\d+$/)) {
+                        abilityData[ability] = parseInt(scoreLine);
+                        abilityMods[ability] = parseInt(modLine);
+                        savingThrows[ability] = parseInt(saveLine);
+                        i += 3;
+                        continue;
+                    }
                 }
             }
 
@@ -456,8 +489,8 @@ export class StatBlockParser {
      * @param {Object} action - Action object to populate
      */
     static parseAttackDetails(description, action) {
-        // Attack bonus
-        const attackMatch = description.match(/Attack Roll:\s*([+-]?\d+)/i);
+        // Attack bonus (2024 format: "Attack Roll: +8" or traditional: "Weapon Attack: +4 to hit")
+        const attackMatch = description.match(/(?:Attack Roll:|Weapon Attack:)\s*([+-]?\d+)/i);
         if (attackMatch) {
             action.attackBonus = parseInt(attackMatch[1]);
         }
