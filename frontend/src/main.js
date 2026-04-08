@@ -29,6 +29,10 @@ import { EventCoordinator } from './scripts/events/index.js';
 import { ToastSystem } from './components/toast/ToastSystem.js';
 import { ModalSystem } from './components/modals/ModalSystem.js';
 
+// Import main template as raw HTML string so it works in production builds
+// (Vite inlines it into the bundle instead of fetching /src/templates/ at runtime)
+import mainTemplateHTML from './templates/index.html?raw';
+
 /**
  * Application initialization and startup sequence
  */
@@ -245,9 +249,8 @@ class DnDEncounterManager {
     async loadMainTemplate() {
         console.log('📄 Loading main template...');
 
-        // Load main application HTML structure
-        const templateResponse = await fetch('/src/templates/index.html');
-        const templateHTML = await templateResponse.text();
+        // Use the bundled template HTML (imported via ?raw at top of file)
+        const templateHTML = mainTemplateHTML;
 
         // Create a temporary container to hold the new content
         const tempDiv = document.createElement('div');

@@ -54,12 +54,8 @@ export class CreatureService {
      */
     static async loadBaseDatabase() {
         try {
-            const response = await fetch(this.DATABASE_PATH);
-            if (!response.ok) {
-                throw new Error(`Failed to load base creature database: ${response.statusText}`);
-            }
-
-            this.baseDatabase = await response.json();
+            // Load base database from the server API endpoint
+            this.baseDatabase = await ApiClient.get('/creatures/base');
             console.log(`✅ Loaded base database: ${this.baseDatabase.creatures.length} creatures`);
             return this.baseDatabase;
         } catch (error) {

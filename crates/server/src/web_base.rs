@@ -219,6 +219,16 @@ pub fn base_router(state: AppState) -> Router {
           .axum_handler(),
       ),
     )
+    // Serve /src/* from frontend/src/ for runtime template fetches (modals, etc.)
+    .nest_service(
+      "/src",
+      ServeDir::new(
+        frontend_path
+          .parent()
+          .unwrap_or(&frontend_path)
+          .join("src"),
+      ),
+    )
     .fallback_service(
       ServiceBuilder::new()
         .layer(SetResponseHeaderLayer::overriding(
