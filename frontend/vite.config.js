@@ -5,12 +5,12 @@ export default defineConfig({
   // Root directory for source files
   root: '.',
   
-  // Public directory for static assets
-  publicDir: 'public',
+  // Public directory for static assets (favicon, etc.)
+  publicDir: 'static',
   
   // Build configuration
   build: {
-    outDir: 'dist',
+    outDir: 'public',
     emptyOutDir: true,
     sourcemap: true,
 
@@ -22,7 +22,7 @@ export default defineConfig({
       }
     }
   },
-  
+
   // Development server configuration
   server: {
     port: 3000,
@@ -32,6 +32,14 @@ export default defineConfig({
     // Simplified Hot Module Replacement settings
     hmr: {
       overlay: true
+    },
+
+    // Proxy API requests to Rust server during development
+    proxy: {
+      '/api': 'http://127.0.0.1:3001',
+      '/healthz': 'http://127.0.0.1:3001',
+      '/metrics': 'http://127.0.0.1:3001',
+      '/scalar': 'http://127.0.0.1:3001'
     }
   },
 

@@ -11,6 +11,8 @@
  * @version 1.0.0
  */
 
+import { ApiClient } from '../services/api-client.js';
+
 export class PersistentState {
     static STORAGE_KEY = 'dnd-encounter-manager';
     static BACKUP_KEY = 'dnd-encounter-manager-backup';
@@ -44,8 +46,11 @@ export class PersistentState {
                 state: this.serializeState(state)
             };
 
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(saveData));
-            console.log('💾 State saved to localStorage');
+            // Fire async save to server, don't await (debounced saves are fire-and-forget)
+            ApiClient.put('/state', saveData).catch(err => {
+                console.error('❌ Failed to save state to server:', err);
+            });
+            console.log('💾 State saved');
             return true;
         } catch (error) {
             console.error('❌ Failed to save state:', error);
@@ -58,15 +63,20 @@ export class PersistentState {
      * Load state from localStorage with error handling
      * @returns {Object|null} Loaded state or null if not found
      */
-    static loadState() {
+    static async loadState() {
         try {
-            const saved = localStorage.getItem(this.STORAGE_KEY);
-            if (!saved) {
-                console.log('📂 No saved state found');
+            let saveData;
+            try {
+                saveData = await ApiClient.get('/state');
+            } catch {
+                console.log('📂 No saved state on server');
                 return null;
             }
 
-            const saveData = JSON.parse(saved);
+            if (!saveData || (typeof saveData === 'object' && Object.keys(saveData).length === 0)) {
+                console.log('📂 No saved state found');
+                return null;
+            }
 
             // Validate save data structure
             if (!this.validateSaveData(saveData)) {
@@ -106,15 +116,9 @@ export class PersistentState {
      */
     static createBackup(state) {
         try {
-            const backupData = {
-                version: this.CURRENT_VERSION,
-                timestamp: Date.now(),
-                state: this.serializeState(state),
-                source: 'auto-backup'
-            };
-
-            localStorage.setItem(this.BACKUP_KEY, JSON.stringify(backupData));
-            console.log('💾 Backup created');
+            // Server-side storage is inherently more durable than localStorage.
+            // Just save state again as the backup mechanism.
+            this.saveState(state);
             return true;
         } catch (error) {
             console.error('❌ Failed to create backup:', error);
@@ -123,31 +127,11 @@ export class PersistentState {
     }
 
     /**
-     * Load backup state
-     * @returns {Object|null} Backup state or null if not found
+     * Load backup state (falls back to loading primary state)
+     * @returns {Promise<Object|null>} Backup state or null if not found
      */
-    static loadBackup() {
-        try {
-            const backup = localStorage.getItem(this.BACKUP_KEY);
-            if (!backup) {
-                console.log('📂 No backup found');
-                return null;
-            }
-
-            const backupData = JSON.parse(backup);
-            if (!this.validateSaveData(backupData)) {
-                console.warn('⚠️ Invalid backup data format');
-                return null;
-            }
-
-            console.log('📂 Loaded backup from localStorage');
-            console.log('Backup timestamp:', new Date(backupData.timestamp).toLocaleString());
-
-            return this.deserializeState(backupData.state);
-        } catch (error) {
-            console.error('❌ Failed to load backup:', error);
-            return null;
-        }
+    static async loadBackup() {
+        return this.loadState();
     }
 
     /**
@@ -168,18 +152,22 @@ export class PersistentState {
      * Set up auto-save and backup systems
      */
     static setupAutoSave() {
-        // Save on page unload
-        window.addEventListener('beforeunload', (event) => {
-            // Get current state from window reference if available
+        // Save on page unload — use sendBeacon for reliability
+        window.addEventListener('beforeunload', () => {
             if (window.StateManager && window.StateManager.getState) {
-                this.saveState(window.StateManager.getState());
+                const saveData = {
+                    version: this.CURRENT_VERSION,
+                    timestamp: Date.now(),
+                    state: this.serializeState(window.StateManager.getState())
+                };
+                ApiClient.beacon('/state', saveData);
             }
         });
 
-        // Periodic backup
+        // Periodic backup (saves state to server)
         this.backupInterval = setInterval(() => {
             if (window.StateManager && window.StateManager.getState) {
-                this.createBackup(window.StateManager.getState());
+                this.saveState(window.StateManager.getState());
             }
         }, this.BACKUP_INTERVAL);
 
@@ -310,23 +298,9 @@ export class PersistentState {
      * Get storage usage information
      * @returns {Object} Storage usage stats
      */
-    static getStorageInfo() {
+    static async getStorageInfo() {
         try {
-            const currentData = localStorage.getItem(this.STORAGE_KEY);
-            const backupData = localStorage.getItem(this.BACKUP_KEY);
-
-            const currentSize = currentData ? new Blob([currentData]).size : 0;
-            const backupSize = backupData ? new Blob([backupData]).size : 0;
-            const totalSize = currentSize + backupSize;
-
-            return {
-                currentSize,
-                backupSize,
-                totalSize,
-                currentSizeKB: Math.round(currentSize / 1024 * 100) / 100,
-                backupSizeKB: Math.round(backupSize / 1024 * 100) / 100,
-                totalSizeKB: Math.round(totalSize / 1024 * 100) / 100
-            };
+            return await ApiClient.get('/storage-info');
         } catch (error) {
             console.error('❌ Failed to get storage info:', error);
             return null;
@@ -339,9 +313,9 @@ export class PersistentState {
      */
     static clearAllData() {
         try {
-            localStorage.removeItem(this.STORAGE_KEY);
-            localStorage.removeItem(this.BACKUP_KEY);
-            localStorage.removeItem(this.VERSION_KEY);
+            ApiClient.delete('/storage').catch(err => {
+                console.error('❌ Failed to clear server data:', err);
+            });
             console.log('🗑️ All stored data cleared');
             return true;
         } catch (error) {

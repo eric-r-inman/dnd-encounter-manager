@@ -21,6 +21,7 @@
  */
 
 import { ToastSystem } from '../../components/toast/ToastSystem.js';
+import { ApiClient } from './api-client.js';
 
 export class CreatureService {
     static DATABASE_PATH = '/src/data/creatures/creature-database.json';
@@ -99,16 +100,15 @@ export class CreatureService {
      */
     static async loadWorkingDatabase() {
         try {
-            const stored = localStorage.getItem(this.STORAGE_KEY);
+            // Load working database from the server API
+            // The server seeds from the base database on first run
+            const db = await ApiClient.get('/creatures');
 
-            if (stored) {
-                // WHY: User has modified the database before - load their working copy
-                this.workingDatabase = JSON.parse(stored);
-                console.log(`✅ Loaded working database from localStorage: ${this.workingDatabase.creatures.length} creatures`);
+            if (db && db.creatures && db.creatures.length > 0) {
+                this.workingDatabase = db;
+                console.log(`✅ Loaded working database from server: ${this.workingDatabase.creatures.length} creatures`);
             } else {
-                // WHY: First time user, or they cleared localStorage - copy the base
-                // database as their starting point. This gives them all the shipped
-                // creatures to work with.
+                // Server returned empty - seed from base database
                 if (!this.baseDatabase) {
                     await this.loadBaseDatabase();
                 }
@@ -120,8 +120,10 @@ export class CreatureService {
             return this.workingDatabase;
         } catch (error) {
             console.error('❌ Failed to load working database:', error);
-            // WHY: If localStorage fails (quota exceeded, etc.), fall back to base
-            // database. User won't be able to save changes, but app still works.
+            // Fall back to base database if server is unavailable
+            if (!this.baseDatabase) {
+                await this.loadBaseDatabase();
+            }
             this.workingDatabase = JSON.parse(JSON.stringify(this.baseDatabase));
             return this.workingDatabase;
         }
@@ -133,9 +135,8 @@ export class CreatureService {
      */
     static async saveWorkingDatabase() {
         try {
-            const json = JSON.stringify(this.workingDatabase);
-            localStorage.setItem(this.STORAGE_KEY, json);
-            console.log(`✅ Saved working database to localStorage: ${this.workingDatabase.creatures.length} creatures`);
+            await ApiClient.put('/creatures', this.workingDatabase);
+            console.log(`✅ Saved working database to server: ${this.workingDatabase.creatures.length} creatures`);
             return true;
         } catch (error) {
             console.error('❌ Failed to save working database:', error);

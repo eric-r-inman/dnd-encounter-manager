@@ -1,0 +1,25 @@
+# D&D Encounter Manager server configuration
+#
+# Copy this file to config.toml and adjust as needed.
+# CLI flags and environment variables override these values.
+
+# Logging configuration
+log_level = "info"     # trace, debug, info, warn, error
+log_format = "text"    # text, json
+
+# Server listen address (host:port for TCP, /path/to.sock for Unix socket)
+listen = "127.0.0.1:3001"
+
+# Path to compiled frontend static assets
+frontend_path = "frontend/public"
+
+# Path to the data directory for JSON file storage
+data_dir = "data"
+
+# Base URL (only needed if configuring OIDC authentication)
+# base_url = "https://example.com"
+
+# OIDC authentication (optional — all three must be set or none)
+# oidc_issuer = "https://sso.example.com/application/o/myapp"
+# oidc_client_id = "my-client"
+# oidc_client_secret_file = "/run/secrets/oidc-client-secret"

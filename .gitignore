@@ -1,11 +1,16 @@
-# Dependencies
-node_modules/
+# Rust
+target/
+data/
+
+# Frontend dependencies
+frontend/node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Production builds
+# Frontend production builds
+frontend/public/
 dist/
 build/
 out/

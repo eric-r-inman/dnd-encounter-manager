@@ -13,6 +13,7 @@ import { CombatantCard } from './CombatantCard.js';
 import { CombatEvents } from '../../scripts/events/combat-events.js';
 import { STORAGE_KEYS, TIMING, DEFAULTS, DATA_PATHS } from '../../scripts/constants.js';
 import { CreatureService } from '../../scripts/services/creature-service.js';
+import { ApiClient } from '../../scripts/services/api-client.js';
 
 export class CombatantManager {
     constructor() {
@@ -468,10 +469,13 @@ export class CombatantManager {
             const saveData = {
                 timestamp: Date.now(),
                 instances: instanceData,
-                version: '1.0' // For future migration compatibility
+                version: '1.0'
             };
 
-            localStorage.setItem(this.autoSaveKey, JSON.stringify(saveData));
+            // Fire async save to server, don't await
+            ApiClient.put('/state/combatant-instances', saveData).catch(err => {
+                console.error('❌ Failed to save combatant instances to server:', err);
+            });
             console.log(`💾 Saved ${instanceData.length} combatant instances`);
             return true;
         } catch (error) {
@@ -479,22 +483,28 @@ export class CombatantManager {
             return false;
         }
     }
-    
+
     /**
-     * Load combatant instances from localStorage
+     * Load combatant instances from server
      */
-    loadInstances() {
+    async loadInstances() {
         try {
-            const savedData = localStorage.getItem(this.autoSaveKey);
-            if (!savedData) return;
-            
-            const { instances } = JSON.parse(savedData);
-            
+            let saveData;
+            try {
+                saveData = await ApiClient.get('/state/combatant-instances');
+            } catch {
+                return; // No saved instances
+            }
+
+            if (!saveData || !saveData.instances) return;
+
+            const { instances } = saveData;
+
             console.log(`📂 Loading ${instances.length} saved combatant instances`);
-            
+
             // Clear existing combatants
             this.combatants.clear();
-            
+
             // Recreate combatants from saved data
             instances.forEach(({ creatureId, instanceData }) => {
                 // Check if this is a placeholder
@@ -504,7 +514,7 @@ export class CombatantManager {
                     this.addCombatant(creatureId, instanceData);
                 }
             });
-            
+
         } catch (error) {
             console.error('❌ Failed to load combatant instances:', error);
         }
