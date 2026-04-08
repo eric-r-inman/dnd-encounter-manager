@@ -33,6 +33,9 @@ async fn get_state(
     .read_collection("state")
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+  if state.is_null() {
+    return Ok(Json(serde_json::json!({})));
+  }
   Ok(Json(state))
 }
 
@@ -58,6 +61,9 @@ async fn get_instances(
     .read_collection("combatant-instances")
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+  if instances.is_null() {
+    return Ok(Json(serde_json::json!({})));
+  }
   Ok(Json(instances))
 }
 
@@ -83,6 +89,9 @@ async fn get_recent_effects(
     .read_collection("recent-effects")
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+  if effects.is_null() {
+    return Ok(Json(serde_json::json!([])));
+  }
   Ok(Json(effects))
 }
 
@@ -127,6 +136,9 @@ async fn get_templates(
     .read_collection("templates")
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+  if templates.is_null() {
+    return Ok(Json(serde_json::json!({})));
+  }
   Ok(Json(templates))
 }
 

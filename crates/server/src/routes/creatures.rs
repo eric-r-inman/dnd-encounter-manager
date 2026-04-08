@@ -42,6 +42,18 @@ async fn list_creatures(
     .read_collection(COLLECTION)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+  // Return empty database structure instead of null for missing collections
+  if db.is_null() {
+    return Ok(Json(serde_json::json!({
+      "creatures": [],
+      "metadata": {
+        "version": "2.0.0",
+        "lastUpdated": chrono::Utc::now().to_rfc3339(),
+        "totalCreatures": 0,
+        "schema": { "version": "2.0", "description": "D&D 5e creature database" }
+      }
+    })));
+  }
   Ok(Json(db))
 }
 

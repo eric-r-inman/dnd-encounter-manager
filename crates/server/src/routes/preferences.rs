@@ -23,6 +23,9 @@ async fn get_preferences(
     .read_collection(COLLECTION)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+  if prefs.is_null() {
+    return Ok(Json(serde_json::json!({})));
+  }
   Ok(Json(prefs))
 }
 

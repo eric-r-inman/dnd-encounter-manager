@@ -49,8 +49,9 @@ export class DataServices {
 
         try {
             // Use the new storage service to load creatures
-            const creatures = await Services.storage.getCreatures();
-            console.log(`📁 Loaded ${Object.keys(creatures).length} creatures from database`);
+            const creaturesDb = await Services.storage.getCreatures();
+            const count = creaturesDb?.creatures?.length || Object.keys(creaturesDb || {}).length;
+            console.log(`📁 Loaded ${count} creatures from database`);
 
             // Initialize CombatantManager with creature data
             if (this.combatantManager) {

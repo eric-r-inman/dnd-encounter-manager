@@ -31,6 +31,10 @@ async fn list_encounters(
     .read_collection(COLLECTION)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+  // Return empty object instead of null for missing collections
+  if encounters.is_null() {
+    return Ok(Json(serde_json::json!({})));
+  }
   Ok(Json(encounters))
 }
 
