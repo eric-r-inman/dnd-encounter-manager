@@ -38,11 +38,12 @@
 
 ## Tech Stack & Architecture
 
-- **Framework:** Vanilla JavaScript (ES6 modules), no framework
-- **Build tool:** Vite 5.0 with `@vitejs/plugin-legacy` for older browser support
+- **Backend:** Rust (Axum) HTTP server with REST API
+- **Frontend:** Vanilla JavaScript (ES6 modules), no framework
+- **Build tools:** Cargo (Rust workspace), Vite 5.0 (frontend)
 - **Styling:** Custom CSS with CSS custom properties (design tokens)
-- **Testing:** Jest 29.7 with Testing Library
-- **Application type:** Single-page browser app (SPA), no backend
+- **Testing:** Rust integration tests + Jest 29.7 with Testing Library
+- **Data persistence:** Server-side JSON file storage via REST API
 
 ### Architecture Pattern
 
@@ -52,7 +53,7 @@ User Interaction
     → Event Handler Module (e.g., CombatEvents, HPEvents)
       → Service Layer (CombatService, CombatantService, StorageService, etc.)
         → StateManager (centralized state object)
-          → Auto-persistence (StorageService → localStorage)
+          → ApiClient (fetch) → Rust Server REST API → JSON files on disk
             → UI Re-render (CombatantCard.render() → DOM)
 ```
 

@@ -2,6 +2,29 @@
 
 All notable changes to the D&D Encounter Manager project.
 
+## [3.0.0] - 2026-04-08
+
+### Changed
+- **Architecture**: Refactored from pure client-side JavaScript SPA to Rust workspace with Axum server backend
+- **Data Persistence**: Replaced browser localStorage with server-side JSON file storage via REST API
+- **Frontend Location**: All frontend source moved from `src/` to `frontend/src/`
+- **Build System**: Added Rust workspace (Cargo) alongside existing Vite frontend build
+- **Creature Database**: Now served and persisted by the Rust server instead of localStorage
+
+### Added
+- **Rust Server** (`crates/server/`): Axum HTTP server with REST API for all data operations
+- **JSON File Store**: Atomic writes with per-collection locking for safe concurrent access
+- **API Client** (`frontend/src/scripts/services/api-client.js`): Fetch wrapper for server communication
+- **REST API**: Full CRUD endpoints for creatures, encounters, preferences, combat state, import/export
+- **Infrastructure**: Health check, Prometheus metrics, OpenAPI docs, optional OIDC auth, systemd integration
+- **Nix Dev Shell**: `flake.nix` with Rust toolchain and Node.js for reproducible development
+- **Stat Block Parser**: Support for traditional 5e stat block format (Armor Class, Hit Points, ability scores as `15 (+2)`)
+- **Compendium Cleanup**: Deleting a creature from the compendium now removes it from the combat queue
+
+### Removed
+- Direct localStorage usage for data persistence (replaced by server API)
+- Static SPA deployment model (now requires the Rust server)
+
 ## [2.0.0] - 2025-11-05
 
 ### Added

@@ -18,7 +18,7 @@ The server might primarily:
 When adding new functionality that requires a long-running process,
 build it in the server crate rather than creating a separate service.
 The server already provides structured logging, systemd socket
-activation, watchdog integration, graceful shutdown, and an Elm
+activation, watchdog integration, graceful shutdown, and a JavaScript
 frontend — duplicating this infrastructure is wasteful and
 error-prone.
 

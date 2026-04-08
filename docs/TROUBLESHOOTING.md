@@ -6,11 +6,13 @@
 
 | Issue | Quick Fix |
 |-------|-----------|
-| Combatants not appearing | Clear browser data and refresh |
+| Combatants not appearing | Check server is running, refresh browser |
 | HP calculations wrong | Check HP history for calculation trail |
 | Tooltips not showing | Hover over condition badges, not text |
-| Performance slow | Clear localStorage: `localStorage.clear()` |
-| Page won't load | Check browser console for JavaScript errors |
+| Page won't load | Check server logs and browser console |
+| "Address already in use" | Kill existing server: `lsof -ti:3001 \| xargs kill` |
+| API errors in console | Ensure Rust server is running on port 3001 |
+| Data not persisting | Check `data/` directory exists and is writable |
 
 ## Application Issues
 

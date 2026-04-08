@@ -1,448 +1,93 @@
-# Architecture Documentation
+# Architecture
 
-## System Overview
+## Overview
 
-The D&D Encounter Manager follows a modular, event-driven architecture designed for maintainability and scalability. The system uses focused, decoupled modules organized into events, services, and components.
+The D&D Encounter Manager is a Rust workspace with three crates and a JavaScript frontend:
 
-## Core Architecture Principles
+- **Server** (`crates/server/`) — Axum HTTP server that serves the frontend and provides a REST API for data persistence
+- **Lib** (`crates/lib/`) — Shared library (logging infrastructure)
+- **CLI** (`crates/cli/`) — Command-line tools for data management
+- **Frontend** (`frontend/`) — Vanilla JavaScript SPA built with Vite
 
-### 1. Modular Design
-- **Separation of Concerns**: Each module handles a specific domain
-- **Loose Coupling**: Modules communicate through well-defined interfaces
-- **High Cohesion**: Related functionality grouped together
-
-### 2. Event-Driven Architecture
-- **Central Event Coordination**: EventCoordinator dispatches events to appropriate handlers
-- **Reactive State Management**: StateManager provides reactive updates
-- **DOM Event Delegation**: Single event listener with action-based routing
-
-### 3. Service Layer Pattern
-- **Business Logic Isolation**: Core operations isolated in services
-- **Data Access Abstraction**: Storage operations through service layer
-- **Validation Centralization**: Input validation handled by validation service
-
-## Module Structure
+## Data Flow
 
 ```
-src/
-├── main.js                 # Application bootstrap
-├── scripts/
-│   ├── events/            # Event handling modules
-│   │   ├── index.js       # EventCoordinator (central dispatch)
-│   │   ├── tooltip-events.js    # Tooltips & batch operation hints
-│   │   ├── hp-events.js   # Health point modifications
-│   │   ├── combatant-events.js  # Batch selection & status
-│   │   ├── modal-events.js      # Modal dialogs & forms
-│   │   ├── combat-events.js     # Turn progression & initiative
-│   │   └── keyboard-events.js   # Shortcuts & input utilities
-│   ├── services/          # Business logic services
-│   │   ├── index.js       # Services registry
-│   │   ├── combatant-service.js  # CRUD operations
-│   │   ├── combat-service.js     # Combat flow management
-│   │   ├── storage-service.js    # Data persistence
-│   │   ├── validation-service.js # Input validation
-│   │   └── calculation-service.js # Game calculations
-│   ├── state/             # State management
-│   │   ├── index.js       # State exports
-│   │   ├── combatant-state.js    # Individual combatant logic
-│   │   ├── combat-state.js       # Combat session state
-│   │   ├── ui-state.js           # UI state management
-│   │   └── persistent-state.js   # localStorage persistence
-│   ├── app-core.js        # Application initialization
-│   ├── state-manager.js   # Central state coordination
-│   └── data-services.js   # Legacy compatibility layer
-├── components/            # Reusable UI components
-│   ├── combatant-card/    # Combatant display logic
-│   │   ├── CombatantManager.js   # Multi-combatant management
-│   │   └── CombatantCard.js      # Individual card rendering
-│   ├── modals/           # Modal dialog system
-│   │   └── ModalSystem.js        # Modal lifecycle management
-│   └── toast/            # Notification system
-│       └── ToastSystem.js        # Toast notifications
-└── styles/               # CSS organization
+Browser (JavaScript)
+    │
+    ├── StateManager          In-memory combat state (combatants, initiative, UI)
+    ├── EventCoordinator      DOM event delegation → handler dispatch
+    └── ApiClient (fetch)     REST calls for persistence
+          │
+          ▼
+Rust Server (Axum)
+    │
+    ├── routes/*              CRUD handlers for each resource
+    └── store.rs (JsonStore)  Read/write JSON files with atomic writes + RwLock
+          │
+          ▼
+data/*.json                   Creatures, encounters, preferences, state, etc.
 ```
 
-## Event Flow Architecture
+## Server Architecture
 
-### 1. Event Registration
-```javascript
-// Single delegated listener in EventCoordinator
-document.addEventListener('click', this.handleDocumentClick.bind(this));
+The server follows the rust-template patterns:
 
-// Action-based routing
-<button data-action="damage" data-target="combatant-123">Damage</button>
-```
+- **`main.rs`** — Orchestrator only: loads config, initializes state, binds listener, wires routes, handles graceful shutdown (SIGINT/SIGTERM)
+- **`config.rs`** — Staged configuration: `CliRaw` (CLI args) → `ConfigFileRaw` (TOML) → `Config` (validated)
+- **`web_base.rs`** — Infrastructure routes (`/healthz`, `/metrics`, `/scalar`), `AppState` struct, SPA fallback file serving
+- **`store.rs`** — `JsonStore` with atomic writes (temp file + rename) and per-collection `RwLock` for concurrency safety
+- **`routes/`** — REST API handlers, one module per resource domain
+- **`auth.rs`** — Optional OIDC authentication (gracefully disabled when not configured)
+- **`systemd.rs`** — `notify_ready()` and `spawn_watchdog()` for systemd integration
 
-### 2. Event Dispatch
-```javascript
-// EventCoordinator.handleAction()
-switch (action) {
-    case 'damage':
-        HPEvents.handleDamage(target, event);
-        break;
-    case 'next-turn':
-        CombatEvents.handleNextTurn();
-        break;
+### AppState
+
+```rust
+pub struct AppState {
+    pub registry: Arc<Registry>,        // Prometheus metrics
+    pub request_counter: IntCounter,    // http_requests_total
+    pub frontend_path: PathBuf,         // Static file serving root
+    pub oidc_client: Option<Arc<CoreClient>>,
+    pub store: Arc<JsonStore>,          // JSON file storage engine
 }
 ```
 
-### 3. State Updates
-```javascript
-// Events trigger state changes
-StateManager.updateCombatant(id, property, value);
+### Storage Engine
 
-// State changes trigger UI updates
-StateManager.subscribe('combatants', this.renderCombatants);
+`JsonStore` manages a `data/` directory with one JSON file per collection. Key properties:
+
+- **Atomic writes**: Data is written to a `.tmp` file, then renamed to the final path — prevents partial reads
+- **Concurrency**: Each collection has its own `tokio::sync::RwLock` — concurrent reads, exclusive writes
+- **Seeding**: On first startup, `creatures.json` is seeded from the base creature database shipped with the frontend
+
+## Frontend Architecture
+
+The frontend is a vanilla JavaScript SPA (no framework) with these core systems:
+
+### Event System
+
+A single delegated click listener on the document routes actions via `data-action` attributes:
+
+```
+DOM click → EventCoordinator.handleAction() → specialized handler (HPEvents, CombatEvents, etc.)
 ```
 
-## Service Layer Design
+### State Management
 
-### CombatantService
-- **Purpose**: CRUD operations for combatant management
-- **Responsibilities**: Create, read, update, delete combatants
-- **Key Methods**: `createCombatant()`, `updateCombatant()`, `removeCombatant()`
+`StateManager` holds in-memory combat state (combatants, round, turn). Changes notify observers for reactive UI updates. `PersistentState` periodically saves state to the server via the API.
 
-### CombatService
-- **Purpose**: Combat flow and turn management
-- **Responsibilities**: Initiative tracking, turn progression, combat state
-- **Key Methods**: `startCombat()`, `nextTurn()`, `endCombat()`
+### Service Layer
 
-### StorageService
-- **Purpose**: Data persistence and retrieval
-- **Responsibilities**: localStorage management, data serialization
-- **Key Methods**: `saveEncounter()`, `loadEncounter()`, `exportData()`
+- **`ApiClient`** — Thin fetch wrapper for all server communication
+- **`StorageService`** — High-level CRUD for encounters, preferences, templates, effects
+- **`CreatureService`** — Creature database management (working copy pattern: base → working → save to server)
+- **`CombatService`** / **`CombatantService`** — Combat and combatant business logic
+- **`CalculationService`** — Damage, healing, temp HP math
+- **`ValidationService`** — Input validation
 
-### ValidationService
-- **Purpose**: Input validation and data integrity
-- **Responsibilities**: Validate user inputs, ensure data consistency
-- **Key Methods**: `validateCombatant()`, `validateHP()`, `validateInitiative()`
+### Components
 
-### CalculationService
-- **Purpose**: Game mechanics calculations
-- **Responsibilities**: HP calculations, damage resolution, effect processing
-- **Key Methods**: `applyDamage()`, `applyHealing()`, `calculateEffectiveHP()`
-
-## State Management Architecture
-
-### StateManager (Central Hub)
-```javascript
-class StateManager {
-    static state = {
-        combatants: [],     // Active combatants
-        combat: {},         // Combat session state
-        ui: {},            // UI state (modals, selections)
-        persistent: {}     // Saved data references
-    };
-
-    static subscribers = new Map(); // Reactive subscriptions
-}
-```
-
-### State Modules
-
-#### CombatantState
-- **Purpose**: Individual combatant data structure and operations
-- **Data**: HP, AC, initiative, conditions, effects, status
-- **Operations**: Create, validate, update individual combatants
-
-#### CombatState
-- **Purpose**: Overall combat session management
-- **Data**: Current turn, round number, combat status
-- **Operations**: Initiative sorting, turn progression, combat lifecycle
-
-#### UIState
-- **Purpose**: User interface state management
-- **Data**: Active modals, selected combatants, form states
-- **Operations**: Modal lifecycle, batch selection, UI synchronization
-
-#### PersistentState
-- **Purpose**: localStorage integration and data persistence
-- **Data**: Saved encounters, preferences, recent data
-- **Operations**: Auto-save, data export/import, cleanup
-
-## Component Architecture
-
-### CombatantCard (Individual Rendering)
-```javascript
-class CombatantCard {
-    constructor(instanceData) {
-        this.id = instanceData.id;
-        this.element = null;        // DOM element
-        this.templateCache = null;  // Rendered template cache
-    }
-
-    render() { /* Template rendering */ }
-    update() { /* Reactive updates */ }
-    destroy() { /* Cleanup */ }
-}
-```
-
-### CombatantManager (Collection Management)
-```javascript
-class CombatantManager {
-    constructor() {
-        this.combatants = new Map();     // CombatantCard instances
-        this.pendingUpdates = new Set(); // Batch DOM updates
-        this.container = null;           // DOM container
-    }
-
-    addCombatant() { /* Instance creation */ }
-    removeCombatant() { /* Instance destruction */ }
-    renderAll() { /* Batch rendering */ }
-}
-```
-
-## Data Flow Patterns
-
-### 1. User Action → Event → State → UI
-```
-User clicks "Damage" button
-↓
-EventCoordinator.handleAction('damage')
-↓
-HPEvents.handleDamage()
-↓
-StateManager.updateCombatant()
-↓
-CombatantCard.update() (via subscription)
-```
-
-### 2. Batch Operations
-```
-User selects multiple combatants
-↓
-CombatantEvents.handleBatchSelect()
-↓
-UIState.setSelectedCombatants()
-↓
-BatchModal.show() with selected targets
-↓
-HPEvents.handleBatchHPModification()
-↓
-StateManager.updateMultipleCombatants()
-```
-
-### 3. Persistence
-```
-StateManager.updateCombatant()
-↓
-PersistentState.autoSave() (debounced)
-↓
-StorageService.saveEncounter()
-↓
-localStorage.setItem()
-```
-
-## Performance Optimizations
-
-### 1. Efficient Rendering
-- **Template Caching**: Pre-compiled templates stored per combatant
-- **Batch DOM Updates**: Multiple changes batched into single DOM operation
-- **Virtual Scrolling**: For 50+ combatants (planned)
-
-### 2. Memory Management
-- **Instance Cleanup**: Proper destruction of CombatantCard instances
-- **Event Listener Cleanup**: Remove listeners on component destruction
-- **Storage Cleanup**: Automatic cleanup of old localStorage data
-
-### 3. State Updates
-- **Reactive Subscriptions**: Only update components that need changes
-- **Debounced Operations**: Auto-save and expensive calculations debounced
-- **Efficient Selectors**: Minimize DOM queries through caching
-
-## Security Considerations
-
-### 1. Input Validation
-- **Client-side Validation**: All user inputs validated before processing
-- **Type Checking**: Strict type validation for numeric inputs
-- **XSS Prevention**: All user content escaped before DOM insertion
-
-### 2. Data Integrity
-- **State Validation**: Combatant state validated on every update
-- **Range Checking**: HP, AC, initiative within valid ranges
-- **Consistency Checks**: Combat state consistency maintained
-
-## Error Handling Strategy
-
-### 1. Graceful Degradation
-```javascript
-try {
-    await CombatantService.createCombatant(data);
-} catch (error) {
-    ToastSystem.showError(`Failed to create combatant: ${error.message}`);
-    console.error('Combatant creation failed:', error);
-    // Application continues functioning
-}
-```
-
-### 2. Error Boundaries
-- **Service Layer**: Each service handles its own errors
-- **UI Components**: Components handle rendering errors gracefully
-- **State Management**: State corruption prevented through validation
-
-### 3. User Feedback
-- **Toast Notifications**: Immediate feedback for user actions
-- **Console Logging**: Detailed error information for debugging
-- **Fallback UI**: Alternative UI when primary features fail
-
-## Extension Points
-
-### 1. Adding New Event Types
-```javascript
-// 1. Add handler to appropriate events module
-class NewFeatureEvents {
-    static handleNewAction(target, event) {
-        // Implementation
-    }
-}
-
-// 2. Register in EventCoordinator
-case 'new-action':
-    NewFeatureEvents.handleNewAction(target, event);
-    break;
-```
-
-### 2. Adding New Services
-```javascript
-// 1. Create service class
-class NewService {
-    static async newOperation() {
-        // Implementation
-    }
-}
-
-// 2. Register in Services index
-export { NewService };
-```
-
-### 3. Adding New State Modules
-```javascript
-// 1. Create state module
-class NewState {
-    static getInitialState() {
-        return { /* initial state */ };
-    }
-}
-
-// 2. Integrate with StateManager
-StateManager.registerStateModule('newState', NewState);
-```
-
-## Development Workflow
-
-### 1. Local Development
-```bash
-npm run dev  # Vite dev server with HMR
-```
-
-### 2. Code Organization
-- **File Size Limit**: Keep modules under 500 lines
-- **Single Responsibility**: One concern per module
-- **Clear Naming**: Descriptive function and variable names
-
-### 3. Testing Strategy
-- **Manual Testing**: Comprehensive UI testing during development
-- **Error Scenarios**: Test error conditions and edge cases
-- **Cross-browser Testing**: Verify functionality across browsers
-
-## Future Architecture Considerations
-
-### 1. Scaling to Larger Applications
-- **Module Federation**: Consider micro-frontend architecture
-- **State Management**: Evaluate dedicated state management libraries
-- **Testing Framework**: Implement automated testing
-
-### 2. Performance Enhancements
-- **Web Workers**: Move calculations to background threads
-- **Service Workers**: Offline functionality and caching
-- **Progressive Web App**: Mobile app-like experience
-
-### 3. Feature Additions
-- **Plugin System**: Allow third-party feature extensions
-- **Theme System**: Customizable UI themes
-- **Multi-user Support**: Real-time collaboration features
----
-
-## Comprehensive Feature Analysis
-
-### Application Features Overview
-
-#### Core Combat Management
-1. **Initiative Tracking System**
-   - Automatic turn order management with visual highlighting of active combatant
-   - Round counter with automatic progression
-   - Initiative editing (inline click-to-edit)
-   - Manual reordering with up/down arrows
-   - Hold action support with visual indicators
-
-2. **Health Point Management**
-   - Three-tier HP system: Current HP, Max HP, Temporary HP
-   - Smart damage calculation (temp HP consumed first)
-   - Healing with overflow prevention (capped at max HP)
-   - Batch operations for multiple combatants
-   - Complete history tracking with round numbers
-   - Visual health states: Healthy, Bloodied (<50%), Unconscious (0 HP), Dead
-
-3. **Status & Condition Tracking**
-   - D&D 5e Conditions: Full library of official conditions with tooltips
-   - Custom Effects: User-defined effects with notes
-   - Duration Tracking: Automatic countdown with manual override
-   - Status Flags: Concentration, Hiding, Cover (4 levels), Surprised, Flying
-   - Visual Indicators: Color-coded badges with counters
-
-### Codebase Statistics
-- **Total JavaScript**: ~23,708 lines organized into modular architecture
-- **Event Modules**: 19 specialized modules replacing monolithic handler
-- **Service Layer**: 10+ services for business logic
-- **Component System**: Modal, combatant, and UI components
-
-### Architecture Strengths
-1. **Modular Design Excellence**
-   - Clean separation of concerns with specialized event modules
-   - Service layer pattern for business logic
-   - Component-based UI architecture
-   - Successfully refactored from monolithic to modular system
-
-2. **State Management**
-   - Reactive state system with observer pattern
-   - Immutable state updates
-   - Automatic persistence to localStorage
-   - Clear state shape and boundaries
-
-3. **Event System**
-   - Efficient event delegation pattern
-   - Single document-level listener
-   - Data-action attributes for routing
-   - Performance optimized for 50+ combatants
-
-4. **Code Quality**
-   - Consistent naming conventions
-   - JSDoc documentation throughout
-   - Error handling with user feedback
-   - Input validation at all entry points
-
-### Performance Considerations
-- **Bundle Size**: 23,708 lines could impact initial load
-- **Browser Requirements**: Modern browser features (ES2022)
-- **Scaling**: Tested with 50+ combatants, optimizations available for larger encounters
-
-
----
-
-## Modal Events Modularization
-
-The modal-events.js system was refactored from a monolithic 2,491-line file into a focused, maintainable system:
-
-### Modularization Results
-- **Original Size:** 2,491 lines
-- **New Size:** 1,148 lines (54% reduction)
-- **New Modules Created:** 3 specialized modules
-- **Breaking Changes:** None (backward compatible)
-
-### New Modules
-1. **recent-items.js** (166 lines) - LocalStorage tracking for recent effects and notes
-2. **creature-modal-events.js** (separate) - Creature form handling
-3. **import-export-handlers.js** (separate) - Import/export operations
-
-For complete modularization details, see archived refactoring logs in `docs/archive/`.
-
+- **`CombatantCard`** / **`CombatantManager`** — Combat queue rendering and lifecycle
+- **`ModalSystem`** / **`ModalLoader`** — Lazy-loaded modal dialogs
+- **`ToastSystem`** — Notification toasts
+- **`DiceRoller`** — Dice rolling with D&D notation parsing
