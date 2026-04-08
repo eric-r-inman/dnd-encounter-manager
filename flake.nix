@@ -97,7 +97,7 @@
       default = pkgs.mkShell {
         buildInputs = devPackages system pkgs;
         shellHook = ''
-          echo "Rust Template development environment"
+          echo "D&D Encounter Manager development environment"
           echo ""
           echo "Available Cargo packages (use 'cargo build -p <name>'):"
           cargo metadata --no-deps --format-version 1 2>/dev/null | \

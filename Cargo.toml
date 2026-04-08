@@ -9,9 +9,9 @@ members = [
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["Eric Inman <ericrinman@gmail.com>"]
 license = "AGPL-3.0-or-later"
-repository = "https://github.com/yourusername/dnd-encounter-manager"
+repository = "https://github.com/eric-r-inman/dnd-encounter-manager"
 
 [workspace.dependencies]
 # Logging and tracing
