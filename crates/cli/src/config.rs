@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use dnd_encounter_manager_lib::{LogFormat, LogLevel};
 use serde::Deserialize;
 use std::path::PathBuf;
@@ -27,7 +27,7 @@ pub enum ConfigError {
 }
 
 #[derive(Debug, Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version, about = "D&D Encounter Manager data tools", long_about = None)]
 pub struct CliRaw {
   /// Log level (trace, debug, info, warn, error)
   #[arg(long, env = "LOG_LEVEL")]
@@ -41,16 +41,43 @@ pub struct CliRaw {
   #[arg(short, long, env = "CONFIG_FILE")]
   pub config: Option<PathBuf>,
 
-  /// Example: Name to greet
-  #[arg(short, long)]
-  pub name: Option<String>,
+  /// Path to the data directory
+  #[arg(long, env = "DATA_DIR", default_value = "data")]
+  pub data_dir: PathBuf,
+
+  #[command(subcommand)]
+  pub command: CommandRaw,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum CommandRaw {
+  /// Seed the data directory from a base creature database file
+  Seed {
+    /// Path to the source creature database JSON
+    #[arg(
+      long,
+      default_value = "frontend/src/data/creatures/creature-database.json"
+    )]
+    source: PathBuf,
+  },
+  /// Export the creature database to a JSON file
+  Export {
+    /// Output file path
+    file: PathBuf,
+  },
+  /// Import a creature database from a JSON file
+  Import {
+    /// Input file path
+    file: PathBuf,
+  },
+  /// Validate JSON files in the data directory
+  Validate,
 }
 
 #[derive(Debug, Deserialize, Default)]
 pub struct ConfigFileRaw {
   pub log_level: Option<String>,
   pub log_format: Option<String>,
-  pub name: Option<String>,
 }
 
 impl ConfigFileRaw {
@@ -62,21 +89,27 @@ impl ConfigFileRaw {
       }
     })?;
 
-    let config: ConfigFileRaw =
-      toml::from_str(&contents).map_err(|source| ConfigError::Parse {
-        path: path.clone(),
-        source,
-      })?;
-
-    Ok(config)
+    toml::from_str(&contents).map_err(|source| ConfigError::Parse {
+      path: path.clone(),
+      source,
+    })
   }
+}
+
+#[derive(Debug)]
+pub enum Command {
+  Seed { source: PathBuf },
+  Export { file: PathBuf },
+  Import { file: PathBuf },
+  Validate,
 }
 
 #[derive(Debug)]
 pub struct Config {
   pub log_level: LogLevel,
   pub log_format: LogFormat,
-  pub name: String,
+  pub data_dir: PathBuf,
+  pub command: Command,
 }
 
 impl Config {
@@ -96,7 +129,6 @@ impl Config {
       .log_level
       .or(config_file.log_level)
       .unwrap_or_else(|| "info".to_string());
-
     let log_level = log_level_str
       .parse::<LogLevel>()
       .map_err(|e| ConfigError::Validation(e.to_string()))?;
@@ -105,20 +137,22 @@ impl Config {
       .log_format
       .or(config_file.log_format)
       .unwrap_or_else(|| "text".to_string());
-
     let log_format = log_format_str
       .parse::<LogFormat>()
       .map_err(|e| ConfigError::Validation(e.to_string()))?;
 
-    let name = cli
-      .name
-      .or(config_file.name)
-      .unwrap_or_else(|| "World".to_string());
+    let command = match cli.command {
+      CommandRaw::Seed { source } => Command::Seed { source },
+      CommandRaw::Export { file } => Command::Export { file },
+      CommandRaw::Import { file } => Command::Import { file },
+      CommandRaw::Validate => Command::Validate,
+    };
 
     Ok(Config {
       log_level,
       log_format,
-      name,
+      data_dir: cli.data_dir,
+      command,
     })
   }
 }
