@@ -1,41 +1,28 @@
-//! dnd-encounter-manager-server - General-purpose long-running service
+//! dnd-encounter-manager-server — Terminal UI for D&D encounter management
 //!
-//! This is the project's persistent process.  It is not specifically an
-//! HTTP server — HTTP is present only as infrastructure for health
-//! checks, metrics, and observability.  The server may primarily watch
-//! files, communicate over a binary protocol, bridge between systems,
-//! or serve any other role requiring a long-running process.  Build new
-//! long-running functionality here rather than creating a separate
-//! service; the logging, systemd integration, and graceful shutdown are
-//! already wired up.
-//!
-//! # LLM Development Guidelines
-//! When modifying this code:
-//! - Keep configuration logic in config.rs
-//! - Keep base web functionality (healthz, metrics, openapi) in web_base.rs
-//! - Add new endpoints in separate modules, not in main.rs
-//! - Maintain the staged configuration pattern (CliRaw -> ConfigFileRaw -> Config)
-//! - Use semantic error types with thiserror - NO anyhow blindly wrapping errors
-//! - Add context at each error site explaining WHAT failed and WHY
-//! - Preserve graceful shutdown handling (SIGTERM/SIGINT)
-//! - Keep logging structured and consistent
-//! - Preserve systemd::notify_ready() and systemd::spawn_watchdog() after bind
+//! Runs a ratatui TUI as the primary interface, with an HTTP observability
+//! server (healthz, metrics) in the background for compliance with the
+//! rust-template server crate requirements.
 
+mod app;
+mod input;
 mod logging;
 mod systemd;
+mod tui;
+mod views;
 
-use dnd_encounter_manager_server::{auth, config, routes, web_base};
+use dnd_encounter_manager_server::{config, web_base};
 
-use axum::{routing::get, serve, Router};
+use app::App;
 use clap::Parser;
 use config::{CliRaw, Config, ConfigError};
+use crossterm::event::{self, Event};
+use dnd_encounter_manager_lib::creature::CreatureDatabase;
 use logging::init_logging;
+use std::time::Duration;
 use thiserror::Error;
-use tokio::signal;
-use tower_http::trace::TraceLayer;
-use tower_sessions::{cookie::SameSite, MemoryStore, SessionManagerLayer};
 use tracing::{error, info};
-use web_base::{AppState, AppStateError};
+use web_base::AppState;
 
 #[derive(Debug, Error)]
 enum ApplicationError {
@@ -43,16 +30,22 @@ enum ApplicationError {
   ConfigurationLoad(#[from] ConfigError),
 
   #[error("Failed to initialize application state: {0}")]
-  StateInit(#[from] AppStateError),
+  StateInit(#[from] web_base::AppStateError),
+
+  #[error("Failed to load creature database: {0}")]
+  CreatureLoad(String),
+
+  #[error("Terminal UI error: {0}")]
+  Tui(#[from] tui::TuiError),
+
+  #[error("IO error: {0}")]
+  Io(#[from] std::io::Error),
 
   #[error("Failed to bind listener to {address}: {source}")]
   ListenerBind {
     address: String,
     source: std::io::Error,
   },
-
-  #[error("Server encountered a runtime error: {0}")]
-  ServerRuntime(#[source] std::io::Error),
 }
 
 #[tokio::main]
@@ -65,96 +58,96 @@ async fn main() -> Result<(), ApplicationError> {
   })?;
 
   init_logging(config.log_level, config.log_format);
+  info!("Starting dnd-encounter-manager");
 
-  info!("Starting dnd-encounter-manager-server");
-  info!("Configuration loaded successfully");
-  info!("Binding to {}", config.listen_address);
-
+  // Initialize application state (metrics, store)
   let state = AppState::init(&config).await.map_err(|e| {
     error!("Failed to initialize application state: {}", e);
     ApplicationError::StateInit(e)
   })?;
 
-  let app = create_app(state);
+  // Spawn HTTP observability server in the background
+  let http_state = state.clone();
+  let listen_address = config.listen_address.clone();
+  tokio::spawn(async move {
+    if let Err(e) = run_http_server(http_state, listen_address).await {
+      error!("HTTP observability server error: {}", e);
+    }
+  });
+
+  // Load creature database
+  let creature_db: CreatureDatabase = state
+    .store
+    .read_collection("creatures")
+    .await
+    .map_err(|e| ApplicationError::CreatureLoad(e.to_string()))?;
+
+  info!(
+    "Loaded {} creatures",
+    creature_db.creatures.len()
+  );
+
+  // Run TUI
+  run_tui(creature_db)?;
+
+  info!("Shutting down dnd-encounter-manager");
+  Ok(())
+}
+
+fn run_tui(creature_db: CreatureDatabase) -> Result<(), ApplicationError> {
+  let mut terminal = tui::setup()?;
+  let mut app = App::new(creature_db);
+
+  loop {
+    app.clear_expired_status();
+    terminal
+      .draw(|frame| views::render(frame, &app))
+      .map_err(tui::TuiError::Draw)?;
+
+    if event::poll(Duration::from_millis(50))? {
+      if let Event::Key(key) = event::read()? {
+        input::handle_key(&mut app, key);
+      }
+    }
+
+    if app.should_quit {
+      break;
+    }
+  }
+
+  tui::restore(&mut terminal)?;
+  Ok(())
+}
+
+async fn run_http_server(
+  state: AppState,
+  listen_address: tokio_listener::ListenerAddress,
+) -> Result<(), ApplicationError> {
+  use axum::serve;
+  use tower_http::trace::TraceLayer;
+
+  let app = web_base::base_router(state)
+    .layer(TraceLayer::new_for_http());
 
   let listener = tokio_listener::Listener::bind(
-    &config.listen_address,
+    &listen_address,
     &tokio_listener::SystemOptions::default(),
     &tokio_listener::UserOptions::default(),
   )
   .await
-  .map_err(|source| {
-    error!("Failed to bind to {}: {}", config.listen_address, source);
-    ApplicationError::ListenerBind {
-      address: config.listen_address.to_string(),
-      source,
-    }
+  .map_err(|source| ApplicationError::ListenerBind {
+    address: listen_address.to_string(),
+    source,
   })?;
 
-  info!("Server listening on {}", config.listen_address);
+  info!("HTTP observability server listening on {}", listen_address);
 
   systemd::notify_ready();
   systemd::spawn_watchdog();
 
   serve(listener, app.into_make_service())
-    .with_graceful_shutdown(shutdown_signal())
     .await
-    .map_err(|e| {
-      error!("Server error: {}", e);
-      ApplicationError::ServerRuntime(e)
-    })?;
+    .map_err(|e| ApplicationError::Io(e))?;
 
-  info!("Shutting down dnd-encounter-manager-server");
   Ok(())
-}
-
-fn create_app(state: AppState) -> Router {
-  let session_store = MemoryStore::default();
-  // SameSite::Lax is required: Strict suppresses the session cookie on the
-  // cross-site redirect back from the OIDC provider.
-  let session_layer = SessionManagerLayer::new(session_store)
-    .with_secure(true)
-    .with_same_site(SameSite::Lax);
-
-  let auth_router = Router::new()
-    .route("/auth/login", get(auth::login_handler))
-    .route("/auth/callback", get(auth::callback_handler))
-    .route("/auth/logout", get(auth::logout_handler))
-    .with_state(state.clone());
-
-  let api = routes::api_router(state.store.clone());
-
-  web_base::base_router(state)
-    .merge(auth_router)
-    .merge(api)
-    .layer(session_layer)
-    .layer(TraceLayer::new_for_http())
-}
-
-async fn shutdown_signal() {
-  let ctrl_c = async {
-    signal::ctrl_c()
-      .await
-      .expect("failed to install Ctrl+C handler");
-  };
-
-  #[cfg(unix)]
-  let terminate = async {
-    signal::unix::signal(signal::unix::SignalKind::terminate())
-      .expect("failed to install signal handler")
-      .recv()
-      .await;
-  };
-
-  #[cfg(not(unix))]
-  let terminate = std::future::pending::<()>();
-
-  tokio::select! {
-      _ = ctrl_c => {
-          info!("Received Ctrl+C, shutting down gracefully");
-      },
-      _ = terminate => {
-          info!("Received SIGTERM, shutting down gracefully");
-      },
-  }
 }

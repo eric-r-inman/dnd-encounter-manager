@@ -25,27 +25,22 @@ serde_json = { workspace = true }
 toml = { workspace = true }
 thiserror = { workspace = true }
 chrono = { workspace = true }
-tap = { workspace = true }  # For method chaining, reduces superfluous locals
+ratatui = { workspace = true }
+crossterm = { workspace = true }
+tap = { workspace = true }
 axum = { workspace = true }
 tokio = { workspace = true }
 tokio-listener = { workspace = true }
-tower = { workspace = true }
 tower-http = { workspace = true }
 prometheus = { workspace = true }
-aide = { workspace = true }
-schemars = { workspace = true }
 sd-notify = { workspace = true }
-openidconnect = { workspace = true }
-reqwest = { workspace = true }
-tower-sessions = { workspace = true }
 
 # tracing-journald connects to the systemd journal socket; unix-only.
 [target.'cfg(unix)'.dependencies]
 tracing-journald = { workspace = true }
 
 [dev-dependencies]
-openidconnect = { workspace = true }
 prometheus = { workspace = true }
 serde_json = { workspace = true }
 tempfile = { workspace = true }
-tower-sessions = { workspace = true }
+tower = { workspace = true }
