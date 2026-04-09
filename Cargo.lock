@@ -386,6 +386,7 @@ dependencies = [
  "crossterm",
  "dnd-encounter-manager-lib",
  "prometheus",
+ "rand",
  "ratatui",
  "sd-notify",
  "serde",

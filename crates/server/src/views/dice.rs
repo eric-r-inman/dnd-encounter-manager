@@ -9,10 +9,21 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
   let [input_area, history_area] =
     Layout::vertical([Constraint::Length(5), Constraint::Min(1)]).areas(area);
 
-  // Input section
+  // Input section with roll mode indicator
+  let mode_color = match app.roll_mode {
+    crate::app::RollMode::Normal => Color::White,
+    crate::app::RollMode::Advantage => Color::Green,
+    crate::app::RollMode::Disadvantage => Color::Red,
+  };
   let input = Paragraph::new(vec![
     Line::from(""),
-    Line::from(format!("  Notation: {}▌", app.dice_input)),
+    Line::from(vec![
+      Span::raw("  Notation: "),
+      Span::raw(format!("{}▌", app.dice_input)),
+      Span::raw("    Mode: "),
+      Span::styled(app.roll_mode.label(), Style::default().fg(mode_color).add_modifier(Modifier::BOLD)),
+      Span::raw("  [!] to cycle"),
+    ]),
     Line::from(""),
   ])
   .block(

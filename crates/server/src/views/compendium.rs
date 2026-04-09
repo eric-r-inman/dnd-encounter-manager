@@ -9,8 +9,13 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
   let [search_area, body] =
     Layout::vertical([Constraint::Length(3), Constraint::Min(1)]).areas(area);
 
-  // Search bar
-  let search = Paragraph::new(format!("Search: {}▌", app.creature_search)).block(
+  // Search bar with sort indicator
+  let search = Paragraph::new(format!(
+    "Search: {}▌    Sort: {} [`]    F2:New F3:Edit F4:Paste X:Delete",
+    app.creature_search,
+    app.sort_mode.label()
+  ))
+  .block(
     Block::default().borders(Borders::ALL).title(" Compendium "),
   );
   frame.render_widget(search, search_area);
