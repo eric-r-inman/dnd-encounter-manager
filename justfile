@@ -1,21 +1,19 @@
-# Build both Rust and Elm.
-build: build-elm build-rust
+# Start the TUI application
+start:
+    cargo run -p dnd-encounter-manager-server
 
-# Build the Elm frontend.
-build-elm:
-    cd frontend && elm make src/Main.elm --output public/elm.js
-
-# Build all Rust workspace crates.
-build-rust:
+# Build all workspace crates
+build:
     cargo build --workspace
 
-# Run all tests (Elm compile check + Rust test suite).
-test: build-elm test-rust
-
-# Run the Rust test suite.
-test-rust:
+# Run all tests
+test:
     cargo test --workspace
 
-# Build Elm then run via cargo, forwarding all arguments.
-run *args: build-elm
-    cargo run {{args}}
+# Seed the creature database
+seed:
+    cargo run -p dnd-encounter-manager-cli -- seed
+
+# Validate the creature database
+validate:
+    cargo run -p dnd-encounter-manager-cli -- validate

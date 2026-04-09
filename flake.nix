@@ -81,8 +81,6 @@
       pkgs.pkg-config
       pkgs.openssl
       pkgs.jq
-      # Frontend toolchain
-      pkgs.nodejs_22
       # Unified formatter
       pkgs.treefmt
       pkgs.alejandra
@@ -106,11 +104,8 @@
             sed 's/^/  • /' || echo "  Run 'cargo init' to get started"
 
           echo ""
-          echo "Frontend (frontend/):"
-          echo "  Install: cd frontend && npm install"
-          echo "  Dev:     cd frontend && npm run dev"
-          echo "  Build:   cd frontend && npm run build"
-          echo "  Test:    cd frontend && npm test"
+          echo "Run: cargo run -p dnd-encounter-manager-server"
+          echo "Test: cargo test --workspace"
 
           # Symlink cargo-husky hooks into .git/hooks/ using paths relative
           # to .git/hooks/ so the repo stays valid after moves or copies.

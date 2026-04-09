@@ -56,7 +56,7 @@ pub enum CommandRaw {
     /// Path to the source creature database JSON
     #[arg(
       long,
-      default_value = "frontend/src/data/creatures/creature-database.json"
+      default_value = "data/seed/creature-database.json"
     )]
     source: PathBuf,
   },

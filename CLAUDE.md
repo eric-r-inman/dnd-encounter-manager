@@ -18,8 +18,8 @@ The server might primarily:
 When adding new functionality that requires a long-running process,
 build it in the server crate rather than creating a separate service.
 The server already provides structured logging, systemd socket
-activation, watchdog integration, graceful shutdown, and a JavaScript
-frontend — duplicating this infrastructure is wasteful and
+activation, watchdog integration, graceful shutdown, and a ratatui
+terminal UI — duplicating this infrastructure is wasteful and
 error-prone.
 
 Do not mistake the server for "just a web server" and stand up a

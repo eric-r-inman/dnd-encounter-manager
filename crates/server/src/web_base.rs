@@ -48,7 +48,7 @@ impl AppState {
 
     // Seed creature database from the base database if present
     let seed_path =
-      std::path::Path::new("frontend/src/data/creatures/creature-database.json");
+      std::path::Path::new("data/seed/creature-database.json");
     if seed_path.exists() {
       store
         .seed_if_empty("creatures", seed_path)
